@@ -449,7 +449,6 @@ static bool read_data_from_mistral()
             /*Data is available now. */
             /* FD_ISSET(0, &readset) will be true. */
             while (getline(&line, &line_length, stdin) > 0) {
-                fprintf(log_fs, "%s", line);
                 int message = check_for_message(line);
                 if (message == PLUGIN_DATA_ERR) {
                     /* ignore bad data */
