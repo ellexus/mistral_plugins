@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <errno.h>
 #include <getopt.h>              /* getopt_long() */
 #include <limits.h>
@@ -226,7 +227,7 @@ static int check_for_message(char *line)
         }
     }
 
-    /* If we have a valid control message it should end ":\n" */
+    /* If we have a valid control message it should end with PLUGIN_MESSAGE_END */
     if (message != PLUGIN_MESSAGE_DATA_LINE
             && strstr(line, PLUGIN_MESSAGE_END) != &line[line_len-sizeof(PLUGIN_MESSAGE_END)+1]) {
         /* strip any trailing newline for readability */
@@ -255,7 +256,7 @@ static int check_for_message(char *line)
         unsigned min_ver = 0;
         unsigned cur_ver = 0;
 
-        if (sscanf(line, ":PGNSUPVRSN:%d:%d:\n",&min_ver, &cur_ver) != 2) {
+        if (sscanf(line, ":PGNSUPVRSN:%u:%u:\n",&min_ver, &cur_ver) != 2) {
             fprintf(log_fs, "Invalid supported versions format received: [%s].\n", line);
             return PLUGIN_DATA_ERR;
         }
@@ -335,6 +336,7 @@ char **str_split(const char *s, int sep, size_t *sep_count)
     size_t n = 1;               /* One more string than separators. */
     size_t len;                 /* Length of 's' */
 
+    assert(sep_count);
     /* Count separators. */
     for (len = 0; s[len]; ++len) {
         n += (sep == s[len]);
@@ -367,19 +369,21 @@ char **str_split(const char *s, int sep, size_t *sep_count)
     return result;
 }
 
-
 bool parse_log_entry(char *line)
 {
+    bool ret = true;
     size_t sep_count;
     char **comma_splits = str_split(line, ',', &sep_count);
     if (sep_count != COMMA_SEP_NUM) {
         fprintf(log_fs, "Invalid log message: %s\n", line);
-        return false;
+        ret = false;
+        goto err_comma_nr;
     }
     char **semicolon_splits = str_split(comma_splits[0], ':', &sep_count);
     if (sep_count != COLON_SEP_NUM) {
         fprintf(log_fs, "Invalid log message: %s\n", line);
-        return false;
+        ret = false;
+        goto err_sc_nr; 
     }
     //todo check if the arrays are the right size
     mistral_log_entry_s log_entry = {0};
@@ -393,6 +397,9 @@ bool parse_log_entry(char *line)
     int i;
     char tmp_timestamp[30];
     strcpy(tmp_timestamp, semicolon_splits[2]);
+    /* Combining again timestamp because it contained ':' which was used as separator 
+     * for the split. The timestamp string was splitted in three parts.
+     */
     for (i = 3; semicolon_splits[i]; i++) {
         strcat(tmp_timestamp, ":");
         strcat(tmp_timestamp, semicolon_splits[i]);
@@ -411,7 +418,12 @@ bool parse_log_entry(char *line)
     log_entry.log_msg->gid = comma_splits[10];
     log_entry.log_msg->jid = comma_splits[11];
 
-    return write_log_to_db(&log_entry);
+    ret = write_log_to_db(&log_entry);
+err_sc_nr:
+    free(semicolon_splits);
+err_comma_nr:
+    free(comma_splits);
+    return ret;
 }
 
 /* Function that reads from stdin.
@@ -433,7 +445,7 @@ static bool read_data_from_mistral()
     FD_ZERO(&readset);
     FD_SET(LOG_INPUT, &readset);
     char *line = NULL;
-    size_t line_length;
+    size_t line_length = 0;
 
     bool ret = false;
 
@@ -481,8 +493,6 @@ static bool read_data_from_mistral()
                     goto read_err;
                 }
             }
-            free(line);
-            line = NULL;
         }
     } while (retval == -1 && errno == EINTR);
 
