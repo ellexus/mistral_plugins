@@ -16,16 +16,16 @@
  */
 
 # TODO Remove this when releasing
- DROP DATABASE IF EXISTS multiple_mistral_log2;
+ DROP DATABASE IF EXISTS multiple_mistral_log;
 
 # Create Database
-CREATE DATABASE multiple_mistral_log2;
+CREATE DATABASE multiple_mistral_log;
 
 # Create User Mistral And Give it Permissions
-GRANT ALL PRIVILEGES ON multiple_mistral_log2.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
+GRANT ALL PRIVILEGES ON multiple_mistral_log.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
 
 # Create Tables for control_table and rule_parameters
-USE multiple_mistral_log2;
+USE multiple_mistral_log;
 CREATE TABLE rule_parameters (Rule_ID INT NOT NULL AUTO_INCREMENT,
                               Violation_Path VARCHAR(256) NOT NULL,
                               Call_Type VARCHAR(45) NOT NULL,
@@ -137,7 +137,7 @@ delimiter $$
 create procedure update_eod_tables()
     begin
     -- Checks that there are 1 indexes
-    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'', @oldest_table_name,'\' AND table_schema = \'multiple_mistral_log2\'');
+    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'', @oldest_table_name,'\' AND table_schema = \'multiple_mistral_log\'');
     CALL exec_qry(@index_count);
 
     IF @index_num > 1 THEN
