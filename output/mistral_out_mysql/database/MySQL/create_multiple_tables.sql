@@ -3,14 +3,14 @@
  * Eric Martin at Ellexus - 08/03/2016
  *
  * This text file should be imported using the command "mysql -u root -p <
- * create_multiple_tables.sql". This will set up the MySQL databases and tables needed for the
+ * create_multiple_tables.sql". This will set up the MySQL database and tables needed for the
  * mistral_mysql_log plugin.
  *
  * In summary this will :
  *  ~ Create a new database called 'multiple_mistral_log'
- *  ~ Create 30 tables within 'mistral_logs' called 'log_01 .. log_30'
+ *  ~ Create 32 tables within 'mistral_logs' called 'log_01 .. log_32'
  *  ~ Create a user called 'mistral' and give it :
- *      All permissions on mistral_log.*
+ *      All permissions on multiple_mistral_log.*
  *     TODO : Change to grant specific permissions [ ALTER, CREATE, DROP, EXECUTE, INSERT, UPDATE ] permissions on these tables
  *
  */
@@ -198,7 +198,7 @@ end $$
 DELIMITER ;
 -- -----------------------------------------------------------------------------
 
--- ---------------------exec_qry( p_sql VARCHAR(100))---------------------------
+-- ---------------------exec_qry( p_sql VARCHAR(255))---------------------------
 delimiter $$
 create procedure exec_qry( p_sql VARCHAR(255))
     begin
@@ -218,7 +218,7 @@ begin
 
     SET @date_today = CURRENT_DATE();
     SET @date_tomorrow = @date_today + INTERVAL 1 DAY;
-    SET @get_oldest_date = CONCAT('SET @oldest_date = (SELECT Table_date FROM control_table ORDER BY Table_date LIMIT 0,1);');
+    SET @get_oldest_date = 'SET @oldest_date = (SELECT Table_date FROM control_table ORDER BY Table_date LIMIT 0,1);';
     CALL exec_qry(@get_oldest_date);
 
     IF @oldest_date < @date_today THEN
