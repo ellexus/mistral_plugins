@@ -368,7 +368,7 @@ char **str_split(const char *s, int sep, size_t *sep_count)
 
 /*
  * parse_log_entry()
- * 
+ *
  * Parse the line received. The line structure is <scope>:<type>:log_message
  * log_message contains comma separated strings.
  */
@@ -386,7 +386,7 @@ bool parse_log_entry(char *line)
     if (sep_count != COLON_SEP_NUM) {
         fprintf(log_fs, "Invalid log message: %s\n", line);
         ret = false;
-        goto err_sc_nr; 
+        goto err_sc_nr;
     }
 
     mistral_log_entry_s log_entry = {0};
@@ -400,7 +400,7 @@ bool parse_log_entry(char *line)
     int i;
     char tmp_timestamp[30];
     strcpy(tmp_timestamp, semicolon_splits[2]);
-    /* Combining again timestamp because it contained ':' which was used as separator 
+    /* Combining again timestamp because it contained ':' which was used as separator
      * for the split. The timestamp string was splitted in three parts.
      */
     for (i = 3; semicolon_splits[i]; i++) {
@@ -429,7 +429,7 @@ err_comma_nr:
     return ret;
 }
 
-/* 
+/*
  * read_data_from_mistral()
  *
  * Function that reads from FD_INPUT file descriptor.
@@ -510,8 +510,8 @@ bool create_tmp_err_log()
 {
     int ppid = syscall(SYS_getppid);
     bool ret = false;
- 
- 
+
+
     if (ppid == -1) {
         fprintf(log_fs, "Couldn't get the parent pid.\n");
     } else {
@@ -571,7 +571,6 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
     }
-
     if (config_file == NULL) {
         fprintf(stderr, "Missing option -c. Impossible to connect to the database without specifying a configuration file.\n");
         exit(EXIT_FAILURE);

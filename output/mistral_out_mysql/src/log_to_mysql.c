@@ -42,7 +42,20 @@ enum fields {
 
 static MYSQL *con = NULL;
 
-/* Sets table_name to the log table corresponding to the log message date */
+/* get_log_table_name()
+ *
+ * Gets the corresponding log message date and sets table_name to this
+ *
+ * Input :
+ *   log_entry      - Structure containing output data from Mistral
+ *
+ *   result_str_data - This is set to the log table name corresponding to the
+ *                   - date given in the log_entry
+ *
+ * Returns :
+ *   0 on Success
+ *   1 on Failure
+ */
 int get_log_table_name(mistral_log_entry_t log_entry, char *result_str_data)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
@@ -84,12 +97,6 @@ int get_log_table_name(mistral_log_entry_t log_entry, char *result_str_data)
         goto fail_get_log_table_name;
     }
 
-    if (mysql_stmt_bind_result(get_table_name, cbind)) {
-        fprintf(stderr, " mysql_stmt_cbind_param() failed\n");
-        fprintf(stderr, " %s\n", mysql_stmt_error(get_table_name));
-        goto fail_get_log_table_name;
-    }
-
     /* Specifies the data */
     strncpy(str_data, log_entry->log_msg->timestamp, STRING_SIZE); /* string  */
     str_length= strlen(str_data);
@@ -122,7 +129,6 @@ int get_log_table_name(mistral_log_entry_t log_entry, char *result_str_data)
         goto fail_get_log_table_name;
     }
 
-    //fprintf(stderr, "The table name is : '%s'\n", result_str_data);
     /* Close the statement */
     if (mysql_stmt_close(get_table_name)) {
         fprintf(stderr, " failed while closing the statement\n");
@@ -138,7 +144,21 @@ fail_get_log_table_name:
     return 1;
 }
 
-/* Sets the rule_id if already exists, else calls insert_rule_parameters */
+/* set_rule_id()
+ *
+ * If combination of rule_parameters exists in the db, get the rule_id.
+ * If not, insert the combination and return the rule_id.
+ *
+ * Input:
+ *  log_entry       - Structure containing output data from Mistral
+ *
+ *  ptr_rule_id     - Pointer to the rule_id string which will be set to the
+ *                    unique rule_id from the database
+ *
+ * Returns:
+ *  0 on Success
+ *  1 on Failure
+ */
 int set_rule_id(mistral_log_entry_t log_entry, int *ptr_rule_id)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
@@ -161,7 +181,7 @@ int set_rule_id(mistral_log_entry_t log_entry, int *ptr_rule_id)
     }
 
     /* Prepares the statement for use */
-    char *get_rule_params_id_str =
+    const char *get_rule_params_id_str =
         "SELECT rule_id FROM rule_parameters WHERE violation_path=? AND call_type=? AND measurement=?";
     if (mysql_stmt_prepare(stmt, get_rule_params_id_str, strlen(get_rule_params_id_str))) {
         fprintf(stderr, " mysql_stmt_prepare(), SELECT failed\n");
@@ -241,7 +261,20 @@ fail_set_rule_id:
     return 1;
 }
 
-/* Inserts rule parameters into table 'rule_parameters' and sets rule_id */
+/* insert_rule_parameters()
+ *
+ * Inserts rule parameters into table 'rule_parameters' and sets rule_id
+ *
+ * Input:
+ *  log_entry       - Structure containing output data from Mistral
+ *
+ *  ptr_rule_id     - Pointer to a string containing the rule_id
+ *
+ * Returns:
+ *  0 on Success
+ *  1 on Failure
+ *
+ */
 int insert_rule_parameters(mistral_log_entry_t log_entry, int *ptr_rule_id)
 {
     static                  MYSQL_STMT *insert_stmt;
@@ -327,7 +360,19 @@ fail_insert_rule_parameters:
     return 1;
 }
 
-/* Inserts the log entry to log_X */
+/* insert_rlog_to_db()
+ *
+ * Inserts the log entry to log_X
+ *
+ * Input:
+ *  log_entry       - Structure containing output data from Mistral
+ *
+ *  rule_id         - Pointer to a string containing the rule_id
+ *
+ * Returns:
+ *  0 on Success
+ *  1 on Failure
+ */
 int insert_log_to_db(char *table_name, mistral_log_entry_t log_entry,int rule_id)
 {
     static MYSQL_STMT       *insert_log_stmt;
@@ -426,13 +471,23 @@ fail_insert_log_to_db:
 }
 
 
-/* First function called.
-* This is the main controlling function. It receives log_entry and returns true on success.
-* It get's the table name from get_log_table_name
-* If the rule_params already exists, it finds and sets rule_id to this
-* If not, it adds to the table and sets the new rule_id
-* It then writes the log to the database
-*/
+/* write_log_to_db()
+ *
+ * First function called.
+ * This is the main controlling function. It receives log_entry and returns true on success.
+ * It gets the table name from get_log_table_name
+ * If the rule_params already exists, it finds and sets rule_id to this
+ * If not, it adds to the table and sets the new rule_id
+ * It then writes the log to the database
+ *
+ * Input:
+ *  log_entry       - Structure containing output data from Mistral
+ *
+ * Returns:
+ *  true on Success
+ *  false on Failure
+ *
+ */
 
 bool write_log_to_db(mistral_log_entry_t log_entry)
 {
@@ -467,6 +522,19 @@ bool write_log_to_db(mistral_log_entry_t log_entry)
     return true;
 }
 
+/* connect_to_db()
+ *
+ * Connects to a MySQL database defined by the config file
+ *
+ * Input:
+ *  default_file_path          - string containing path to config file
+ *                               containing log in details and IP for MySQL
+ *                               database
+ *
+ * Returns:
+ *  true on Success
+ *  false on Failure
+ */
 bool connect_to_db(char *default_file_path)
 {
     /* Initialize a MySQL object suitable for connection */

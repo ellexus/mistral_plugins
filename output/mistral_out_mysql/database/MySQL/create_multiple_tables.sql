@@ -8,21 +8,18 @@
  *
  * In summary this will :
  *  ~ Create a new database called 'multiple_mistral_log'
- *  ~ Create 32 tables within 'mistral_logs' called 'log_01 .. log_32'
+ *  ~ Create 32 tables within 'multiple_mistral_logs' called 'log_01 .. log_32'
+ *  ~ Creates a control table and a rule_parameters table
  *  ~ Create a user called 'mistral' and give it :
- *      All permissions on multiple_mistral_log.*
- *     TODO : Change to grant specific permissions [ ALTER, CREATE, DROP, EXECUTE, INSERT, UPDATE ] permissions on these tables
+ *      SELECT, EXECUTE and INSERT permissions on multiple_mistral_log.*
  *
  */
-
-# TODO Remove this when releasing
- DROP DATABASE IF EXISTS multiple_mistral_log;
 
 # Create Database
 CREATE DATABASE multiple_mistral_log;
 
 # Create User Mistral And Give it Permissions
-GRANT ALL PRIVILEGES ON multiple_mistral_log.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
+GRANT SELECT, EXECUTE, INSERT ON multiple_mistral_log.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
 
 # Create Tables for control_table and rule_parameters
 USE multiple_mistral_log;
@@ -239,6 +236,4 @@ DELIMITER ;
 -- -----------------------------------------------------------------------------
 
 # Runs the end of procedure to set up today and tomorrow
-SET @date_today = '2016-01-31';
-SET @date_tomorrow = @date_today + INTERVAL 1 DAY;
 CALL end_of_day();
