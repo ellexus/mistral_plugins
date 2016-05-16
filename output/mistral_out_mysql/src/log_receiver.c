@@ -246,7 +246,6 @@ static int check_for_message(char *line)
         /* We should never receive this message */
         fprintf(log_fs, "Invalid data: [%s]. Don't expect to receive this message.\n", line);
         return PLUGIN_DATA_ERR;
-        break;
     }
     case PLUGIN_MESSAGE_SUP_VERSION: {
         /* Extract minimun and current version supported */
@@ -328,7 +327,7 @@ static int check_for_message(char *line)
     return message;
 }
 
-char **str_split(const char *s, int sep, size_t *sep_count)
+static char **str_split(const char *s, int sep, size_t *sep_count)
 {
     size_t n = 1;               /* One more string than separators. */
     size_t len;                 /* Length of 's' */
@@ -372,7 +371,7 @@ char **str_split(const char *s, int sep, size_t *sep_count)
  * Parse the line received. The line structure is <scope>:<type>:log_message
  * log_message contains comma separated strings.
  */
-bool parse_log_entry(char *line)
+static bool parse_log_entry(char *line)
 {
     bool ret = true;
     size_t sep_count;
@@ -506,7 +505,7 @@ read_fail_select:
     return ret;
 }
 
-bool create_tmp_err_log()
+static bool create_tmp_err_log()
 {
     int ppid = syscall(SYS_getppid);
     bool ret = false;
@@ -532,7 +531,7 @@ bool create_tmp_err_log()
     return ret;
 }
 
-int main(int argc, char **argv)
+static int main(int argc, char **argv)
 {
 
     static const struct option options[] = {
