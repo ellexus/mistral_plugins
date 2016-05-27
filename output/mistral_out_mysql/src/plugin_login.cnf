@@ -1,6 +1,0 @@
-[client]
-user=mistral
-password=mistral
-host=10.33.0.86
-port=3306
-database=multiple_mistral_log

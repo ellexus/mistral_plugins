@@ -16,7 +16,7 @@
 #define VERSION 1
 
 /* Define the path to the error log file when there is no -o options*/
-#define TMP_ERR_LOG /tmp/mistral_out_mysql_
+#define TMP_ERR_LOG /tmp/err_mistral_out_mysql_
 
 /* Define supported plugin interface version range */
 #define PLUGIN_MIN_VER "1"

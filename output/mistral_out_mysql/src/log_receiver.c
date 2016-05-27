@@ -40,7 +40,6 @@ const struct timeval shutdown_delay = {
  */
 static bool send_message_to_mistral(const char *message)
 {
-    const char *message_start = message;
     size_t message_len = strlen(message);
 
     fd_set writeset;
@@ -66,13 +65,13 @@ static bool send_message_to_mistral(const char *message)
                 return false;
             } else if (retval) {
                 ssize_t w_res =
-                    write(FD_OUTPUT, message_start, message_len);
+                    write(FD_OUTPUT, message, message_len);
 
                 /* If we've successfully written some data, update the message
                  * pointer and length values
                  */
                 if (w_res >= 0) {
-                    message_start += w_res;
+                    message += w_res;
                     message_len -= w_res;
                 }
 
@@ -531,9 +530,13 @@ static bool create_tmp_err_log()
     return ret;
 }
 
-static int main(int argc, char **argv)
+int main(int argc, char **argv)
 {
-
+    /* The plugin runs with 2 parameters: 
+     * "-c" (mandatory) specifies the configuration file needed to connect to the DB
+     * "-o" (optional) specifies the location for the error log file
+     *      if not specified the error message will go to /tmp
+     */
     static const struct option options[] = {
         {"config", required_argument, NULL, 'c'},
         {"output", required_argument, NULL, 'o'},
@@ -571,7 +574,7 @@ static int main(int argc, char **argv)
         }
     }
     if (config_file == NULL) {
-        fprintf(stderr, "Missing option -c. Impossible to connect to the database without specifying a configuration file.\n");
+        fprintf(stderr, "Missing parameter -c. Impossible to connect to the database without specifying a configuration file.\n");
         exit(EXIT_FAILURE);
     }
 
