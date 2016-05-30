@@ -8,7 +8,7 @@
  * procedure in the end_of_day.sql script.
  *
  * In summary this will :
- *  Populate all the 32 log tables with 5 sets of random data
+ *  Populate all the 32 log tables with 5 sets of garbage data
  */
 
  USE multiple_mistral_log;
@@ -28,7 +28,7 @@
 
     start transaction;
     WHILE log_max_counter < (log_max +1) DO
-    SET data_counter = 1;
+        SET data_counter = 1;
 
         WHILE data_counter < (data_set_num +1) DO
         IF log_max_counter < 10 then
@@ -41,7 +41,7 @@
         SET data_counter = data_counter + 1;
         END WHILE;
 
-    SET log_max_counter = log_max_counter + 1;
+        SET log_max_counter = log_max_counter + 1;
     END WHILE;
 COMMIT;
 END $$

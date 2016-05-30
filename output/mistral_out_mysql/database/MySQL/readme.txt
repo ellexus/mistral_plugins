@@ -1,8 +1,6 @@
 Mistral MySQL Plugin
 ====================
 
-This is the readme for using the Mistral mysql plugin.
-
 Intro
 -----
 This plugin receives violation data from Mistral and enters it into a MySQL database named
@@ -11,7 +9,7 @@ This plugin receives violation data from Mistral and enters it into a MySQL data
 Process Summary
 ---------------
 The initiation scripts create a database called "multiple_mistral_log". Within it are 34 tables:
-32 log tables; a control table; and a rule_parameters table. A user "'mistral'@'%'" is created and given [SELECT, EXECUTE, INSERT] permission on "multiple_mistral_log".
+32 log tables; a control table; and a rule_parameters table. A user "'mistral'@'%'" is created and given [SELECT, EXECUTE, INSERT] permissions on "multiple_mistral_log".
 
 The plugin uses a 32 day rotating log system to store Mistral data. The data is the same as would
 be outputted from Mistral to a log file. Each field is stored in a separate column with the
@@ -37,16 +35,17 @@ port=3306
 database=multiple_mistral_log
 
 
-Set-Up Instruction
-------------------
+Set-Up Instructions
+-------------------
 From a terminal on the host machine designated to house the database, run
 "mysql -u root -p < create_multiple_tables.sql"
 And enter the password to the root user account. This will create the database with tables and
-mistral user.
+mistral user. If you have another user with CREATE permissions then you can use that instead.
 
 Run the "end_of_day" script once to set up tables for today and tomorrow :
 "mysql -u root -p < end_of_day.sql"
 
-Set up a CRON job to run "mysql --defaults-file=<path-to-password-file> -u mistral < end_of_day.sql" at the some point each day.
+Set up a CRON job to run "mysql --defaults-file=<path-to-password-file> -u mistral < end_of_day.sql" at the some point each day. <path-to-password-file> should point to the
+config file as explained in "Password Hiding".
 
 

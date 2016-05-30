@@ -60,8 +60,8 @@ int get_log_table_name(mistral_log_entry_t log_entry, char *result_str_data)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
     static MYSQL_STMT *get_table_name;
-    static MYSQL_BIND bbind[1];
-    static MYSQL_BIND cbind[1];
+    static MYSQL_BIND input_bind[1];
+    static MYSQL_BIND result_bind[1];
     static unsigned long str_length;
     static unsigned long result_str_length;
     char str_data[STRING_SIZE];
@@ -83,16 +83,16 @@ int get_log_table_name(mistral_log_entry_t log_entry, char *result_str_data)
     }
 
     /* Binds the String Data */
-    memset(bbind, 0, sizeof(bbind));
-    memset(cbind, 0, sizeof(cbind));
+    memset(input_bind, 0, sizeof(input_bind));
+    memset(result_bind, 0, sizeof(result_bind));
 
-    BIND_STRING( bbind, 0, str_data, 0, str_length);
-    BIND_STRING( cbind, 0, result_str_data, 0, result_str_length);
+    BIND_STRING(input_bind, 0, str_data, 0, str_length);
+    BIND_STRING(result_bind, 0, result_str_data, 0, result_str_length);
 
 
     /* Bind the buffers */
-    if (mysql_stmt_bind_param(get_table_name, bbind)) {
-        fprintf(stderr, "mysql_stmt_bbind_param() failed\n");
+    if (mysql_stmt_bind_param(get_table_name, input_bind)) {
+        fprintf(stderr, "mysql_stmt_bind_param() failed\n");
         fprintf(stderr, "%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
@@ -103,14 +103,14 @@ int get_log_table_name(mistral_log_entry_t log_entry, char *result_str_data)
 
     /* Executes the statement */
     if (mysql_stmt_execute(get_table_name)) {
-        fprintf(stderr, "mysql_stmt_execute(), 1 failed\n");
+        fprintf(stderr, "mysql_stmt_execute(), failed\n");
         fprintf(stderr, "%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
 
     /* Binds the results */
-    if (mysql_stmt_bind_result(get_table_name, cbind)) {
-        fprintf(stderr, "mysql_stmt_bbind_result(), failed\n");
+    if (mysql_stmt_bind_result(get_table_name, result_bind)) {
+        fprintf(stderr, "mysql_stmt_bind_result(), failed\n");
         fprintf(stderr, "%s\n", mysql_stmt_error(get_table_name));
     }
 
@@ -164,8 +164,8 @@ int set_rule_id(mistral_log_entry_t log_entry, int *ptr_rule_id)
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT *stmt;
 
-    static MYSQL_BIND dbind[3];
-    static MYSQL_BIND ebind[1];
+    static MYSQL_BIND rule_bind[3];
+    static MYSQL_BIND rule_bind_result[1];
     static unsigned long str_length_vio;
     static unsigned long str_length_call;
     static unsigned long str_length_measure;
@@ -190,16 +190,16 @@ int set_rule_id(mistral_log_entry_t log_entry, int *ptr_rule_id)
     }
 
     /* Binds the String Data */
-    memset(dbind, 0, sizeof(dbind));
-    memset(ebind, 0, sizeof(ebind));
-    BIND_STRING( dbind, 0, vio_path_str, 0, str_length_vio);
-    BIND_STRING( dbind, 1, call_type_str, 0, str_length_call);
-    BIND_STRING( dbind, 2, measurement_str, 0, str_length_measure);
-    BIND_INT( ebind, 0, ptr_rule_id, 0);
+    memset(rule_bind, 0, sizeof(rule_bind));
+    memset(rule_bind_result, 0, sizeof(rule_bind_result));
+    BIND_STRING(rule_bind, 0, vio_path_str, 0, str_length_vio);
+    BIND_STRING(rule_bind, 1, call_type_str, 0, str_length_call);
+    BIND_STRING(rule_bind, 2, measurement_str, 0, str_length_measure);
+    BIND_INT(rule_bind_result, 0, ptr_rule_id, 0);
 
     /* Bind the buffers */
-    if (mysql_stmt_bind_param(stmt, dbind)) {
-        fprintf(stderr, "mysql_stmt_dbind_param() failed\n");
+    if (mysql_stmt_bind_param(stmt, rule_bind)) {
+        fprintf(stderr, "mysql_stmt_rule_bind_param() failed\n");
         fprintf(stderr, "%s\n", mysql_stmt_error(stmt));
         goto fail_set_rule_id;
     }
@@ -220,8 +220,8 @@ int set_rule_id(mistral_log_entry_t log_entry, int *ptr_rule_id)
     }
 
     /* Binds the results */
-    if (mysql_stmt_bind_result(stmt, ebind)) {
-        fprintf(stderr, "mysql_stmt_ebind_result(), failed\n");
+    if (mysql_stmt_bind_result(stmt, rule_bind_result)) {
+        fprintf(stderr, "mysql_stmt_rule_bind_result_result(), failed\n");
         fprintf(stderr, "%s\n", mysql_stmt_error(stmt));
         goto fail_set_rule_id;
     }
@@ -278,8 +278,8 @@ fail_set_rule_id:
 int insert_rule_parameters(mistral_log_entry_t log_entry, int *ptr_rule_id)
 {
     static MYSQL_STMT *insert_stmt;
-    static MYSQL_BIND bbind[4];
-    static unsigned lonng str_length_empty;
+    static MYSQL_BIND input_bind[4];
+    static unsigned long str_length_empty;
     static unsigned long str_length_vio;
     static unsigned long str_length_call;
     static unsigned long str_length_measure;
@@ -305,16 +305,16 @@ int insert_rule_parameters(mistral_log_entry_t log_entry, int *ptr_rule_id)
     }
 
     /* Binds the String Date */
-    memset(bbind, 0, sizeof(bbind));
+    memset(input_bind, 0, sizeof(input_bind));
 
-    BIND_STRING( bbind, 0, empty_field, 0, str_length_empty);
-    BIND_STRING( bbind, 1, vio_path_str, 0, str_length_vio);
-    BIND_STRING( bbind, 2, call_type_str, 0, str_length_call);
-    BIND_STRING( bbind, 3, measurement_str, 0, str_length_measure);
+    BIND_STRING(input_bind, 0, empty_field, 0, str_length_empty);
+    BIND_STRING(input_bind, 1, vio_path_str, 0, str_length_vio);
+    BIND_STRING(input_bind, 2, call_type_str, 0, str_length_call);
+    BIND_STRING(input_bind, 3, measurement_str, 0, str_length_measure);
 
     /* Bind the buffers */
-    if (mysql_stmt_bind_param(insert_stmt, bbind)) {
-        fprintf(stderr, "mysql_stmt_bbind_param() failed\n");
+    if (mysql_stmt_bind_param(insert_stmt, input_bind)) {
+        fprintf(stderr, "mysql_stmt_bind_param() failed\n");
         fprintf(stderr, "%s\n", mysql_stmt_error(insert_stmt));
         goto fail_insert_rule_parameters;
     }
@@ -376,7 +376,7 @@ fail_insert_rule_parameters:
 int insert_log_to_db(char *table_name, mistral_log_entry_t log_entry,int rule_id)
 {
     static MYSQL_STMT *insert_log_stmt;
-    static MYSQL_BIND bbind[B_SIZE];
+    static MYSQL_BIND input_bind[B_SIZE];
     static unsigned long str_length[B_SIZE];
     const static int log_str_len = 55;           /* Fixed length of insert statement*/
     char insert_log_str[log_str_len];
@@ -392,7 +392,7 @@ int insert_log_to_db(char *table_name, mistral_log_entry_t log_entry,int rule_id
 
     /* Converts the timestamp to a formatted string */
     strptime(log_entry->log_msg->timestamp, "%Y-%m-%dT%H:%M:%S", &tm);
-    strftime(timestamp, sizeof(timestamp), "%F %H-%M-%S", &tm);
+    strftime(timestamp, sizeof(timestamp), "%F %H:%M:%S", &tm);
 
     /* Prepares the statement for use */
     snprintf(insert_log_str, log_str_len, "INSERT INTO %s VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -405,26 +405,26 @@ int insert_log_to_db(char *table_name, mistral_log_entry_t log_entry,int rule_id
         goto fail_insert_log_to_db;
     }
 
-    /* Binds the String Date */
-    memset(bbind, 0, sizeof(bbind));
+    /* Binds the Input String Data */
+    memset(input_bind, 0, sizeof(input_bind));
 
-    BIND_STRING( bbind, B_SCOPE , log_entry->scope , 0, str_length[B_SCOPE]);
-    BIND_STRING( bbind, B_TYPE , log_entry->type , 0, str_length[B_TYPE]);
-    BIND_STRING( bbind, B_TIMESTAMP , timestamp , 0, str_length[B_TIMESTAMP]);
-    BIND_STRING( bbind, B_LABEL , log_entry->log_msg->label , 0, str_length[B_LABEL]);
-    BIND_INT( bbind, B_RULE_ID, &rule_id, 0);
-    BIND_STRING( bbind, B_OBSERVED , log_entry->log_msg->observed , 0, str_length[B_OBSERVED]);
-    BIND_STRING( bbind, B_LIMIT , log_entry->log_msg->limit , 0, str_length[B_LIMIT]);
-    BIND_STRING( bbind, B_PID, log_entry->log_msg->pid, str_length[B_PID]);
-    BIND_STRING( bbind, B_COMMAND , log_entry->log_msg->command , 0, str_length[B_COMMAND]);
-    BIND_STRING( bbind, B_FILENAME , log_entry->log_msg->file_name , 0, str_length[B_FILENAME]);
-    BIND_STRING( bbind, B_GID , log_entry->log_msg->gid , 0, str_length[B_GID]);
-    BIND_STRING( bbind, B_JID , log_entry->log_msg->jid , 0, str_length[B_JID]);
-    BIND_STRING( bbind, B_EMPTY , empty_field, 0, str_length[B_EMPTY]);
+    BIND_STRING(input_bind, B_SCOPE , log_entry->scope , 0, str_length[B_SCOPE]);
+    BIND_STRING(input_bind, B_TYPE , log_entry->type , 0, str_length[B_TYPE]);
+    BIND_STRING(input_bind, B_TIMESTAMP , log_entry->log_msg->timestamp , 0, str_length[B_TIMESTAMP]);
+    BIND_STRING(input_bind, B_LABEL , log_entry->log_msg->label , 0, str_length[B_LABEL]);
+    BIND_INT(input_bind, B_RULE_ID, &rule_id, 0);
+    BIND_STRING(input_bind, B_OBSERVED , log_entry->log_msg->observed , 0, str_length[B_OBSERVED]);
+    BIND_STRING(input_bind, B_LIMIT , log_entry->log_msg->limit , 0, str_length[B_LIMIT]);
+    BIND_STRING(input_bind, B_PID, log_entry->log_msg->pid, 0, str_length[B_PID]);
+    BIND_STRING(input_bind, B_COMMAND , log_entry->log_msg->command , 0, str_length[B_COMMAND]);
+    BIND_STRING(input_bind, B_FILENAME , log_entry->log_msg->file_name , 0, str_length[B_FILENAME]);
+    BIND_STRING(input_bind, B_GID , log_entry->log_msg->gid , 0, str_length[B_GID]);
+    BIND_STRING(input_bind, B_JID , log_entry->log_msg->jid , 0, str_length[B_JID]);
+    BIND_STRING(input_bind, B_EMPTY , empty_field, 0, str_length[B_EMPTY]);
 
     /* Bind the buffers */
-    if (mysql_stmt_bind_param(insert_log_stmt, bbind)) {
-        fprintf(stderr, "mysql_stmt_bbind_param() failed\n");
+    if (mysql_stmt_bind_param(insert_log_stmt, input_bind)) {
+        fprintf(stderr, "mysql_stmt_bind_param() failed\n");
         fprintf(stderr, "%s\n", mysql_stmt_error(insert_log_stmt));
         goto fail_insert_log_to_db;
     }
@@ -552,6 +552,7 @@ bool connect_to_db(char *default_file_path)
     if (opt_ret) {
         fprintf(stderr, "Couldn't get MYSQL_READ_DEFAULT_FILE option: %s. File path %s %d\n",
                 mysql_error(con),  default_file_path, opt_ret);
+        mysql_close(con);
         return false;
     }
 

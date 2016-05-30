@@ -8,7 +8,7 @@
  *
  * In summary this will :
  *  ~ Create a new database called 'multiple_mistral_log'
- *  ~ Create 32 tables within 'multiple_mistral_logs' called 'log_01 .. log_32'
+ *  ~ Create 32 tables within 'multiple_mistral_log' called 'log_01 .. log_32'
  *  ~ Creates a control table and a rule_parameters table
  *  ~ Create a user called 'mistral' and give it :
  *      SELECT, EXECUTE and INSERT permissions on multiple_mistral_log.*
@@ -18,7 +18,7 @@
 # Create Database
 CREATE DATABASE multiple_mistral_log;
 
-# Create User Mistral And Give it Permissions
+# Create User Mistral And Give it Permissions - Replace % sign to constrain it to an IP range
 GRANT SELECT, EXECUTE, INSERT ON multiple_mistral_log.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
 
 # Create Tables for control_table and rule_parameters
@@ -40,40 +40,40 @@ CREATE TABLE control_table (Table_date DATE NOT NULL,
 -- --------------------------create_log_tables()--------------------------------
 -- Procedure which creates 32 tables starting on 01-01-2016
 delimiter $$
-create procedure create_log_tables()
-    begin
+CREATE PROCEDURE create_log_tables()
+    BEGIN
 
     declare log_max int unsigned default 32;
     declare log_counter int unsigned default 1;
 
-    start transaction;
+    START TRANSACTION;
     while log_counter < (log_max + 1) do
-    IF log_counter < 10 THEN set @enter_name = concat('log_0',log_counter);
-    ELSE set @enter_name = concat('log_',log_counter);
-    END IF;
+        IF log_counter < 10 THEN SET @enter_name = concat('log_0',log_counter);
+        ELSE SET @enter_name = concat('log_',log_counter);
+        END IF;
 
-    SET @dynamic_name = CONCAT('CREATE TABLE ', @enter_name, ' (Scope VARCHAR(6) NOT NULL,
-                     Type VARCHAR(8) NOT NULL,
-                     Time_Stamp VARCHAR(20) NOT NULL,
-                     Label VARCHAR(256) NOT NULL,
-                     Rule_Parameters INT NOT NULL,
-                     Observed VARCHAR(32) NOT NULL,
-                     Threshold VARCHAR(32) NOT NULL,
-                     PID INT,
-                     Command VARCHAR(256),
-                     File_name VARCHAR(256),
-                     Group_ID VARCHAR(256),
-                     ID VARCHAR(256),
-                     Log_ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY)
-                     ENGINE=InnoDB;');
-    PREPARE cl from @dynamic_name;
-    EXECUTE cl;
-    DEALLOCATE PREPARE cl;
+        SET @dynamic_name = CONCAT('CREATE TABLE ', @enter_name, ' (Scope VARCHAR(6) NOT NULL,
+                         Type VARCHAR(8) NOT NULL,
+                         Time_Stamp DATETIME NOT NULL,
+                         Label VARCHAR(256) NOT NULL,
+                         Rule_ID INT NOT NULL,
+                         Observed VARCHAR(32) NOT NULL,
+                         Threshold VARCHAR(32) NOT NULL,
+                         PID INT,
+                         Command VARCHAR(256),
+                         File_name VARCHAR(256),
+                         Group_ID VARCHAR(256),
+                         ID VARCHAR(256),
+                         Log_ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY)
+                         ENGINE=InnoDB;');
+        PREPARE cl FROM @dynamic_name;
+        EXECUTE cl;
+        DEALLOCATE PREPARE cl;
 
-    set log_counter = log_counter + 1;
+        SET log_counter = log_counter + 1;
     END WHILE;
-    commit;
-end $$
+    COMMIT;
+END $$
 
 DELIMITER ;
 -- -----------------------------------------------------------------------------
@@ -83,36 +83,37 @@ call create_log_tables();
 -- --------------------------populate_control_table()---------------------------
 -- Procedure which populates the control_table
 delimiter $$
-create procedure populate_control_table()
+CREATE PROCEDURE populate_control_table()
     begin
 
     declare table_max int unsigned default 32;
     declare counter int unsigned default 1;
-    set @enter_date = '2016-01-01';
+    SET @enter_date = '2016-01-01';
 
-    start transaction;
+    START TRANSACTION;
     while counter < (table_max + 1) do
-    IF counter < 10 THEN set @enter_table_name = concat('log_0',counter);
-    ELSE set @enter_table_name = concat('log_',counter);
+    IF counter < 10 THEN SET @enter_table_name = concat('log_0',counter);
+    ELSE SET @enter_table_name = concat('log_',counter);
     END IF;
-        insert into control_table (Table_date, Table_name) VALUES(STR_TO_DATE(@enter_date, '%Y-%m-%e'), @enter_table_name);
-        set counter = counter + 1;
-        set @enter_date = @enter_date + INTERVAL 1 DAY;
+        INSERT INTO control_table (Table_date, Table_name) VALUES(STR_TO_DATE(@enter_date, '%Y-%m-%e'), @enter_table_name);
+        SET counter = counter + 1;
+        SET  @enter_date = @enter_date + INTERVAL 1 DAY;
     END WHILE;
-    commit;
-end $$
+    COMMIT;
+END $$
 DELIMITER ;
 
 call populate_control_table();
 
 
-drop procedure create_log_tables;
-drop procedure populate_control_table;
+DROP PROCEDURE create_log_tables;
+DROP PROCEDURE populate_control_table;
 
 -- --------------------------------check_exist()--------------------------------
+-- Checks if a table has been set up for today. If not, makes one
 delimiter $$
-create procedure check_exist()
-    begin
+CREATE PROCEDURE check_exist()
+    BEGIN
     -- If date is not in control table, set it to be updated
     IF (SELECT NOT EXISTS(SELECT 1 FROM control_table WHERE Table_date = @to_check)) THEN
     SET @date_to_update = @to_check;
@@ -126,19 +127,18 @@ create procedure check_exist()
     END IF;
 
     COMMIT;
-end $$
+END $$
 DELIMITER ;
 -- -------------------------update_eod_tables()---------------------------------
--- This procedure truncates and then drops the indexes
+-- This procedure drops the indexes
 delimiter $$
-create procedure update_eod_tables()
-    begin
+CREATE PROCEDURE update_eod_tables()
+    BEGIN
     -- Checks that there are 1 indexes
     SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'', @oldest_table_name,'\' AND table_schema = \'multiple_mistral_log\'');
     CALL exec_qry(@index_count);
 
     IF @index_num > 1 THEN
-    SELECT 'Entered if to drop indexes';
         SET @drop = CONCAT('DROP INDEX ScopeIndex ON ', @oldest_table_name, ';');
         CALL exec_qry(@drop);
         SET @drop = CONCAT('DROP INDEX TypeIndex ON ', @oldest_table_name, ';');
@@ -151,22 +151,22 @@ create procedure update_eod_tables()
         CALL exec_qry(@drop);
     END IF;
     COMMIT;
-end $$
+END $$
 DELIMITER ;
 
 
 -- -------------------------update_index()--------------------------------------
 -- This procedure tries to add indexes to all older tables
 delimiter $$
-create procedure update_index()
-    begin
+CREATE PROCEDURE update_index()
+    BEGIN
 
     declare counter int unsigned default 0;
     -- Finds the number of tables older than today
     SELECT COUNT(*) INTO @old_table_num FROM control_table WHERE (table_date < @date_today);
 
     while counter < @old_table_num do
-    SET @counter = counter;
+        SET @counter = counter;
         -- Retrieves the name of the old table corresponding to the counter
         SET @to_run = CONCAT('SET @older_table_name = (SELECT Table_name FROM control_table ORDER BY Table_date LIMIT ', @counter,',1);');
         CALL exec_qry(@to_run);
@@ -191,27 +191,27 @@ create procedure update_index()
         SET counter = counter + 1;
     END WHILE;
     COMMIT;
-end $$
+END $$
 DELIMITER ;
 -- -----------------------------------------------------------------------------
 
 -- ---------------------exec_qry( p_sql VARCHAR(255))---------------------------
 delimiter $$
-create procedure exec_qry( p_sql VARCHAR(255))
-    begin
-    set @equery = p_sql;
-    PREPARE stmt from @equery;
+CREATE PROCEDURE exec_qry( p_sql VARCHAR(255))
+    BEGIN
+    SET @equery = p_sql;
+    PREPARE stmt FROM @equery;
     EXECUTE stmt;
     DEALLOCATE PREPARE stmt;
 END $$
 DELIMITER ;
 
--- -----------------------------end_of_day()----------------------------------
--- Checks that today's date is not older than any in table and runs
+-- -----------------------------end_of_day()------------------------------------
+-- Checks that today's date is not older than any in table and runs update_index
 
 delimiter $$
-create procedure end_of_day()
-begin
+CREATE PROCEDURE end_of_day()
+BEGIN
 
     SET @date_today = CURRENT_DATE();
     SET @date_tomorrow = @date_today + INTERVAL 1 DAY;
