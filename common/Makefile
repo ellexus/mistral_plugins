@@ -1,0 +1,65 @@
+# ------------------------------------------------------------------------------
+# Set up targets and default required PHONY rules
+
+TARGETS = \
+	plugin_control.o
+
+DEPENDENCIES = \
+	plugin_control.c \
+	plugin_control.h \
+	mistral_plugin.h
+
+.PHONY: all
+all: $(TARGETS)
+
+.PHONY: clean
+clean:
+	rm -f *.o
+
+# ------------------------------------------------------------------------------
+# GCC -- just set it to gcc
+
+GCC ?= gcc
+CC = $(GCC)
+
+# ------------------------------------------------------------------------------
+# CFLAGS -- compilation flags on all target platforms.
+
+CFLAGS += \
+	-std=gnu99 \
+	-D_GNU_SOURCE \
+	-Wall \
+	-Wextra \
+	-Werror \
+	-Wcast-align \
+	-Wformat=2 \
+	-Wmissing-noreturn \
+	-Wno-attributes \
+	-Wpointer-arith \
+	-Wredundant-decls \
+	-Wshadow \
+	-Wunreachable-code \
+	-fPIC \
+	-pthread
+
+
+ifneq (,$(DEBUG))
+CFLAGS += -gdwarf-2
+LDFLAGS += -g
+else
+CFLAGS += \
+	-O3 \
+	-fvisibility=hidden
+endif
+
+# ------------------------------------------------------------------------------
+# Set up a default rule that sets up a dependency on both .c and .h files
+
+%.o: %.c %.h
+	$(GCC) $(CFLAGS) -c -o $@ $<
+
+# ------------------------------------------------------------------------------
+# and immediately override it for plugin_control!
+
+plugin_control.o: $(DEPENDENCIES)
+	$(GCC) $(CFLAGS) -c -o $@ $<
