@@ -30,7 +30,7 @@ size_t mistral_call_type_len[MAX_CALL_TYPE] = {
 /* Define the separator as a character that is not valid in a contract label */
 #define PLUGIN_MESSAGE_SEP_C ':'
 #define PLUGIN_MESSAGE_SEP_S ":"
-#define PLUGIN_MESSAGE_END PLUGIN_MESSAGE_SEP_S "\n"
+#define PLUGIN_MESSAGE_END PLUGIN_MESSAGE_SEP_S
 
 /* Set up message type strings */
 #define PLUGIN_MESSAGE(X) \
@@ -51,7 +51,7 @@ enum {
 
 /* Store the lengths of the messages to avoid using strlen */
 size_t mistral_log_msg_len[PLUGIN_MESSAGE_LIMIT] = {
-#define X(P, V) sizeof(V)-1,
+#define X(P, V) sizeof(V) - 1,
     PLUGIN_MESSAGE(X)
 #undef X
 };

@@ -1,15 +1,22 @@
+/*
+ * plugin_control MODULE ALIAS: mistral
+ *
+ * The module alias defined above is slightly odd. The reason this was chosen is because at some
+ * point we intend to release the object file to customers so they can link against it to produce
+ * plug-ins. This alias, combined with our naming convention produces nice function names for the
+ * external interface.
+ */
 #include <assert.h>             /* assert */
 #include <errno.h>              /* errno */
-#include <limits.h>             /* ULLONG_MAX */
+#include <limits.h>             /* SSIZE_MAX */
 #include <stdarg.h>             /* va_start, va_list, va_end */
 #include <stdbool.h>            /* bool */
-#include <stdint.h>             /* uint64_t */
+#include <stdint.h>             /* uint64_t, UINT64_MAX */
 #include <stdio.h>              /* fprintf, asprintf, fdopen, vfprintf */
-#include <stdlib.h>
+#include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
-#include <sys/syscall.h>
 #include <time.h>               /* strptime */
-#include <unistd.h>
+#include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO */
 
 #include "plugin_control.h"
 
@@ -44,30 +51,30 @@ uint64_t mistral_max_size = SSIZE_MAX;
  */
 void init_mistral_call_type_names(void)
 {
-    char buffer[0
+    char tmp[0
 #define X(name, str) + sizeof(str) + 1
-        CALL_TYPES(X)
+             CALL_TYPES(X)
 #undef X
-    ];
+        ];
 
     for (size_t i = 0; i < mistral_call_type_mask[MAX_CALL_TYPE]; i++) {
-        buffer[0] = '\0';
+        tmp[0] = '\0';
         for (size_t j = 0; j < MAX_CALL_TYPE; j++) {
-            if (strlen(buffer) > 0 && (i & mistral_call_type_mask[j]) == mistral_call_type_mask[j]){
-                sprintf(buffer, "%s+%s", buffer, mistral_call_type_name[j]);
-            } else if ((i & mistral_call_type_mask[j]) == mistral_call_type_mask[j]){
-                sprintf(buffer, "%s", mistral_call_type_name[j]);
+            if (strlen(tmp) > 0 && (i & mistral_call_type_mask[j]) == mistral_call_type_mask[j]) {
+                sprintf(tmp, "%s+%s", tmp, mistral_call_type_name[j]);
+            } else if ((i & mistral_call_type_mask[j]) == mistral_call_type_mask[j]) {
+                sprintf(tmp, "%s", mistral_call_type_name[j]);
             }
         }
-        strncpy((char *)mistral_call_type_names[i], buffer, sizeof(mistral_call_type_names[i]));
+        strncpy((char *)mistral_call_type_names[i], tmp, sizeof(mistral_call_type_names[i]));
     }
 }
 
 /*
  * mistral_err
  *
- * Simply print the passed message to the error log.  If this is not stderr and the message is
- * written successfully also output a trailing new line character (ignoring any error in this case)
+ * Simply print the passed message to the error log.  If this is not stderr attempt to append a
+ * newline to the format before printing the message.
  *
  * Parameters:
  *    format - a standard printf style format string
@@ -81,13 +88,23 @@ int mistral_err(const char *format, ...)
     int retval = 0;
     va_list ap;
     va_start(ap, format);
-    retval = vfprintf(mistral_plugin_info.error_log, format, ap);
-    va_end(ap);
-    if (mistral_plugin_info.error_log != stderr && retval >= 0) {
-        fprintf(mistral_plugin_info.error_log, "\n");
+    char *file_fmt = NULL;
+    char *fmt = NULL;
+
+    if (mistral_plugin_info.error_log != stderr) {
+        if (asprintf(&file_fmt, "%s\n", format) < 0) {
+            fmt = (char *)format;
+        } else {
+            fmt = (char *)file_fmt;
+        }
     }
+
+    retval = vfprintf(mistral_plugin_info.error_log, fmt, ap);
+    va_end(ap);
+    free(file_fmt);
     return retval;
 }
+
 /*
  * send_string_to_mistral
  *
@@ -120,7 +137,7 @@ static bool send_string_to_mistral(const char *message)
     while (message_len) {
         do {
             result = select(1 + STDOUT_FILENO, NULL, &write_set, NULL, &timeout);
-        } while (result == -1 && errno == EINTR);  /* retry if interrupted */
+        } while (result == -1 && errno == EINTR);   /* retry if interrupted */
 
         if (result < 0) {
             char buf[256];
@@ -178,13 +195,13 @@ static bool send_message_to_mistral(int message)
 
     switch (message) {
     case PLUGIN_MESSAGE_SHUTDOWN:
-        if (asprintf(&message_string, "%s", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]) < 0) {
+        if (asprintf(&message_string, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]) < 0) {
             mistral_err("Unable to construct shutdown message.");
             goto fail_asprintf;
         }
         break;
     case PLUGIN_MESSAGE_USED_VERSION:
-        if (asprintf(&message_string, "%s%u%s",
+        if (asprintf(&message_string, "%s%u%s\n",
                      mistral_log_message[PLUGIN_MESSAGE_USED_VERSION],
                      ver, PLUGIN_MESSAGE_END) < 0) {
             mistral_err("Unable to construct used version message.");
@@ -192,8 +209,8 @@ static bool send_message_to_mistral(int message)
         }
         break;
     default:
-            mistral_err("Invalid message type.");
-            goto fail_invalid;
+        mistral_err("Invalid message type.");
+        goto fail_invalid;
     }
 
     if (!send_string_to_mistral((const char *)message_string)) {
@@ -286,7 +303,7 @@ static int find_in_array(const char *s, const char *const *array)
  *   true if the string is successfully parsed
  *   false otherwise
  */
-static bool parse_size(const char *s, uint64_t *size, int *unit)
+static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
 {
     char *end = NULL;
     unsigned long long value = strtoull(s, &end, 10);
@@ -299,21 +316,21 @@ static bool parse_size(const char *s, uint64_t *size, int *unit)
         mistral_err("Invalid unit in value: %s", s);
         return false;
     } else {
-        *unit = u;
+        *unit = (enum mistral_unit)u;
     }
 
     *size = (uint64_t)(value * (double)mistral_unit_scale[*unit]);
 
     /* Check if the size calculation above overflowed */
 
-    switch(mistral_unit_type[*unit]) {
-    /* Because of the differing types each block has to be handled separately */
+    switch (mistral_unit_type[*unit]) {
+        /* Because of the differing types each block has to be handled separately */
     case UNIT_CLASS_TIME:
     case UNIT_CLASS_COUNT:
         /* Cast to a double so we shouldn't suffer from buffer overflows in the comparison */
-        if (value * (double)mistral_unit_scale[*unit] > LLONG_MAX) {
+        if (value * (double)mistral_unit_scale[*unit] > UINT64_MAX) {
             /* This should not be possible as Mistral is subject to the same limits */
-            *size = (uint64_t)LLONG_MAX;
+            *size = (uint64_t)UINT64_MAX;
         }
         break;
     case UNIT_CLASS_SIZE:
@@ -350,7 +367,8 @@ static bool parse_size(const char *s, uint64_t *size, int *unit)
  *   true if the string is successfully parsed
  *   false otherwise
  */
-static bool parse_rate(const char *s, uint64_t *size, int *unit, uint64_t *time, int *timeunit)
+static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, uint64_t *time,
+                       enum mistral_unit *timeunit)
 {
     size_t field_count;
 
@@ -361,13 +379,13 @@ static bool parse_rate(const char *s, uint64_t *size, int *unit, uint64_t *time,
     }
 
     if (field_count == 2) {
-        if(!parse_size(rate_split[0], size, unit)) {
+        if (!parse_size(rate_split[0], size, unit)) {
             mistral_err("Unable to parse rate: %s", s);
             goto fail_rate_size;
         }
         /* We don't know the type of unit this will be so we will validate it is consistent later */
 
-        if(!parse_size(rate_split[1], time, timeunit)) {
+        if (!parse_size(rate_split[1], time, timeunit)) {
             mistral_err("Unable to parse rate time period: %s", s);
             goto fail_rate_time;
         }
@@ -416,17 +434,27 @@ static bool parse_log_entry(char *line)
     size_t field_count;
     mistral_log *log_entry = NULL;
 
-    char **comma_splits = str_split(line, ',', &field_count);
-    /* As there might be commas in the command and/or filename we cannot just check the raw count */
-    if (field_count < LOG_FIELDS) {
-        mistral_err("Invalid log message: %s", line);
+    char **comma_split = str_split(line, ',', &field_count);
+    if (!comma_split) {
+        mistral_err("Unable to allocate memory for split log line: %s", line);
         goto fail_split_commas;
     }
 
-    char **hash_splits = str_split(comma_splits[0], '#', &field_count);
+    /* As there might be commas in the command and/or filename we cannot just check the raw count */
+    if (field_count < LOG_FIELDS) {
+        mistral_err("Invalid log message: %s", line);
+        goto fail_split_comma_fields;
+    }
+
+    char **hash_split = str_split(comma_split[0], '#', &field_count);
+    if (!hash_split) {
+        mistral_err("Unable to allocate memory for mistral fields: %s", hash_split);
+        goto fail_split_hashes;
+    }
+
     if (field_count != PLUGIN_MESSAGE_FIELDS) {
         mistral_err("Invalid log message: %s", line);
-        goto fail_split_hashes;
+        goto fail_split_hash_fields;
     }
 
     /* Allocate memory for the log entry */
@@ -437,60 +465,60 @@ static bool parse_log_entry(char *line)
     }
 
     /* Record the contract scope */
-    int scope = find_in_array(hash_splits[0], mistral_scope_name);
+    int scope = find_in_array(hash_split[0], mistral_scope_name);
     if (scope == -1) {
-        mistral_err("Invalid scope in log message: %s", hash_splits[0]);
+        mistral_err("Invalid scope in log message: %s", hash_split[0]);
         goto fail_log_scope;
     } else {
         log_entry->scope = scope;
     }
 
     /* Record the contract type */
-    int contract = find_in_array(hash_splits[1], mistral_contract_name);
+    int contract = find_in_array(hash_split[1], mistral_contract_name);
     if (contract == -1) {
-        mistral_err("Invalid contract type in log message: %s", hash_splits[1]);
+        mistral_err("Invalid contract type in log message: %s", hash_split[1]);
         goto fail_log_contract;
     } else {
         log_entry->contract = contract;
     }
 
     /* Record the log event time */
-    char *p = strptime(hash_splits[2], "%FT%T", &log_entry->time);
+    char *p = strptime(hash_split[2], "%FT%T", &log_entry->time);
 
     if (p == NULL || *p != '\0') {
-        mistral_err("Unable to parse date and time in log message: %s", hash_splits[2]);
+        mistral_err("Unable to parse date and time in log message: %s", hash_split[2]);
         goto fail_log_strptime;
     }
 
     /* Record the log event time as seconds since epoch */
-    log_entry->epoch = mktime(&log_entry->time);
+    log_entry->epoch.tv_sec = mktime(&log_entry->time);
 
-    if (log_entry->epoch < 0) {
+    if (log_entry->epoch.tv_sec < 0) {
         mistral_err("Unable to convert date and time in log message: %s", line);
         goto fail_log_mktime;
     }
 
     /* Record the rule label */
-    if ((log_entry->label = (const char *)strdup(comma_splits[1])) == NULL) {
-        mistral_err("Unable to allocate memory for label: %s", comma_splits[1]);
+    if ((log_entry->label = (const char *)strdup(comma_split[1])) == NULL) {
+        mistral_err("Unable to allocate memory for label: %s", comma_split[1]);
         goto fail_log_label;
     }
 
     /* Record the rule path */
-    if ((log_entry->path = (const char *)strdup(comma_splits[2])) == NULL) {
-        mistral_err("Unable to allocate memory for path: %s", comma_splits[2]);
+    if ((log_entry->path = (const char *)strdup(comma_split[2])) == NULL) {
+        mistral_err("Unable to allocate memory for path: %s", comma_split[2]);
         goto fail_log_label;
     }
 
     /* Record the rule call types */
-    char **call_type_split = str_split(comma_splits[3], '+', &field_count);
+    char **call_type_split = str_split(comma_split[3], '+', &field_count);
     if (!call_type_split) {
-        mistral_err("Unable to allocate memory for call types: %s", comma_splits[3]);
+        mistral_err("Unable to allocate memory for call types: %s", comma_split[3]);
         goto fail_log_call_types_split;
     }
 
     if (!call_type_split[0]) {
-        mistral_err("Unable to find call type: %s", comma_splits[3]);
+        mistral_err("Unable to find call type: %s", comma_split[3]);
         goto fail_log_call_types;
     }
 
@@ -506,9 +534,9 @@ static bool parse_log_entry(char *line)
     }
 
     /* Record the rule size range, default/missing values are 0 for min, SSIZE_MAX for max */
-    char **size_range_split = str_split(comma_splits[4], '-', &field_count);
+    char **size_range_split = str_split(comma_split[4], '-', &field_count);
     if (!size_range_split) {
-        mistral_err("Unable to allocate memory for size range: %s", comma_splits[4]);
+        mistral_err("Unable to allocate memory for size range: %s", comma_split[4]);
         goto fail_log_size_range_split;
     }
 
@@ -522,8 +550,8 @@ static bool parse_log_entry(char *line)
         uint64_t range;
         /* size range contained a '-' so parse each string that is present (blank => min/max) */
         if (strcmp(size_range_split[0], "")) {
-            if(!parse_size(size_range_split[0], &range, (int *)&log_entry->size_min_unit)) {
-                mistral_err("Unable to parse size range minimum: %s", comma_splits[4]);
+            if (!parse_size(size_range_split[0], &range, &log_entry->size_min_unit)) {
+                mistral_err("Unable to parse size range minimum: %s", comma_split[4]);
                 goto fail_log_size_range;
             }
             log_entry->size_min = (ssize_t)range;
@@ -534,8 +562,8 @@ static bool parse_log_entry(char *line)
             }
         }
         if (strcmp(size_range_split[1], "")) {
-            if(!parse_size(size_range_split[1], &range, (int *)&log_entry->size_max_unit)) {
-                mistral_err("Unable to parse size range maximum: %s", comma_splits[4]);
+            if (!parse_size(size_range_split[1], &range, &log_entry->size_max_unit)) {
+                mistral_err("Unable to parse size range maximum: %s", comma_split[4]);
                 goto fail_log_size_range;
             }
             log_entry->size_max = (ssize_t)range;
@@ -545,40 +573,40 @@ static bool parse_log_entry(char *line)
                 goto fail_log_size_range;
             }
         }
-    } else if(strcmp(size_range_split[0], "") || field_count > 1) {
+    } else if (strcmp(size_range_split[0], "") || field_count > 1) {
         /* Size range contained content but had the wrong number of '-' chars */
-        mistral_err("Unable to parse size range: %s", comma_splits[4]);
+        mistral_err("Unable to parse size range: %s", comma_split[4]);
         goto fail_log_size_range;
     }
 
     /* Record the measurement type */
-    int measurement = find_in_array(comma_splits[5], mistral_measurement_name);
+    int measurement = find_in_array(comma_split[5], mistral_measurement_name);
     if (measurement == -1) {
-        mistral_err("Invalid measurement in log message: %s", comma_splits[5]);
+        mistral_err("Invalid measurement in log message: %s", comma_split[5]);
         goto fail_log_measurement;
     } else {
         log_entry->measurement = measurement;
     }
 
     /* Record the allowed rate */
-    if (!parse_rate(comma_splits[7], &log_entry->threshold, (int *)&log_entry->threshold_unit,
-                    (uint64_t *)&log_entry->timeframe, (int *)&log_entry->timeframe_unit)) {
+    if (!parse_rate(comma_split[7], &log_entry->threshold, &log_entry->threshold_unit,
+                    (uint64_t *)&log_entry->timeframe, &log_entry->timeframe_unit)) {
         goto fail_log_allowed;
     }
 
     /* Record the observed rate */
-    if (!parse_rate(comma_splits[6], &log_entry->measured, (int *)&log_entry->measured_unit,
-                    (uint64_t *)&log_entry->measured_time, (int *)&log_entry->measured_time_unit)) {
+    if (!parse_rate(comma_split[6], &log_entry->measured, &log_entry->measured_unit,
+                    (uint64_t *)&log_entry->measured_time, &log_entry->measured_time_unit)) {
         goto fail_log_observed;
     }
 
     /* Record the pid - because pid_t varies from machine to machine use an int64_t to be safe */
     char *end = NULL;
     errno = 0;
-    log_entry->pid = (int64_t)strtoll(comma_splits[8], &end, 10);
+    log_entry->pid = (int64_t)strtoll(comma_split[8], &end, 10);
 
-    if (!end || *end != '\0' || end == comma_splits[8] || errno) {
-        mistral_err("Invalid PID seen: [%s].", comma_splits[8]);
+    if (!end || *end != '\0' || end == comma_split[8] || errno) {
+        mistral_err("Invalid PID seen: [%s].", comma_split[8]);
         goto fail_log_pid;
     }
 
@@ -593,11 +621,11 @@ static bool parse_log_entry(char *line)
     char *command = NULL;
     do {
         if (!command) {
-            command = strdup(comma_splits[field]);
+            command = strdup(comma_split[field]);
         } else {
             char *new_command = NULL;
 
-            if (asprintf(&new_command, "%s,%s", command, comma_splits[field]) > 0) {
+            if (asprintf(&new_command, "%s,%s", command, comma_split[field]) > 0) {
                 free(command);
                 command = new_command;
             } else {
@@ -610,7 +638,7 @@ static bool parse_log_entry(char *line)
             }
         }
         field++;
-    } while (field < LOG_FIELDS - 4 && strlen(command) + strlen(comma_splits[field]) + 2 <= 256);
+    } while (field < LOG_FIELDS - 4 && strlen(command) + strlen(comma_split[field]) + 2 <= 256);
 
     log_entry->command = command;
 
@@ -623,11 +651,11 @@ static bool parse_log_entry(char *line)
     char *filename = NULL;
     do {
         if (!filename) {
-            filename = strdup(comma_splits[field]);
+            filename = strdup(comma_split[field]);
         } else {
             char *new_filename = NULL;
 
-            if (asprintf(&new_filename, "%s,%s", filename, comma_splits[field]) > 0) {
+            if (asprintf(&new_filename, "%s,%s", filename, comma_split[field]) > 0) {
                 free(filename);
                 filename = new_filename;
             } else {
@@ -640,30 +668,30 @@ static bool parse_log_entry(char *line)
             }
         }
         field++;
-    } while (field < LOG_FIELDS - 3 && strlen(filename) + strlen(comma_splits[field]) + 2 <= 256);
+    } while (field < LOG_FIELDS - 3);
 
     log_entry->file = filename;
 
     /* Record the job group id */
-    if ((log_entry->job_group_id = (const char *)strdup(comma_splits[field++])) == NULL) {
-        mistral_err("Unable to allocate memory for job group id: %s", comma_splits[field++]);
+    if ((log_entry->job_group_id = (const char *)strdup(comma_split[field++])) == NULL) {
+        mistral_err("Unable to allocate memory for job group id: %s", comma_split[field++]);
         goto fail_log_group;
     }
 
     /* Record the job id */
-    if ((log_entry->job_id = (const char *)strdup(comma_splits[field++])) == NULL) {
-        mistral_err("Unable to allocate memory for job id: %s", comma_splits[field++]);
+    if ((log_entry->job_id = (const char *)strdup(comma_split[field++])) == NULL) {
+        mistral_err("Unable to allocate memory for job id: %s", comma_split[field++]);
         goto fail_log_job;
     }
 
-    if(mistral_received_log) {
+    if (mistral_received_log) {
         mistral_received_log(log_entry);
     }
 
     free(size_range_split);
     free(call_type_split);
-    free(hash_splits);
-    free(comma_splits);
+    free(hash_split);
+    free(comma_split);
     return true;
 
 fail_log_job:
@@ -693,13 +721,14 @@ fail_log_strptime:
 fail_log_contract:
 fail_log_scope:
 fail_log_alloc:
+fail_split_hash_fields:
+    free(hash_split);
 fail_split_hashes:
-    free(hash_splits);
-
+fail_split_comma_fields:
+    free(comma_split);
 fail_split_commas:
-    free(comma_splits);
 
-    if(mistral_received_bad_log) {
+    if (mistral_received_bad_log) {
         mistral_received_bad_log(line);
     }
 
@@ -729,6 +758,7 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
         free((void *)log_entry);
     }
 }
+
 /*
  * parse_message
  *
@@ -750,10 +780,13 @@ static int parse_message(char *line)
     int message = PLUGIN_MESSAGE_DATA_LINE;
     size_t line_len = strlen(line);
 
-#define X(P, V)                             \
-    if (strncmp(line, V, sizeof(V)-1) == 0) \
-    {                                       \
-        message = PLUGIN_MESSAGE_ ##P;      \
+    if (line_len > 0 && line[line_len - 1] == '\n') {
+        line[line_len - 1] = '\0';
+    }
+#define X(P, V)                               \
+    if (strncmp(line, V, sizeof(V) - 1) == 0) \
+    {                                         \
+        message = PLUGIN_MESSAGE_ ##P;        \
     } else
     PLUGIN_MESSAGE(X)
 #undef X
@@ -763,31 +796,21 @@ static int parse_message(char *line)
 
     /* Do some generic error checking before we handle the message */
     if (!supported_version && message != PLUGIN_MESSAGE_SUP_VERSION &&
-        message != PLUGIN_MESSAGE_SHUTDOWN ) {
-        /* Strip any trailing newline for readability */
-        STRIP_NEWLINE(line, line_len);
-
+        message != PLUGIN_MESSAGE_SHUTDOWN) {
         mistral_err("Message seen before supported versions received [%s].", line);
         return PLUGIN_DATA_ERR;
-    } else if (in_data) { /* We are currently processing a data block */
+    } else if (in_data) {       /* We are currently processing a data block */
         switch (message) {
         case PLUGIN_MESSAGE_INTERVAL:
         case PLUGIN_MESSAGE_SUP_VERSION:
-        case PLUGIN_MESSAGE_DATA_START: {
+        case PLUGIN_MESSAGE_DATA_START:
             /* Invalid messages */
-            /* Strip any trailing newline for readability */
-            STRIP_NEWLINE(line, line_len);
-
             mistral_err("Data block incomplete, log data might be corrupted [%s].", line);
             return PLUGIN_DATA_ERR;
         }
-        }
     } else {
         /* Not in a data block so only control messages are valid */
-        if (message == PLUGIN_MESSAGE_DATA_LINE && *line != '\n') {
-            /* strip any trailing newline for readability */
-            STRIP_NEWLINE(line, line_len);
-
+        if (message == PLUGIN_MESSAGE_DATA_LINE && *line != '\0') {
             mistral_err("Invalid data: [%s]. Expected a control message.", line);
             return PLUGIN_DATA_ERR;
         }
@@ -795,16 +818,10 @@ static int parse_message(char *line)
 
     /* If we have a valid control message it should end with PLUGIN_MESSAGE_END */
     if (message != PLUGIN_MESSAGE_DATA_LINE
-        && strstr(line, PLUGIN_MESSAGE_END) != &line[line_len - sizeof(PLUGIN_MESSAGE_END) + 1]) {
-        /* strip any trailing newline for readability */
-        STRIP_NEWLINE(line, line_len);
-
+        && strcmp(PLUGIN_MESSAGE_END, &line[line_len - sizeof(PLUGIN_MESSAGE_END)])) {
         mistral_err("Invalid data: [%s]. Expected control message.", line);
         return PLUGIN_DATA_ERR;
     }
-
-    /* now we've validated strip trailing new lines */
-    STRIP_NEWLINE(line, line_len);
 
     switch (message) {
 
@@ -824,7 +841,7 @@ static int parse_message(char *line)
         interval = (uint64_t)strtoull(p, &end, 10);
 
         if (interval == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C || errno) {
-            mistral_err("Invalid data block number seen: [%s].", line);
+            mistral_err("Invalid interval seen: [%s].", line);
             return PLUGIN_DATA_ERR;
         }
 
@@ -836,12 +853,12 @@ static int parse_message(char *line)
 
         break;
     }
-    case PLUGIN_MESSAGE_SUP_VERSION: {
+    case PLUGIN_MESSAGE_SUP_VERSION:{
         /* Extract minimum and current version supported */
         unsigned min_ver = 0;
         unsigned cur_ver = 0;
 
-        if (sscanf(line, ":PGNSUPVRSN:%u:%u:\n",&min_ver, &cur_ver) != 2) {
+        if (sscanf(line, ":PGNSUPVRSN:%u:%u:\n", &min_ver, &cur_ver) != 2) {
             mistral_err("Invalid supported versions format received: [%s].", line);
             return PLUGIN_DATA_ERR;
         }
@@ -862,7 +879,7 @@ static int parse_message(char *line)
         }
         break;
     }
-    case PLUGIN_MESSAGE_DATA_START: {
+    case PLUGIN_MESSAGE_DATA_START:{
         /* Check if the data block number is one higher than the last version seen */
         char *p = NULL;
         char *end = NULL;
@@ -892,7 +909,7 @@ static int parse_message(char *line)
         data_count = block_count;
         break;
     }
-    case PLUGIN_MESSAGE_DATA_END: {
+    case PLUGIN_MESSAGE_DATA_END:{
         /* Check if the data block number matches the last value seen */
         uint64_t end_block_count = 0;
         char *p = NULL;
@@ -908,7 +925,7 @@ static int parse_message(char *line)
             return PLUGIN_DATA_ERR;
         }
 
-        if (data_count != end_block_count ) {
+        if (data_count != end_block_count) {
             mistral_err("Unexpected data block number %d seen (expected %d), data may be corrupt.",
                         end_block_count, data_count);
             return PLUGIN_DATA_ERR;
@@ -922,19 +939,18 @@ static int parse_message(char *line)
 
         break;
     }
-    case PLUGIN_MESSAGE_SHUTDOWN: {
+    case PLUGIN_MESSAGE_SHUTDOWN:
         /* Handle a clean shut down */
         shutdown_message = true;
         if (mistral_received_shutdown) {
             mistral_received_shutdown();
         }
         break;
-    }
     default:
         /* Should only get here with a contract line */
         /* This is output plug-in specific */
         if (!parse_log_entry(line)) {
-            mistral_err("Invalid log message received: %s.",line);
+            mistral_err("Invalid log message received: %s.", line);
         }
         break;
 
@@ -977,7 +993,7 @@ static bool read_data_from_mistral(void)
 
     do {
         result = select(1 + STDIN_FILENO, &read_set, NULL, NULL, &timeout);
-    } while (result == -1 && errno == EINTR);  /* retry if interrupted */
+    } while (result == -1 && errno == EINTR);   /* retry if interrupted */
 
     if (result < 0) {
         char buf[256];
@@ -1018,8 +1034,8 @@ read_fail_select:
 /*
  * main
  *
- * Parses options and runs the main processing. We currently only support one option which allows
- * the user to send errors to a file rather than stderr
+ * Call the mistral_startup function to get required initialisation for the plug-in then start the
+ * main read and processing loop.
  *
  * Parameters:
  *   argc - the number of arguments in the argv array
@@ -1054,4 +1070,3 @@ int main(int argc, char **argv)
     }
     return EXIT_SUCCESS;
 }
-

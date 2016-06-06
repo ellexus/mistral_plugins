@@ -151,7 +151,7 @@ typedef struct mistral_log {
     enum mistral_contract contract;
     enum mistral_scope scope;
     struct tm time;
-    time_t epoch;
+    struct timespec epoch;
     const char *label;
     const char *path;
     uint32_t call_type_mask;
