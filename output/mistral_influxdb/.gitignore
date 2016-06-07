@@ -1,4 +1,2 @@
 *.o
-*~
-.*.swp
 mistral_influxdb
