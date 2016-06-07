@@ -2,11 +2,11 @@
 #include <errno.h>              /* errno */
 #include <getopt.h>             /* getopt_long */
 #include <inttypes.h>           /* uint32_t, uint64_t */
+#include <search.h>             /* insque, remque */
 #include <stdbool.h>            /* bool */
 #include <stdio.h>              /* asprintf */
 #include <stdlib.h>             /* calloc, realloc, free */
 #include <string.h>             /* strerror_r */
-#include <search.h>             /* insque, remque */
 
 #include "mistral_plugin.h"
 
@@ -17,6 +17,23 @@ char curl_error[CURL_ERROR_SIZE] = "";
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
 
+/*
+ * set_curl_option
+ *
+ * Function used to set options on a CURL * handle and checking for success.
+ * If an error occured log a message and shut down the plug-in.
+ *
+ * The CURL handle is stored in a global variable as it is shared between all
+ * libcurl calls.
+ *
+ * Parameters:
+ *   option    - The curl option to set
+ *   parameter - A pointer to the appropriate value to set
+ *
+ * Returns:
+ *   true on success
+ *   false otherwise
+ */
 static bool set_curl_option(CURLoption option, void *parameter)
 {
 
@@ -28,11 +45,30 @@ static bool set_curl_option(CURLoption option, void *parameter)
     return true;
 }
 
+/*
+ * influxdb_escape
+ *
+ * InfluxDB query strings treat commas and spaces as delimiters, if these
+ * characters occur within the data to be sent they must be escaped with a
+ * single backslash character.
+ *
+ * This function allocates twice as much memory as is required to copy the
+ * passed string and then copies the string character by character escaping
+ * sapces and commas as they are encountered. Once the copy is complete the
+ * memory is reallocated to reduce wasteage.
+ *
+ * Parameters:
+ *   string - The string whose content needs to be escaped
+ *
+ * Returns:
+ *   A pointer to newly allocated memory containing the escaped string or
+ *   NULL on error
+ */
 static char *influxdb_escape(const char *string)
 {
     size_t len = strlen(string);
 
-    char *escaped = calloc(1, (len + 1) * sizeof(char));
+    char *escaped = calloc(1, (len + 1) * 2 * sizeof(char));
     if (escaped) {
         for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
             if (*p == ' ' || *p == ',') {
@@ -51,6 +87,26 @@ static char *influxdb_escape(const char *string)
     }
 }
 
+/*
+ * mistral_startup
+ *
+ * Required function that initialises the type of plug-in we are running. This
+ * function is called immediately on plug-in start-up.
+ *
+ * In addition this plug-in needs to initialise the InfluxDB connection
+ * parameters. The stream used for error messages defaults to stderr but can
+ * be overridden here by setting plugin->error_log.
+ *
+ * Parameters:
+ *   plugin - A pointer to the plug-in information structure. This function
+ *            must set plugin->type before returning, if it doesn't the plug-in
+ *            will immediately shut down.
+ *   argc   - The number of entries in the argv array
+ *   argv   - A pointer to the argument array passed to main.
+ *
+ * Returns:
+ *   void - but see note about setting plugin-type above.
+ */
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 {
     /* Returning without setting plug-in type will cause a clean exit */
@@ -173,6 +229,18 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
 }
 
+/*
+ * mistral_exit
+ *
+ * Function called immediately before the plug-in exits. Clean up any open
+ * error log and the libcurl connection.
+ *
+ * Parameters:
+ *   None
+ *
+ * Returns:
+ *   void
+ */
 void mistral_exit()
 {
     if (log_file) {
@@ -185,11 +253,23 @@ void mistral_exit()
     curl_global_cleanup();
 }
 
+/*
+ * mistral_received_log
+ *
+ * Function called whenever a log message is received. Simply store the log
+ * entry received in a linked list until we reach the end of this data block
+ * as it is more efficient to send all the entries to InfluxDB in a single
+ * request.
+ *
+ * Parameters:
+ *   log_entry - A Mistral log record data structure containing the received
+ *               log information.
+ *
+ * Returns:
+ *   void
+ */
 void mistral_received_log(mistral_log *log_entry)
 {
-    /* Store log entries in a linked list until we see the end of the data
-     * block so we can send all the logs in one request for better performance.
-     */
     if (!log_list_head) {
         /* Initialise linked list */
         log_list_head = log_entry;
@@ -198,9 +278,25 @@ void mistral_received_log(mistral_log *log_entry)
     } else {
         insque(log_entry, log_list_tail);
     }
-
 }
 
+/*
+ * mistral_received_data_end
+ *
+ * Function called whenever an end of data block message is received. At this
+ * point run through the linked list of log entries we have seen and send them
+ * to InfluxDB. Remove each log_entry from the linked list as they are
+ * processed and destroy them.
+ *
+ * On error the mistral_shutdown flag is set to true which will cause the
+ * plug-in to exit cleanly.
+ *
+ * Parameters:
+ *   block_num - the data block number that was sent in the message. Unused.
+ *
+ * Returns:
+ *   void
+ */
 void mistral_received_data_end(uint64_t block_num)
 {
     UNUSED(block_num);
