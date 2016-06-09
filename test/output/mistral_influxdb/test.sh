@@ -54,6 +54,9 @@ curl -s -GET "$influx_protocol://$influx_host:$influx_port/query?pretty=true" \
     $influx_auth --data-urlencode "db=$influx_db" --data-urlencode \
     "q=SELECT * FROM bandwidth" > $results_dir/results.txt
 
+# curl/influxdb do not append a newline to the end of the output, do it manually
+echo >> $results_dir/results.txt
+
 check_results
 
 if [ "$KEEP_TEST_OUTPUT" = "" ];then
