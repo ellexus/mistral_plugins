@@ -59,7 +59,7 @@ echo >> $results_dir/results.txt
 
 check_results
 
-if [ "$KEEP_TEST_OUTPUT" = "" ];then
+if [ -z "$KEEP_TEST_OUTPUT" ];then
     # Delete the test database regardless of test status
     curl -s -POST "$influx_protocol://$influx_host:$influx_port/query" \
         $influx_auth --data-urlencode "db=_internal" --data-urlencode \

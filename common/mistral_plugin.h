@@ -1,5 +1,5 @@
-/* The following file lists all the publicly accessable data and interfaces
- * needed when writing a plug-in for Mistral
+/* This file lists all the publicly accessible data and interfaces needed when
+ * writing a plug-in for Mistral
  */
 
 #ifndef MISTRAL_PLUGIN_H
@@ -12,59 +12,51 @@
 
 /* Define the valid plug-in types */
 #define PLUGIN(X)  \
-    X(OUTPUT)      \
-    X(UPDATE)
+    X(0, OUTPUT)   \
+    X(1, UPDATE)   \
+    X(2, MAX)
 
-/* And construct an enum that contains an entry for each plug-in type */
-enum mistral_plugin_type {
-#define X(V) V ## _PLUGIN,
+
+#define X(N, V) extern const uint8_t V ## _PLUGIN;
     PLUGIN(X)
 #undef X
-    MAX_PLUGIN
-};
 
-#define CONTRACTS(X)                              \
-    X(MONITORING, "monitor", "monitortimeframe")  \
-    X(THROTTLING, "throttle","throttletimeframe")
+#define CONTRACT(X)                                  \
+    X(0, MONITORING, "monitor", "monitortimeframe")  \
+    X(1, THROTTLING, "throttle","throttletimeframe") \
+    X(2, MAX,        0x0,       0x0)
 
-enum mistral_contract {
-#define X(name, str, header) CONTRACT_ ## name,
-    CONTRACTS(X)
+#define X(num, name, str, header) extern const uint8_t CONTRACT_ ## name;
+    CONTRACT(X)
 #undef X
-    MAX_CONTRACT
-};
 
 extern const char *const mistral_contract_name[];
 extern const char *const mistral_contract_header[];
 
-#define SCOPE(X)       \
-    X(LOCAL,  "local") \
-    X(GLOBAL, "global")
+#define SCOPE(X)           \
+    X(0, LOCAL,  "local")  \
+    X(1, GLOBAL, "global") \
+    X(2, MAX,    0x0)
 
-enum mistral_scope {
-#define X(name, str) SCOPE_ ## name,
+#define X(num, name, str) extern const uint8_t SCOPE_ ## name;
     SCOPE(X)
 #undef X
-    MAX_SCOPE
-};
 
 extern const char *const mistral_scope_name[];
 
-#define MEASUREMENTS(X)               \
-    X(BANDWIDTH,     "bandwidth")     \
-    X(COUNT,         "count")         \
-    X(SEEK_DISTANCE, "seek-distance") \
-    X(MIN_LATENCY,   "min-latency")   \
-    X(MAX_LATENCY,   "max-latency")   \
-    X(MEAN_LATENCY,  "mean-latency")  \
-    X(TOTAL_LATENCY, "total-latency")
+#define MEASUREMENT(X)                   \
+    X(0, BANDWIDTH,     "bandwidth")     \
+    X(1, COUNT,         "count")         \
+    X(2, SEEK_DISTANCE, "seek-distance") \
+    X(3, MIN_LATENCY,   "min-latency")   \
+    X(4, MAX_LATENCY,   "max-latency")   \
+    X(5, MEAN_LATENCY,  "mean-latency")  \
+    X(6, TOTAL_LATENCY, "total-latency") \
+    X(7, MAX,           0x0)
 
-enum mistral_measurement {
-#define X(name, str) MEASUREMENT_ ## name,
-    MEASUREMENTS(X)
+#define X(num, name, str) extern const uint8_t MEASUREMENT_ ## name;
+    MEASUREMENT(X)
 #undef X
-    MAX_MEASUREMENT
-};
 
 extern const char *const mistral_measurement_name[];
 
@@ -82,93 +74,88 @@ enum mistral_unit_class {
 
 extern const char *const mistral_unit_class_name[];
 
-#define UNITS(X)                              \
-    X(MICROSECS, "us", 1,   UNIT_CLASS_TIME)  \
-    X(MILLISECS, "ms", 1e3, UNIT_CLASS_TIME)  \
-    X(KILOBYTES, "kB", 1e3, UNIT_CLASS_SIZE)  \
-    X(MEGABYTES, "MB", 1e6, UNIT_CLASS_SIZE)  \
-    X(SECONDS,   "s",  1e6, UNIT_CLASS_TIME)  \
-    X(BYTES,     "B",  1,   UNIT_CLASS_SIZE)  \
-    X(THOUSAND,  "k",  1e3, UNIT_CLASS_COUNT) \
-    X(MILLION,   "M",  1e6, UNIT_CLASS_COUNT) \
-    X(COUNT,     "",   1,   UNIT_CLASS_COUNT)
+#define UNIT(X)                                  \
+    X(0, MICROSECS, "us", 1,   UNIT_CLASS_TIME)  \
+    X(1, MILLISECS, "ms", 1e3, UNIT_CLASS_TIME)  \
+    X(2, KILOBYTES, "kB", 1e3, UNIT_CLASS_SIZE)  \
+    X(3, MEGABYTES, "MB", 1e6, UNIT_CLASS_SIZE)  \
+    X(4, SECONDS,   "s",  1e6, UNIT_CLASS_TIME)  \
+    X(5, BYTES,     "B",  1,   UNIT_CLASS_SIZE)  \
+    X(6, THOUSAND,  "k",  1e3, UNIT_CLASS_COUNT) \
+    X(7, MILLION,   "M",  1e6, UNIT_CLASS_COUNT) \
+    X(8, COUNT,     "",   1,   UNIT_CLASS_COUNT) \
+    X(9, MAX,       0x0,  0,   MAX_UNIT_CLASS)
 
-enum mistral_unit {
-#define X(name, suffix, scale, type) UNIT_ ## name,
-    UNITS(X)
+#define X(num, name, suffix, scale, type) extern const uint8_t UNIT_ ## name;
+    UNIT(X)
 #undef X
-    MAX_UNIT
-};
 
 extern const char *const mistral_unit_suffix[];
 extern const uint32_t mistral_unit_scale[];
 extern const uint32_t mistral_unit_type[];
 
-#define CALL_TYPES(X)       \
-    X(ACCEPT,   "accept")   \
-    X(ACCESS,   "access")   \
-    X(CONNECT,  "connect")  \
-    X(CREATE,   "create")   \
-    X(DELETE,   "delete")   \
-    X(FSCHANGE, "fschange") \
-    X(GLOB,     "glob")     \
-    X(OPEN,     "open")     \
-    X(READ,     "read")     \
-    X(SEEK,     "seek")     \
-    X(WRITE,    "write")
+#define CALL_TYPE(X)            \
+    X(0,  1u << 0,  ACCEPT,   "accept")   \
+    X(1,  1u << 1,  ACCESS,   "access")   \
+    X(2,  1u << 2,  CONNECT,  "connect")  \
+    X(3,  1u << 3,  CREATE,   "create")   \
+    X(4,  1u << 4,  DELETE,   "delete")   \
+    X(5,  1u << 5,  FSCHANGE, "fschange") \
+    X(6,  1u << 6,  GLOB,     "glob")     \
+    X(7,  1u << 7,  OPEN,     "open")     \
+    X(8,  1u << 8,  READ,     "read")     \
+    X(9,  1u << 9,  SEEK,     "seek")     \
+    X(10, 1u << 10, WRITE,    "write")    \
+    X(11, 1u << 11, MAX,      0x0)
 
-enum mistral_call_type {
-#define X(name, str) CALL_TYPE_ ## name,
-    CALL_TYPES(X)
-#undef X
-    MAX_CALL_TYPE
-};
+/* The following definition is needed for declarations and should be kept in
+ * sync with the number of entries in the CALL_TYPE() definition above.
+ */
+#define NUM_CALL_TYPES 11
+#define MAX_CALL_TYPE_BITMASK (1u << NUM_CALL_TYPES)
 
-enum mistral_call_type_bitmask {
-    CALL_BITMASK_NONE = 0u,
-#define X(name, str) CALL_BITMASK_ ## name = 1u << (CALL_TYPE_ ## name),
-    CALL_TYPES(X)
+#define X(num, mask, name, str) extern const uint8_t CALL_TYPE_ ## name;
+    CALL_TYPE(X)
 #undef X
-};
 
 extern const char *const mistral_call_type_name[];
 extern const uint32_t mistral_call_type_mask[];
-extern const char mistral_call_type_names[1u << MAX_CALL_TYPE][0
-#define X(name, str) + sizeof(str) + 1
-    CALL_TYPES(X)
+extern const char mistral_call_type_names[MAX_CALL_TYPE_BITMASK][
+#define X(num, mask, name, str) + sizeof(str) + 1
+    CALL_TYPE(X)
 #undef X
 ];
 
 typedef struct mistral_plugin {
     uint64_t interval;
-    enum mistral_plugin_type type;
+    uint8_t type;
     FILE *error_log;
 } mistral_plugin;
 
 typedef struct mistral_log {
     struct mistral_log *forward;
     struct mistral_log *backward;
-    enum mistral_contract contract;
-    enum mistral_scope scope;
+    uint8_t contract_type;
+    uint8_t scope;
     struct tm time;
     struct timespec epoch;
     const char *label;
     const char *path;
     uint32_t call_type_mask;
-    bool call_types[MAX_CALL_TYPE];
+    bool call_types[NUM_CALL_TYPES];
     ssize_t size_min;
-    enum mistral_unit size_min_unit;
+    uint8_t size_min_unit;
     ssize_t size_max;
-    enum mistral_unit size_max_unit;
-    enum mistral_measurement measurement;
+    uint8_t size_max_unit;
+    uint8_t measurement;
     uint64_t threshold;
-    enum mistral_unit threshold_unit;
+    uint8_t threshold_unit;
     uint64_t timeframe;
-    enum mistral_unit timeframe_unit;
+    uint8_t timeframe_unit;
     uint64_t measured;
-    enum mistral_unit measured_unit;
+    uint8_t measured_unit;
     uint64_t measured_time;
-    enum mistral_unit measured_time_unit;
+    uint8_t measured_time_unit;
     int64_t pid;
     const char *command;
     const char *file;
@@ -178,31 +165,34 @@ typedef struct mistral_log {
 
 typedef struct mistral_header {
     uint32_t contract_version;
-    enum mistral_contract contract_type;
+    uint8_t contract_type;
     uint64_t timeframe;
-    enum mistral_unit timeframe_unit;
+    uint8_t timeframe_unit;
 } mistral_header;
 
-#define MISTRAL_HEADER_INITIALIZER {0, MAX_CONTRACT, 0, MAX_UNIT}
+#define MISTRAL_HEADER_INITIALIZER {.contract_type = CONTRACT_MAX, \
+                                    .timeframe_unit = UNIT_MAX}
 
 typedef struct mistral_rule {
     char *label;
     char *path;
     uint32_t call_types;
     ssize_t size_min;
-    enum mistral_unit size_min_unit;
+    uint8_t size_min_unit;
     ssize_t size_max;
-    enum mistral_unit size_max_unit;
-    enum mistral_measurement measurement;
+    uint8_t size_max_unit;
+    uint8_t measurement;
     uint64_t threshold;
-    enum mistral_unit threshold_unit;
+    uint8_t threshold_unit;
 } mistral_rule;
 
-#define MISTRAL_RULE_INITIALIZER {0, 0, 0, 0, MAX_UNIT, 0, MAX_UNIT, \
-                                  MAX_MEASURMENT, 0, MAX_UNIT}
+#define MISTRAL_RULE_INITIALIZER {.size_min_unit = UNIT_MAX, \
+                                  .size_max_unit = UNIT_MAX, \
+                                  .measurement = MEASURMENT_MAX, \
+                                  .threshold_unit = MAX_UNIT}
 
-extern uint64_t mistral_max_size;   /* Holds max value of ssize_t as defined */
-                                    /* in plugin_control.o                   */
+extern const uint64_t mistral_max_size;   /* Holds max value of ssize_t as   */
+                                          /* defined in plugin_control.o     */
 
 extern bool mistral_shutdown;       /* If set to true will cause the plugin  */
                                     /* to exit before reading the next line  */
@@ -215,13 +205,13 @@ extern int mistral_err(const char *format, ...);
 #define UNUSED(param) ((void)(param))
 
 /* Prototypes for stubs that exist within the plug-in framework */
-void mistral_startup(mistral_plugin *plugin, int argc, char *argv[]) __attribute__((weak));
+void mistral_startup(mistral_plugin *plugin, int argc, char *argv[]);
 void mistral_received_interval(mistral_plugin *plugin) __attribute__((weak));
 void mistral_received_data_start(uint64_t block_num) __attribute__((weak));
 void mistral_received_data_end(uint64_t block_num) __attribute__((weak));
 void mistral_received_shutdown(void) __attribute__((weak));
 void mistral_received_log(mistral_log *log_entry) __attribute__((weak));
-void mistral_received_bad_log(char *log_line) __attribute__((weak));
+void mistral_received_bad_log(const char *log_line) __attribute__((weak));
 void mistral_exit(void) __attribute__((weak));
 
 #endif

@@ -1,4 +1,4 @@
-#include <curl/curl.h>
+#include <curl/curl.h>          /* CURL *, CURLoption, etc */
 #include <errno.h>              /* errno */
 #include <getopt.h>             /* getopt_long */
 #include <inttypes.h>           /* uint32_t, uint64_t */
@@ -54,7 +54,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
  *
  * This function allocates twice as much memory as is required to copy the
  * passed string and then copies the string character by character escaping
- * sapces and commas as they are encountered. Once the copy is complete the
+ * spaces and commas as they are encountered. Once the copy is complete the
  * memory is reallocated to reduce wasteage.
  *
  * Parameters:
@@ -68,7 +68,7 @@ static char *influxdb_escape(const char *string)
 {
     size_t len = strlen(string);
 
-    char *escaped = calloc(1, (len + 1) * 2 * sizeof(char));
+    char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
     if (escaped) {
         for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
             if (*p == ' ' || *p == ',') {
@@ -207,18 +207,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
-    char *auth = "";
     /* Set up authentication */
-    if (username && asprintf(&auth, "%s", username) < 0) {
-        mistral_err("Could not allocate memory for username");
+    char *auth;
+    if (asprintf(&auth, "%s:%s", (username)? username : "", (password)? password : "" ) < 0) {
+        mistral_err("Could not allocate memory for authentication");
         return;
     }
-    /* Add the password to the authentication string if one was specified */
-    if (password && asprintf(&auth, "%s:%s", auth, password) < 0) {
-        mistral_err("Could not allocate memory for password");
-        return;
-    }
-    if (strlen(auth)) {
+
+    if (strcmp(auth, ":")) {
         if (curl_easy_setopt(easyhandle, CURLOPT_USERPWD, auth) != CURLE_OK) {
             mistral_err("Could not set up authentication");
             return;
@@ -241,7 +237,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
  * Returns:
  *   void
  */
-void mistral_exit()
+void mistral_exit(void)
 {
     if (log_file) {
         fclose(log_file);
@@ -311,13 +307,13 @@ void mistral_received_data_end(uint64_t block_num)
         char *file = influxdb_escape(log_entry->file);
 
         /* We need to write one record for every call type in the rule */
-        for (size_t i = 0; i < MAX_CALL_TYPE; i++) {
+        for (size_t i = 0; i < NUM_CALL_TYPES; i++) {
             if (log_entry->call_types[i]) {
                 if (asprintf(&data,
                              "%s%s%s,label=%s,calltype=%s,path=%s,threshold=%"
                              PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
                              ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
-                             "job-id=%s,pid=%" PRIu64 ",command=%s value=%"
+                             "job-id=%s,pid=%" PRId64 ",command=%s value=%"
                              PRIu64 " %jd",
                              (data) ? data : "", (data) ? "\n" : "",
                              mistral_measurement_name[log_entry->measurement],

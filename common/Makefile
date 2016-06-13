@@ -26,12 +26,11 @@ CC = $(GCC)
 # CFLAGS -- compilation flags on all target platforms.
 
 CFLAGS += \
-	-std=gnu99 \
 	-D_GNU_SOURCE \
 	-Wall \
-	-Wextra \
-	-Werror \
 	-Wcast-align \
+	-Werror \
+	-Wextra \
 	-Wformat=2 \
 	-Wmissing-noreturn \
 	-Wno-attributes \
@@ -40,7 +39,8 @@ CFLAGS += \
 	-Wshadow \
 	-Wunreachable-code \
 	-fPIC \
-	-pthread
+	-pthread \
+	-std=gnu99
 
 
 ifneq (,$(DEBUG))

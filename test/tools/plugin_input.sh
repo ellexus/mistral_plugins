@@ -27,7 +27,7 @@ fi
 output_dir=$(dirname "$output")
 mkdir -p "$output_dir"
 
-if [ -a "$output" ] && [ ! -w "$output" ]; then
+if [ -e "$output" ] && [ ! -w "$output" ]; then
     >&2 echo "ERROR: unable to write to file '$output'"
     usage
     exit 3
