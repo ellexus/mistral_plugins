@@ -21,10 +21,10 @@
     PLUGIN(X)
 #undef X
 
-#define CONTRACT(X)                                  \
-    X(0, MONITORING, "monitor", "monitortimeframe")  \
-    X(1, THROTTLING, "throttle","throttletimeframe") \
-    X(2, MAX,        0x0,       0x0)
+#define CONTRACT(X)                                   \
+    X(0, MONITORING, "monitor",  "monitortimeframe")  \
+    X(1, THROTTLING, "throttle", "throttletimeframe") \
+    X(2, MAX,        0x0,        0x0)
 
 #define X(num, name, str, header) extern const uint8_t CONTRACT_ ## name;
     CONTRACT(X)
@@ -94,7 +94,7 @@ extern const char *const mistral_unit_suffix[];
 extern const uint32_t mistral_unit_scale[];
 extern const uint32_t mistral_unit_type[];
 
-#define CALL_TYPE(X)            \
+#define CALL_TYPE(X)                      \
     X(0,  1u << 0,  ACCEPT,   "accept")   \
     X(1,  1u << 1,  ACCESS,   "access")   \
     X(2,  1u << 2,  CONNECT,  "connect")  \
@@ -188,7 +188,7 @@ typedef struct mistral_rule {
 
 #define MISTRAL_RULE_INITIALIZER {.size_min_unit = UNIT_MAX, \
                                   .size_max_unit = UNIT_MAX, \
-                                  .measurement = MEASURMENT_MAX, \
+                                  .measurement = MEASUREMENT_MAX, \
                                   .threshold_unit = MAX_UNIT}
 
 extern const uint64_t mistral_max_size;   /* Holds max value of ssize_t as   */

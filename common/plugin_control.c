@@ -87,13 +87,11 @@ int mistral_err(const char *format, ...)
     va_list ap;
     va_start(ap, format);
     char *file_fmt = NULL;
-    char *fmt = NULL;
+    char *fmt = (char *)format;
 
     if (mistral_plugin_info.error_log != stderr) {
-        if (asprintf(&file_fmt, "%s\n", format) < 0) {
-            fmt = (char *)format;
-        } else {
-            fmt = (char *)file_fmt;
+        if (asprintf(&file_fmt, "%s\n", format) >= 0) {
+            fmt = file_fmt;
         }
     }
 

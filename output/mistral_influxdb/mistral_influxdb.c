@@ -10,9 +10,9 @@
 
 #include "mistral_plugin.h"
 
-FILE *log_file = NULL;
-CURL *easyhandle = NULL;
-char curl_error[CURL_ERROR_SIZE] = "";
+static FILE *log_file = NULL;
+static CURL *easyhandle = NULL;
+static char curl_error[CURL_ERROR_SIZE] = "";
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
