@@ -198,7 +198,6 @@ extern bool mistral_shutdown;       /* If set to true will cause the plugin  */
                                     /* to exit before reading the next line  */
                                     /* of input.                             */
 
-extern char *mistral_call_type_str(uint32_t call_types);
 extern void mistral_destroy_log_entry(mistral_log *log_entry);
 extern int mistral_err(const char *format, ...);
 
