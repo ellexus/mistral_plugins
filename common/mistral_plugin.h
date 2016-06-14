@@ -143,9 +143,9 @@ typedef struct mistral_log {
     const char *path;
     uint32_t call_type_mask;
     bool call_types[NUM_CALL_TYPES];
-    ssize_t size_min;
+    int64_t size_min;
     uint8_t size_min_unit;
-    ssize_t size_max;
+    int64_t size_max;
     uint8_t size_max_unit;
     uint8_t measurement;
     uint64_t threshold;
