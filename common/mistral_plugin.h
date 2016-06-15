@@ -177,9 +177,9 @@ typedef struct mistral_rule {
     char *label;
     char *path;
     uint32_t call_types;
-    ssize_t size_min;
+    int64_t size_min;
     uint8_t size_min_unit;
-    ssize_t size_max;
+    int64_t size_max;
     uint8_t size_max_unit;
     uint8_t measurement;
     uint64_t threshold;
@@ -191,7 +191,7 @@ typedef struct mistral_rule {
                                   .measurement = MEASUREMENT_MAX, \
                                   .threshold_unit = MAX_UNIT}
 
-extern const uint64_t mistral_max_size;   /* Holds max value of ssize_t as   */
+extern const int64_t mistral_max_size;    /* Holds max value of ssize_t as   */
                                           /* defined in plugin_control.o     */
 
 extern bool mistral_shutdown;       /* If set to true will cause the plugin  */

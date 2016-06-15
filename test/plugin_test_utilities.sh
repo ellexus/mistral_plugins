@@ -87,7 +87,7 @@ function check_results() {
     if [ $(grep -c ERROR: "$summary_file") -ne 0 ]; then
         echo "FAILURE: see '$summary_file' for details"
     else
-        if [ -z "$KEEP_TEST_OUTPUT" ];then
+        if [ -n "$KEEP_TEST_OUTPUT" ];then
             echo "SUCCESS: See '$summary_file' for details"
         else
             rm -rf "$results_dir"

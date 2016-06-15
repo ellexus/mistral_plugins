@@ -66,7 +66,7 @@ CALL_TYPE(X)
  * different values. This will allow a plug-in author to identify when the upper bound of a size
  * range was seen in a mistral log message.
  */
-const uint64_t mistral_max_size = SSIZE_MAX;
+const int64_t mistral_max_size = SSIZE_MAX;
 
 /*
  * mistral_err
@@ -376,8 +376,9 @@ static bool parse_size(const char *s, uint64_t *size, uint8_t *unit)
     assert(unit);
 
     char *end = NULL;
+    errno = 0;
     unsigned long long value = strtoull(s, &end, 10);
-    if (!end || s == end) {
+    if (errno || !end || s == end) {
         return false;
     }
 
@@ -406,7 +407,7 @@ static bool parse_size(const char *s, uint64_t *size, uint8_t *unit)
     case UNIT_CLASS_SIZE:
         /* Cast to a double so we shouldn't suffer from integer overflows in the comparison */
         if (value * (double)mistral_unit_scale[*unit] > SSIZE_MAX) {
-            /* Set the size to the maximum value allowedfor an ssize_t. This might happen if this
+            /* Set the size to the maximum value allowed for an ssize_t. This might happen if this
              * file is not compiled on the same machine as the version of Mistral in use.
              */
             *size = (uint64_t)SSIZE_MAX;
@@ -751,13 +752,13 @@ static bool parse_log_entry(const char *line)
 
     /* Record the job group id */
     if ((log_entry->job_group_id = (const char *)strdup(comma_split[field++])) == NULL) {
-        mistral_err("Unable to allocate memory for job group id: %s", comma_split[field++]);
+        mistral_err("Unable to allocate memory for job group id: %s", comma_split[field - 1]);
         goto fail_log_group;
     }
 
     /* Record the job id */
     if ((log_entry->job_id = (const char *)strdup(comma_split[field++])) == NULL) {
-        mistral_err("Unable to allocate memory for job id: %s", comma_split[field++]);
+        mistral_err("Unable to allocate memory for job id: %s", comma_split[field - 1]);
         goto fail_log_job;
     }
 
@@ -840,6 +841,8 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
  *
  * Returns:
  *   PLUGIN_DATA_ERR  - If a control message was recognised but contained invalid data
+ *   PLUGIN_FATAL_ERR - If this plug-in does not use a supported API version or was unable to send
+ *                      the API version to use to Mistral
  *   value of message - The PLUGIN_MESSAGE_ enum message type seen
  */
 static enum mistral_message parse_message(char *line)
@@ -965,7 +968,7 @@ static enum mistral_message parse_message(char *line)
         errno = 0;
         block_count = (uint64_t)strtoull(p, &end, 10);
 
-        if (block_count == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C) {
+        if (block_count == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C || errno) {
             mistral_err("Invalid data block number seen: [%s].", line);
             return PLUGIN_DATA_ERR;
         }
@@ -994,7 +997,7 @@ static enum mistral_message parse_message(char *line)
         errno = 0;
         end_block_count = (uint64_t)strtoull(p, &end, 10);
 
-        if (end_block_count == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C) {
+        if (end_block_count == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C || errno) {
             mistral_err("Invalid data block number seen: [%s].", line);
             return PLUGIN_DATA_ERR;
         }
