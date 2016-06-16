@@ -228,8 +228,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 /*
  * mistral_exit
  *
- * Function called immediately before the plug-in exits. Clean up any open
- * error log and the libcurl connection.
+ * Function called immediately before the plug-in exits. Check for any unhandled
+ * log entries and call mistral_received_data_end to process them if any are
+ * found. Clean up any open error log and the libcurl connection.
  *
  * Parameters:
  *   None
@@ -239,6 +240,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
  */
 void mistral_exit(void)
 {
+    if (log_list_head) {
+        mistral_received_data_end(0, false);
+    }
+
     if (log_file) {
         fclose(log_file);
     }
@@ -284,18 +289,25 @@ void mistral_received_log(mistral_log *log_entry)
  * to InfluxDB. Remove each log_entry from the linked list as they are
  * processed and destroy them.
  *
+ * No special handling of data block number errors is done beyond the message
+ * logged by the main plug-in framework. Instead this function will simply
+ * attempt to log any data received as normal.
+ *
  * On error the mistral_shutdown flag is set to true which will cause the
  * plug-in to exit cleanly.
  *
  * Parameters:
- *   block_num - the data block number that was sent in the message. Unused.
+ *   block_num   - The data block number that was sent in the message. Unused.
+ *   block_error - Was an error detected in the block number. May indicate data
+ *                 corruption. Unused.
  *
  * Returns:
  *   void
  */
-void mistral_received_data_end(uint64_t block_num)
+void mistral_received_data_end(uint64_t block_num, bool block_error)
 {
     UNUSED(block_num);
+    UNUSED(block_error);
 
     char *data = NULL;
 
@@ -360,4 +372,27 @@ void mistral_received_data_end(uint64_t block_num)
         }
     }
     free(data);
+}
+
+/*
+ * mistral_received_shutdown
+ *
+ * Function called whenever a shutdown message is received. Under normal
+ * circumstances this message will be sent by Mistral outside of a data block
+ * but in certain failure cases this may not be true.
+ *
+ * On receipt of a shutdown message check to see if there are any log entries
+ * stored and, if so, call mistral_received_data_end to send them to InfluxDB.
+ *
+ * Parameters:
+ *   void
+ *
+ * Returns:
+ *   void
+ */
+void mistral_received_shutdown(void)
+{
+    if (log_list_head) {
+        mistral_received_data_end(0, false);
+    }
 }

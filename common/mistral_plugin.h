@@ -206,8 +206,8 @@ extern int mistral_err(const char *format, ...);
 /* Prototypes for stubs that exist within the plug-in framework */
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[]);
 void mistral_received_interval(mistral_plugin *plugin) __attribute__((weak));
-void mistral_received_data_start(uint64_t block_num) __attribute__((weak));
-void mistral_received_data_end(uint64_t block_num) __attribute__((weak));
+void mistral_received_data_start(uint64_t block_num, bool block_error) __attribute__((weak));
+void mistral_received_data_end(uint64_t block_num, bool block_error) __attribute__((weak));
 void mistral_received_shutdown(void) __attribute__((weak));
 void mistral_received_log(mistral_log *log_entry) __attribute__((weak));
 void mistral_received_bad_log(const char *log_line) __attribute__((weak));

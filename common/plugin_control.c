@@ -962,6 +962,7 @@ static enum mistral_message parse_message(char *line)
         /* Check if the data block number is one higher than the last version seen */
         char *p = NULL;
         char *end = NULL;
+        bool error_seen = false;
 
         p = line + mistral_log_msg_len[PLUGIN_MESSAGE_DATA_START];
 
@@ -970,20 +971,22 @@ static enum mistral_message parse_message(char *line)
 
         if (block_count == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C || errno) {
             mistral_err("Invalid data block number seen: [%s].", line);
-            return PLUGIN_DATA_ERR;
+            error_seen = true;
         }
 
         if (block_count != data_count + 1) {
             mistral_err("Unexpected data block number %d seen (expected %d).", block_count,
                         data_count + 1);
-            return PLUGIN_DATA_ERR;
+            error_seen = true;
         }
 
-        /* Possible enhancement is to pass an error state flag to this function */
-        CALL_IF_DEFINED(mistral_received_data_start, block_count);
+        CALL_IF_DEFINED(mistral_received_data_start, block_count, error_seen);
 
         in_data = true;
         data_count = block_count;
+        if (error_seen) {
+            return PLUGIN_DATA_ERR;
+        }
         break;
     }
     case PLUGIN_MESSAGE_DATA_END:{
@@ -991,6 +994,7 @@ static enum mistral_message parse_message(char *line)
         uint64_t end_block_count = 0;
         char *p = NULL;
         char *end = NULL;
+        bool error_seen = false;
 
         p = line + mistral_log_msg_len[PLUGIN_MESSAGE_DATA_END];
 
@@ -999,19 +1003,21 @@ static enum mistral_message parse_message(char *line)
 
         if (end_block_count == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C || errno) {
             mistral_err("Invalid data block number seen: [%s].", line);
-            return PLUGIN_DATA_ERR;
+            error_seen = true;
         }
 
         if (data_count != end_block_count) {
             mistral_err("Unexpected data block number %d seen (expected %d), data may be corrupt.",
                         end_block_count, data_count);
-            return PLUGIN_DATA_ERR;
+            error_seen = true;
         }
         in_data = false;
 
-        /* Possible enhancement is to pass an error state flag to this function */
-        CALL_IF_DEFINED(mistral_received_data_end, end_block_count);
+        CALL_IF_DEFINED(mistral_received_data_end, end_block_count, error_seen);
 
+        if (error_seen) {
+            return PLUGIN_DATA_ERR;
+        }
         break;
     }
     case PLUGIN_MESSAGE_SHUTDOWN:
