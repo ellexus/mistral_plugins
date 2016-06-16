@@ -1,0 +1,22 @@
+.TH MISTRAL_DESTROY_LOG_ENTRY 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_destroy_log_entry \- Clean up a log_entry structure
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_destroy_log_entry(mistral_log *" log_entry );
+.fi
+.SH DESCRIPTION
+The \fBmistral_destroy_log_entry()\fP function attempts to free all
+memory associated with the log entry structure pointed to by
+\fIlog_entry\fP.
+.LP
+This function is the only safe way to dispose of an unwanted
+\fImistral_log\fP structure.
+.LP
+After calling this function any saved references to elements except the
+\fIforward\fP or \fIbackward\fP pointers will be invalid.
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP
+

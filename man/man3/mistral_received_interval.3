@@ -1,0 +1,44 @@
+.TH MISTRAL_RECEIVED_INTERVAL 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_received_interval \- Function called on receipt of an interval
+message
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_received_interval(mistral_plugin *" plugin ");"
+.fi
+.SH DESCRIPTION
+If this function is defined when linking with \fBplugin_control.o\fP
+it will be called when an interval message is received from Mistral.
+.LP
+This function is only called for update plug-ins and will be received
+before any data blocks are sent.
+.LP
+The \fIplugin\fP structure as defined in \fI"mistral_plugin.h"\fP will
+contain the following members:
+.sp
+.RS
+.nf
+
+\fBuint64_t  \fPinterval;
+\fBuint8_t   \fPtype;
+\fBFILE     *\fPerror_log;
+.fi
+.RE
+.LP
+This \fIinterval\fP value is for information only and will be set to the
+period in seconds Mistral will wait between calls to an update plug-in
+at the time of this function call.
+.LP
+If the period between calls to the plug-in is important to the correct
+functioning of the plug-in the passed pointer \fIplugin\fP or value of
+the structure member \fIinterval\fP should be saved by this function.
+.LP
+If the value of the global variable \fBbool\fP \fImistral_shutdown\fP is
+set to true by this function then \fBplugin_control.o\fP will perform a
+clean plug-in shutdown on its return.
+.LP
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBmistral_startup\fP(3)
+

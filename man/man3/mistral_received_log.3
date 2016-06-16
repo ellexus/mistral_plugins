@@ -1,0 +1,45 @@
+.TH MISTRAL_RECEIVED_LOG 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_received_log, mistral_received_bad \- Functions called on
+receipt of a log data message
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_received_log(mistral_log *" log_entry ");"
+.BI "void mistral_received_bad_log(const char *" log_line ");"
+.fi
+.SH DESCRIPTION
+If either of these functions are defined when linking with
+\fBplugin_control.o\fP the appropriate function will be called when a
+log message is received from Mistral.
+.LP
+The \fBmistral_received_log\fP() function will be called on receipt
+of a valid log message.
+.LP
+The \fBmistral_received_bad_log\fP() function will be called on receipt
+of an invalid message.
+.LP
+The framework defined by \fBplugin_control.o\fP will attempt to parse
+all log messages received and convert them into \fImistral_log\fP
+structures for ease of use.
+On successful parsing of a log message the created \fImistral_log\fP
+structure will be passed to the \fBmistral_received_log\fP() function.
+Details on the structure and content of the \fImistral_log\fP structure
+can be found in the man page for \fImistral_plugin.h\fP.
+.LP
+Once the plug-in has finished processing the \fIlog_entry\fP passed to
+this function it must be destroyed by passing the same pointer as a
+parameter to \fBmistral_destroy_log_entry\fP().
+.LP
+If the framework is unable successfully parse the log an error message
+will be produced and the raw data line will be passed to
+\fBmistral_received_bad_log\fP().
+.LP
+If the value of the global variable \fBbool\fP \fImistral_shutdown\fP is
+set to true by either function then \fBplugin_control.o\fP will perform
+a clean plug-in shutdown on its return.
+.LP
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBmistral_destroy_log_entry\fP(3)
+

@@ -5,7 +5,8 @@ mistral_plugin.h \- Plug-in development framework
 .B #include """mistral_plugin.h"""
 .SH DESCRIPTION
 The \fI"mistral_plugin.h"\fP header shall declare the structure
-\fBmistral_plugin\fP, which shall include at least the following members:
+\fBmistral_plugin\fP, which shall include at least the following
+members:
 .sp
 .RS
 .nf
@@ -462,9 +463,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[]);
 
 void mistral_received_interval(mistral_plugin *plugin) __attribute__((weak));
 
-void mistral_received_data_start(uint64_t block_num) __attribute__((weak));
+void mistral_received_data_start(uint64_t block_num, bool block_error) __attribute__((weak));
 
-void mistral_received_data_end(uint64_t block_num) __attribute__((weak));
+void mistral_received_data_end(uint64_t block_num, bool block_error) __attribute__((weak));
 
 void mistral_received_shutdown(void) __attribute__((weak));
 
@@ -486,11 +487,12 @@ symbols from the \fI<stdbool.h>\fP, \fI<stdint.h>\fP,
 .SH SEE ALSO
 .LP
 \fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<sys/types.h>\fP,
-\fI<time.h>\fP, \fIinsque\fP(), \fIremque\fP(),
-\fImistral_destroy_log_entry\fP(), \fImistral_err\fP(),
-\fImistral_startup\fP(), \fImistral_received_interval\fP(),
-\fImistral_received_data_start\fP(), \fImistral_received_data_end\fP(),
-\fImistral_received_shutdown\fP(), \fImistral_received_log\fP(),
-\fImistral_received_bad_log\fP(), \fImistral_exit\fP()
+\fI<time.h>\fP, \fIinsque\fP(3), \fIremque\fP(3),
+\fImistral_destroy_log_entry\fP(3), \fImistral_err\fP(3),
+\fImistral_startup\fP(3), \fImistral_received_interval\fP(3),
+\fImistral_received_data_start\fP(3),
+\fImistral_received_data_end\fP(3), \fImistral_received_shutdown\fP(3),
+\fImistral_received_log\fP(3), \fImistral_received_bad_log\fP(3),
+\fImistral_exit\fP(3)
 
 

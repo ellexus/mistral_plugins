@@ -1,0 +1,27 @@
+.TH MISTRAL_RECEIVED_SHUTDOWN 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_received_shutdown \- Function called on receipt of a shutdown
+message
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_received_shutdown(void);"
+.fi
+.SH DESCRIPTION
+If this function is defined when linking with \fBplugin_control.o\fP
+it will be called whenever a shutdown message is received from Mistral.
+.LP
+This function is only called when Mistral informs the plug-in that it is
+shutting down.
+These messages may be received at any time and this function should be
+used to tidy up any transactions in progress.
+.LP
+Any actions required to tidy up resources used by the plug-in should not
+be done here but instead should be handled within the
+\fBmistral_exit\fP() function.
+.LP
+.sp
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBmistral_exit\fP(3)
+
