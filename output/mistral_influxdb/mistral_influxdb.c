@@ -105,7 +105,7 @@ static char *influxdb_escape(const char *string)
  *   argv   - A pointer to the argument array passed to main.
  *
  * Returns:
- *   void - but see note about setting plugin-type above.
+ *   void - but see note about setting plugin->type above.
  */
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 {
@@ -175,6 +175,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
+    /* If we've opened an error log file use it in preference to stderr */
     if (log_file) {
         plugin->error_log = log_file;
     }
@@ -184,6 +185,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
+    /* Initialise curl */
     easyhandle = curl_easy_init();
 
     if (!easyhandle) {
@@ -196,9 +198,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
+    /* Set InfluxDB connection options and set precision to seconds as this is
+     * what we see in logs
+     */
     char *url = NULL;
-    /* Set InfluxDB connetion options and set precision to seconds as this is what we see in logs */
-    if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=s", protocol, host, port, database) < 0) {
+    if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=s", protocol, host,
+                 port, database) < 0) {
         mistral_err("Could not allocate memory for connection URL");
         return;
     }
@@ -209,7 +214,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Set up authentication */
     char *auth;
-    if (asprintf(&auth, "%s:%s", (username)? username : "", (password)? password : "" ) < 0) {
+    if (asprintf(&auth, "%s:%s", (username)? username : "",
+                                 (password)? password : "" ) < 0) {
         mistral_err("Could not allocate memory for authentication");
         return;
     }
@@ -319,7 +325,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *file = influxdb_escape(log_entry->file);
 
         /* We need to write one record for every call type in the rule */
-        for (size_t i = 0; i < NUM_CALL_TYPES; i++) {
+        for (size_t i = 0; i < CALL_TYPE_MAX; i++) {
             if (log_entry->call_types[i]) {
                 if (asprintf(&data,
                              "%s%s%s,label=%s,calltype=%s,path=%s,threshold=%"

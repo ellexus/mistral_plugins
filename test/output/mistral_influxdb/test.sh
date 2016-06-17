@@ -2,6 +2,14 @@
 
 . ../../plugin_test_utilities.sh
 
+function check_db() {
+    local db_name=$1
+    db_test=$(curl -s -GET "$influx_protocol://$influx_host:$influx_port/query" \
+              -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
+              "q=SHOW DATABASES")
+
+    return $(echo "$db_test" | grep -c "$db_name")
+}
 # Set up influxdb defaults but allow them to be overridden
 
 influx_protocol=${influx_protocol:-http}
@@ -18,12 +26,10 @@ if [ -z "$curl_cmd" ]; then
 fi
 
 # Check the database does not already exist
-db_test=$(curl -s -GET "$influx_protocol://$influx_host:$influx_port/query" \
-          -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
-          "q=SHOW DATABASES")
+check_db "$influx_db"
 
-if [ $(echo "$db_test" | grep -c "$influx_db") -ge 1 ]; then
-    echo "Specified database already exists - '$influx_db'"
+if [ $? -ge 1 ]; then
+    logerr "Specified database already exists - '$influx_db'"
     exit 2
 fi
 
@@ -32,12 +38,10 @@ curl -s -POST "$influx_protocol://$influx_host:$influx_port/query" \
     $influx_auth --data-urlencode "db=_internal" --data-urlencode \
     "q=CREATE DATABASE $influx_db" >/dev/null 2>&1
 
-db_test=$(curl -s -GET "$influx_protocol://$influx_host:$influx_port/query" \
-          -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
-          "q=SHOW DATABASES")
+check_db "$influx_db"
 
-if [ $(echo "$db_test" | grep -c "$influx_db") -ne 1 ]; then
-    echo "Unable to create test database - '$influx_db'"
+if [ $? -ne 1 ]; then
+    logerr "Unable to create test database - '$influx_db'"
     exit 3
 fi
 
@@ -65,12 +69,10 @@ if [ -z "$KEEP_TEST_OUTPUT" ];then
         $influx_auth --data-urlencode "db=_internal" --data-urlencode \
         "q=DROP DATABASE $influx_db" >/dev/null 2>&1
 
-    db_test=$(curl -s -GET "$influx_protocol://$influx_host:$influx_port/query"\
-              -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
-              "q=SHOW DATABASES")
+    check_db "$influx_db"
 
-    if [ $(echo "$db_test" | grep -c "$influx_db") -ge 1 ]; then
-        echo "Unable to remove test database - '$influx_db'"
+    if [ $? -ge 1 ]; then
+        logerr "Unable to remove test database - '$influx_db'"
         exit 4
     fi
 fi

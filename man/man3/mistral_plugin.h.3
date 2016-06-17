@@ -1,4 +1,4 @@
-.TH """mistral_plugin.h""" 3 2016-06-09 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH """mistral_plugin.h""" 3 2016-06-17 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_plugin.h \- Plug-in development framework
 .SH SYNOPSIS
@@ -11,9 +11,9 @@ members:
 .RS
 .nf
 
-\fBuint64_t  \fPinterval;
-\fBuint8_t   \fPtype;
-\fBFILE     *\fPerror_log;
+\fBuint64_t                   \fPinterval;
+\fBenum mistral_plugin_type   \fPtype;
+\fBFILE                      *\fPerror_log;
 .fi
 .RE
 .LP
@@ -43,41 +43,41 @@ The \fI"mistral_plugin.h"\fP header shall also declare the structure
 .RS
 .nf
 
-\fBstruct mistral_log *\fPforward;
-\fBstruct mistral_log *\fPbackward;
-\fBuint8_t             \fPcontract_type;
-\fBuint8_t             \fPscope;
-\fBstruct tm           \fPtime;
-\fBstruct timespec     \fPepoch;
-\fBconst char         *\fPlabel;
-\fBconst char         *\fPpath;
-\fBuint32_t            \fPcall_type_mask;
-\fBbool                \fPcall_types[];
-\fBssize_t             \fPsize_min;
-\fBuint8_t             \fPsize_min_unit;
-\fBssize_t             \fPsize_max;
-\fBuint8_t             \fPsize_max_unit;
-\fBuint8_t             \fPmeasurement;
-\fBuint64_t            \fPthreshold;
-\fBuint8_t             \fPthreshold_unit;
-\fBuint64_t            \fPtimeframe;
-\fBuint8_t             \fPtimeframe_unit;
-\fBuint64_t            \fPmeasured;
-\fBuint8_t             \fPmeasured_unit;
-\fBuint64_t            \fPmeasured_time;
-\fBuint8_t             \fPmeasured_time_unit;
-\fBint64_t             \fPpid;
-\fBconst char         *\fPcommand;
-\fBconst char         *\fPfile;
-\fBconst char         *\fPjob_group_id;
-\fBconst char         *\fPjob_id;
+\fBstruct mistral_log       *\fPforward;
+\fBstruct mistral_log       *\fPbackward;
+\fBenum mistral_contract     \fPcontract_type;
+\fBenum mistral_scope        \fPscope;
+\fBstruct tm                 \fPtime;
+\fBstruct timespec           \fPepoch;
+\fBconst char               *\fPlabel;
+\fBconst char               *\fPpath;
+\fBuint32_t                  \fPcall_type_mask;
+\fBbool                      \fPcall_types[];
+\fBuint64_t                  \fPsize_min;
+\fBenum mistral_unit         \fPsize_min_unit;
+\fBuint64_t                  \fPsize_max;
+\fBenum mistral_unit         \fPsize_max_unit;
+\fBenum mistral_measurement  \fPmeasurement;
+\fBuint64_t                  \fPthreshold;
+\fBenum mistral_unit         \fPthreshold_unit;
+\fBuint64_t                  \fPtimeframe;
+\fBenum mistral_unit         \fPtimeframe_unit;
+\fBuint64_t                  \fPmeasured;
+\fBenum mistral_unit         \fPmeasured_unit;
+\fBuint64_t                  \fPmeasured_time;
+\fBenum mistral_unit         \fPmeasured_time_unit;
+\fBint64_t                   \fPpid;
+\fBconst char               *\fPcommand;
+\fBconst char               *\fPfile;
+\fBconst char               *\fPjob_group_id;
+\fBconst char               *\fPjob_id;
 .fi
 .RE
 .LP
 The \fBforward\fP and \fBbackward\fP pointers are provided for
 compatiblity with the \fIinsque\fP() and \fIremque\fP() functions or
 other linked list implementations.
-These values will not be set by \fIplugin_control.o\fP.
+These values will be set to \fBNULL\fP by \fIplugin_control.o\fP.
 .LP
 The \fBcontract_type\fP will be set to one of the following positive
 integer constants:
@@ -93,11 +93,9 @@ contract rule.
 .RE
 .sp
 .LP
-The value of \fBcontract_type\fP is guaranteed to be greater than or
-equal to zero and less than \fICONTRACT_MAX\fP.
-.LP
-The following static character arrays containing \fICONTRACT_MAX\fP
-entries relating to the \fBcontract_type\fP will also be defined:
+The following constant character arrays containing \fICONTRACT_MAX\fP
+entries relating to the \fBcontract_type\fP and a trailing \fINULL\fP
+pointer will also be defined:
 .sp
 .RS
 .nf
@@ -116,6 +114,7 @@ format used by a Mistral output plug-in log entry.
 The \fBmistral_contract_header\fP array contains the contract type in
 the format used by a Mistral contract header line.
 .LP
+.LP
 The \fBscope\fP will be set to one of the following positive integer
 constants:
 .RS
@@ -130,11 +129,9 @@ contract rule.
 .RE
 .sp
 .LP
-The value of \fBscope\fP is guaranteed to be greater than or equal to
-zero and less than \fISCOPE_MAX\fP.
-.LP
-The following static character array containing \fISCOPE_MAX\fP entries
-relating to the \fBscope\fP will also be defined:
+The following constant character array containing \fISCOPE_MAX\fP
+entries relating to the \fBscope\fP and a trailing \fINULL\fP pointer
+will also be defined:
 .sp
 .RS
 .nf
@@ -162,7 +159,7 @@ being monitored by the violated rule.
 The \fBcall_type_mask\fP and \fBcall_types\fP array will be set to a
 represent the call types being monitored by the violated rule.
 .LP
-The \fBcall_types\fP array will contain \fINUM_CALL_TYPES\fP entries
+The \fBcall_types\fP array will contain \fICALL_TYPE_MAX\fP entries
 which can be addressed using the following positive integer constants:
 .RS
 .TP 7
@@ -206,8 +203,8 @@ Indicates monitoring of \fIwrite()\fP and other related function calls.
 The value of the associated \fBcall_types\fP array entry will be set to
 \fItrue\fP if the violated rule was concerned with that call type.
 .LP
-In addition the following static arrays containing \fINUM_CALL_TYPES\fP
-entries will also be defined:
+In addition the following constant arrays containing
+\fICALL_TYPE_MAX\fP entries will also be defined:
 .sp
 .RS
 .nf
@@ -221,7 +218,8 @@ Entries in both arrays can be addressed using the same integer call
 type constants defined above.
 .LP
 The \fBmistral_call_type_name\fP array contains the call type in the
-format used by a Mistral output plug-in log entry.
+format used by a Mistral output plug-in log entry. This array also
+contains a trailing \fINULL\fP pointer.
 .LP
 The \fBmistral_call_type_mask\fP array contains an integer bitmask value
 related to the call type.
@@ -229,12 +227,27 @@ The \fBcall_type_mask\fP value is produced as an OR of one or more of
 these bitmask values representing the entire set of call types the
 violated rule was concerned with.
 .LP
-The following static character array containing
-\fIMAX_CALL_TYPE_BITMASK\fP entries will also be defined:
+Corresponding bit mask values for all defined \fBCALL_TYPE_x\fP
+constants are also defined and named \fBCALL_TYPE_MASK_x\fP i.e. the bit
+mask for \fBCALL_TYPE_READ\fP is defined as \fBCALL_TYPE_MASK_READ\fP.
+The macro \fBBITMASK\fP() can be used to generate the appropriate bit
+mask value from an arbitrary call type i.e.
 .sp
 .RS
 .nf
-\fBextern const char \fPmistral_call_type_names[MAX_CALL_TYPE_BITMASK][];
+\fBBITMASK\fP(\fICALL_TYPE_READ\fP) == \fICALL_TYPE_MASK_READ\fP
+.fi
+.RE
+.sp
+.LP
+.LP
+The following constant character array containing
+\fICALL_TYPE_MASK_MAX\fP entries and a trailing \fINULL\fP pointer will
+also be defined:
+.sp
+.RS
+.nf
+\fBextern const char \fPmistral_call_type_names[CALL_TYPE_MASK_MAX][];
 .fi
 .RE
 .sp
@@ -380,6 +393,47 @@ This value is only valid for \fIcount\fP rules.
 .RE
 .sp
 .LP
+In addition the following constant arrays containing \fIUNIT_MAX\fP
+entries will also be defined:
+.sp
+.RS
+.nf
+\fBextern const char *const \fPmistral_unit_suffix[];
+\fBextern const uint32_t    \fPmistral_unit_scale[];
+\fBextern const uint32_t    \fPmistral_unit_type[];
+.fi
+.RE
+.sp
+.LP
+Entries in all three arrays can be addressed using the same integer unit
+type constants defined above.
+.LP
+The \fBmistral_unit_suffix\fP array contains the unit suffix in the
+format used by a Mistral output plug-in log entry. This array also
+contains a trailing \fINULL\fP pointer.
+.LP
+The \fBmistral_unit_scale\fP array contains the scalar value that is
+needed to convert this unit to or from the base unit e.g.
+\fBmistral_unit_scale\fP[\fIUNIT_KILOBYTES\fP] == 1000.
+.LP
+The \fBmistral_unit_type\fP array will be set to one of the following
+positive integer constants:
+.RS
+.TP 7
+\fBUNIT_CLASS_TIME\fP
+Indicates this unit is one of \fIUNIT_SECONDS\fP, \fIUNIT_MILLISECS\fP
+or \fIUNIT_MICROSECS\fP.
+.TP 7
+\fBUNIT_CLASS_SIZE\fP
+Indicates this unit is one of \fIUNIT_BYTES\fP, \fIUNIT_KILOBYTES\fP
+or \fIUNIT_MEGABYTES\fP.
+.TP 7
+\fBUNIT_CLASS_COUNT\fP
+Indicates this unit is one of \fIUNIT_COUNT\fP, \fIUNIT_THOUSAND\fP
+or \fIUNIT_MILLION\fP.
+.RE
+.sp
+.LP
 The \fBtimeframe\fP will be set to the length of time in microseconds
 the Mistral accumulated statistics for the violated rule.
 .LP
@@ -480,14 +534,18 @@ void mistral_exit(void) __attribute__((weak));
 .sp
 .LP
 Inclusion of the \fI"mistral_plugin.h\fP header may make visible all
-symbols from the \fI<stdbool.h>\fP, \fI<stdint.h>\fP,
+symbols from the \fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<stdio.h>\fP,
 \fI<sys/types.h>\fP and \fI<time.h>\fP, headers.
 .LP
 \fIThe following sections are informative.\fP
+.SH NOTES
+Any files that include this header must be compiled with \fBgcc\fP or
+another compiler that is compatible with the
+\fB__attribute__((packed))\fP and \fB__attribute__((weak))\fP notation.
 .SH SEE ALSO
 .LP
-\fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<sys/types.h>\fP,
-\fI<time.h>\fP, \fIinsque\fP(3), \fIremque\fP(3),
+\fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<stdio.h>\fP,
+\fI<sys/types.h>\fP, \fI<time.h>\fP, \fIinsque\fP(3), \fIremque\fP(3),
 \fImistral_destroy_log_entry\fP(3), \fImistral_err\fP(3),
 \fImistral_startup\fP(3), \fImistral_received_interval\fP(3),
 \fImistral_received_data_start\fP(3),

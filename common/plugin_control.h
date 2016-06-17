@@ -7,12 +7,13 @@
 
 #include <stddef.h>             /* size_t */
 #include <stdint.h>             /* uint32_t */
+#include <stdio.h>              /* FILE */
 #include <sys/time.h>           /* struct timeval */
 #include "mistral_plugin.h"     /* Definitions that need to be available to plug-in developers */
 
 /* Store the lengths of the scopes to avoid using strlen */
-size_t mistral_call_type_len[NUM_CALL_TYPES + 1] = {
-#define X(num, mask, name, str) sizeof(str)-1,
+size_t mistral_call_type_len[CALL_TYPE_MAX] = {
+#define X(name, str) sizeof(str)-1,
     CALL_TYPE(X)
 #undef X
 };
@@ -84,69 +85,76 @@ enum mistral_log_fields {
 
 /* Create various string arrays based off of the mistral_plugin.h header */
 const char *const mistral_contract_name[] = {
-#define X(num, name, str, header) str,
+#define X(name, str, header) str,
     CONTRACT(X)
 #undef X
+    NULL
 };
 
 const char *const mistral_contract_header[] = {
-#define X(num, name, str, header) header,
+#define X(name, str, header) header,
     CONTRACT(X)
 #undef X
+    NULL
 };
 
 const char *const mistral_scope_name[] = {
-#define X(num, name, str) str,
+#define X(name, str) str,
     SCOPE(X)
 #undef X
+    NULL
 };
 
 const char *const mistral_measurement_name[] = {
-#define X(num, name, str) str,
+#define X(name, str) str,
     MEASUREMENT(X)
 #undef X
+    NULL
 };
 
 const char *const mistral_unit_class_name[] = {
 #define X(name, str) str,
     UNIT_CLASS(X)
 #undef X
-    0x0
+    NULL
 };
 
 const char *const mistral_unit_suffix[] = {
-#define X(num, name, str, scale, type) str,
+#define X(name, str, scale, type) str,
     UNIT(X)
 #undef X
+    NULL
 };
 
 const char *const mistral_call_type_name[] = {
-#define X(num, mask, name, str) str,
+#define X(name, str) str,
     CALL_TYPE(X)
 #undef X
+    NULL
 };
 
 const uint32_t mistral_call_type_mask[] = {
-#define X(num, mask, name, str) mask,
+#define X(name, str) BITMASK(CALL_TYPE_ ## name),
     CALL_TYPE(X)
 #undef X
+    BITMASK(CALL_TYPE_MAX)
 };
 
-const char mistral_call_type_names[MAX_CALL_TYPE_BITMASK][
-#define X(num, mask, name, str) + sizeof(str) + 1
+const char mistral_call_type_names[CALL_TYPE_MASK_MAX][
+#define X(name, str) + sizeof(str) + 1
     CALL_TYPE(X)
 #undef X
 ];
 
 /* Similarly create some constant integer arrays */
 const uint32_t mistral_unit_scale[] = {
-#define X(num, name, str, scale, type) scale,
+#define X(name, str, scale, type) scale,
     UNIT(X)
 #undef X
 };
 
 const uint32_t mistral_unit_type[] = {
-#define X(num, name, str, scale, type) type,
+#define X(name, str, scale, type) type,
     UNIT(X)
 #undef X
 };

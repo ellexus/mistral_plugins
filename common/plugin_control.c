@@ -31,37 +31,6 @@ static mistral_plugin mistral_plugin_info;  /* Used to store plug-in type and ca
 /* Global variables available to plug-in developers */
 bool mistral_shutdown = false;               /* If set to true plug-in will exit at next line */
 
-/* As enums are not portable use declarations of const uint8_t variables instead */
-/* Plug-in types */
-#define X(num, name) const uint8_t name ## _PLUGIN = num;
-PLUGIN(X)
-#undef X
-
-/* Contract types */
-#define X(num, name, str, header) const uint8_t CONTRACT_ ## name = num;
-CONTRACT(X)
-#undef X
-
-/* Contract scopes */
-#define X(num, name, str) const uint8_t SCOPE_ ## name = num;
-SCOPE(X)
-#undef X
-
-/* Measurement types */
-#define X(num, name, str) const uint8_t MEASUREMENT_ ## name = num;
-MEASUREMENT(X)
-#undef X
-
-/* Measurement units */
-#define X(num, name, suffix, scale, type) const uint8_t UNIT_ ## name = num;
-UNIT(X)
-#undef X
-
-/* Function call types */
-#define X(num, mask, name, str) const uint8_t CALL_TYPE_ ## name = num;
-CALL_TYPE(X)
-#undef X
-
 /* Define this value here in case the machine used to compile the plug-in functionality module uses
  * different values. This will allow a plug-in author to identify when the upper bound of a size
  * range was seen in a mistral log message.
@@ -116,23 +85,23 @@ int mistral_err(const char *format, ...)
 void init_mistral_call_type_names(void)
 {
     size_t max_string = 0;
-#define X(num, mask, name, str) max_string += sizeof(str) + 1;
+#define X(name, str) max_string += sizeof(str) + 1;
     CALL_TYPE(X)
 #undef X
     char tmp1[max_string];
 
     /* Loop through all the possible bitmask combinations */
-    for (size_t i = 0; i < mistral_call_type_mask[NUM_CALL_TYPES]; i++) {
+    for (size_t i = 0; i < CALL_TYPE_MASK_MAX; i++) {
         tmp1[0] = '\0';
         /* For each entry in the list loop through the list of call types */
-        for (size_t j = 0; j < NUM_CALL_TYPES; j++) {
-            if (tmp1[0] == '\0' && (i & mistral_call_type_mask[j]) == mistral_call_type_mask[j]) {
+        for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
+            if (tmp1[0] == '\0' && (i & BITMASK(j)) == BITMASK(j)) {
                 /* This is the first call type we have seen that is represented in this bitmask */
                 if (snprintf(tmp1, max_string, "%s", mistral_call_type_name[j]) < 0) {
                     mistral_err("Could not initialise call type name array");
                     mistral_shutdown = true;
                 }
-            } else if ((i & mistral_call_type_mask[j]) == mistral_call_type_mask[j]) {
+            } else if ((i & BITMASK(j)) == BITMASK(j)) {
                 /* This call type is in the bit mask but we need to append it to the current list */
                 char tmp2[max_string];
                 tmp2[0] = '\0';
@@ -343,9 +312,10 @@ static char **str_split(const char *s, int sep, size_t *field_count)
  *   Index of the matching entry in the array if a match is found
  *   -1 on error
  */
-static int find_in_array(const char *s, const char *const *array)
+static ssize_t find_in_array(const char *s, const char *const *array)
 {
-    for (int i = 0; array[i]; ++i) {
+    assert(array);
+    for (size_t i = 0; array[i]; ++i) {
         if (0 == strcmp(s, array[i])) {
             return i;
         }
@@ -369,7 +339,7 @@ static int find_in_array(const char *s, const char *const *array)
  *   true if the string is successfully parsed
  *   false otherwise
  */
-static bool parse_size(const char *s, uint64_t *size, uint8_t *unit)
+static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
 {
     assert(s);
     assert(size);
@@ -382,12 +352,12 @@ static bool parse_size(const char *s, uint64_t *size, uint8_t *unit)
         return false;
     }
 
-    int u = find_in_array(end, mistral_unit_suffix);
+    ssize_t u = find_in_array(end, mistral_unit_suffix);
     if (u == -1) {
         mistral_err("Invalid unit in value: %s", s);
         return false;
     } else {
-        *unit = (uint8_t)u;
+        *unit = u;
     }
 
     *size = (uint64_t)(value * (double)mistral_unit_scale[*unit]);
@@ -438,8 +408,8 @@ static bool parse_size(const char *s, uint64_t *size, uint8_t *unit)
  *   true if the string is successfully parsed
  *   false otherwise
  */
-static bool parse_rate(const char *s, uint64_t *size, uint8_t *unit, uint64_t *time,
-                       uint8_t *timeunit)
+static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, uint64_t *time,
+                       enum mistral_unit *timeunit)
 {
     assert(s);
     assert(size);
@@ -456,7 +426,7 @@ static bool parse_rate(const char *s, uint64_t *size, uint8_t *unit, uint64_t *t
 
     if (field_count == 2) {
         if (!parse_size(rate_split[0], size, unit)) {
-            mistral_err("Unable to parse rate: %s", s);
+            mistral_err("Unable to parse rate size: %s", s);
             goto fail_rate_size;
         }
         /* We don't know the type of unit this will be so we will validate it is consistent later */
@@ -542,7 +512,7 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Record the contract scope */
-    int scope = find_in_array(hash_split[0], mistral_scope_name);
+    ssize_t scope = find_in_array(hash_split[0], mistral_scope_name);
     if (scope == -1) {
         mistral_err("Invalid scope in log message: %s", hash_split[0]);
         goto fail_log_scope;
@@ -551,7 +521,7 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Record the contract type */
-    int contract = find_in_array(hash_split[1], mistral_contract_name);
+    ssize_t contract = find_in_array(hash_split[1], mistral_contract_name);
     if (contract == -1) {
         mistral_err("Invalid contract type in log message: %s", hash_split[1]);
         goto fail_log_contract;
@@ -600,7 +570,7 @@ static bool parse_log_entry(const char *line)
     }
 
     for (char **call_type = call_type_split; call_type && *call_type; ++call_type) {
-        int type = find_in_array(*call_type, mistral_call_type_name);
+        ssize_t type = find_in_array(*call_type, mistral_call_type_name);
         if (type == -1) {
             mistral_err("Invalid call type: %s", *call_type);
             goto fail_log_call_type;
@@ -657,7 +627,7 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Record the measurement type */
-    int measurement = find_in_array(comma_split[FIELD_MEASUREMENT], mistral_measurement_name);
+    ssize_t measurement = find_in_array(comma_split[FIELD_MEASUREMENT], mistral_measurement_name);
     if (measurement == -1) {
         mistral_err("Invalid measurement in log message: %s", comma_split[FIELD_MEASUREMENT]);
         goto fail_log_measurement;
