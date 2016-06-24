@@ -87,8 +87,9 @@ extern const char *const mistral_unit_class_name[];
     X(MILLISECS, "ms", 1e3, UNIT_CLASS_TIME)  \
     X(KILOBYTES, "kB", 1e3, UNIT_CLASS_SIZE)  \
     X(MEGABYTES, "MB", 1e6, UNIT_CLASS_SIZE)  \
-    X(SECONDS,   "s",  1e6, UNIT_CLASS_TIME)  \
+    X(GIGABYTES, "GB", 1e9, UNIT_CLASS_SIZE)  \
     X(BYTES,     "B",  1,   UNIT_CLASS_SIZE)  \
+    X(SECONDS,   "s",  1e6, UNIT_CLASS_TIME)  \
     X(THOUSAND,  "k",  1e3, UNIT_CLASS_COUNT) \
     X(MILLION,   "M",  1e6, UNIT_CLASS_COUNT) \
     X(COUNT,     "",   1,   UNIT_CLASS_COUNT)

@@ -292,6 +292,10 @@ contract rule in kilobytes.
 \fBUNIT_MEGABYTES\fP
 Indicates this log entry reported the size value for the violated
 contract rule in megabytes.
+.TP 7
+\fBUNIT_GIGABYTES\fP
+Indicates this log entry reported the size value for the violated
+contract rule in gigabytes.
 .RE
 .sp
 .LP
@@ -355,6 +359,12 @@ rules.
 \fBUNIT_MEGABYTES\fP
 Indicates this log entry reported the threshold for the violated
 contract rule in megabytes.
+This value is only valid for \fIbandwidth\fP and \fIseek-distance\fP
+rules.
+.TP 7
+\fBUNIT_GIGABYTES\fP
+Indicates this log entry reported the threshold for the violated
+contract rule in gigabytes.
 This value is only valid for \fIbandwidth\fP and \fIseek-distance\fP
 rules.
 .TP 7
@@ -425,8 +435,8 @@ Indicates this unit is one of \fIUNIT_SECONDS\fP, \fIUNIT_MILLISECS\fP
 or \fIUNIT_MICROSECS\fP.
 .TP 7
 \fBUNIT_CLASS_SIZE\fP
-Indicates this unit is one of \fIUNIT_BYTES\fP, \fIUNIT_KILOBYTES\fP
-or \fIUNIT_MEGABYTES\fP.
+Indicates this unit is one of \fIUNIT_BYTES\fP, \fIUNIT_KILOBYTES\fP,
+\fIUNIT_MEGABYTES\fP or \fIUNIT_GIGABYTES\fP.
 .TP 7
 \fBUNIT_CLASS_COUNT\fP
 Indicates this unit is one of \fIUNIT_COUNT\fP, \fIUNIT_THOUSAND\fP
