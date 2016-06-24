@@ -620,8 +620,8 @@ static bool parse_log_entry(const char *line)
                 goto fail_log_size_range;
             }
         }
-    } else if (strcmp(size_range_split[0], "") || field_count > 1) {
-        /* Size range contained content but had the wrong number of '-' chars */
+    } else if (strcmp(size_range_split[0], "all") || field_count > 1) {
+        /* Size range was not "all" which is the only other valid value */
         mistral_err("Unable to parse size range: %s", comma_split[FIELD_SIZE_RANGE]);
         goto fail_log_size_range;
     }
