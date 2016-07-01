@@ -820,7 +820,7 @@ static enum mistral_message parse_message(char *line)
     assert(line);
 
     /* number of data blocks received */
-    uint64_t block_count = data_count;
+    uint64_t block_count;
     enum mistral_message message = PLUGIN_MESSAGE_DATA_LINE;
     size_t line_len = strlen(line);
 

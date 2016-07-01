@@ -349,7 +349,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                              command,
                              log_entry->measured,
                              log_entry->epoch.tv_sec) < 0) {
+
                     mistral_err("Could not allocate memory for log entry");
+                    free(file);
                     mistral_shutdown = true;
                     return;
                 }
