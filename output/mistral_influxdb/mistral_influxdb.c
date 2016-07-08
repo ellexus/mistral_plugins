@@ -284,6 +284,7 @@ void mistral_received_log(mistral_log *log_entry)
         insque(log_entry, NULL);
     } else {
         insque(log_entry, log_list_tail);
+        log_list_tail = log_entry;
     }
 }
 
@@ -352,6 +353,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
                     mistral_err("Could not allocate memory for log entry");
                     free(file);
+                    free(command);
                     mistral_shutdown = true;
                     return;
                 }
@@ -367,6 +369,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
         log_entry = log_list_head;
     }
+    log_list_tail = NULL;
 
     if (data) {
         if (!set_curl_option(CURLOPT_POSTFIELDS, data)) {
