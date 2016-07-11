@@ -1,0 +1,28 @@
+.TH MISTRAL_ERR 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_err \- Output an error message
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_err(const char *" format ", ...);"
+.fi
+.SH DESCRIPTION
+The \fBmistral_err()\fP function will produce output according to a
+\fIformat\fP as described in the man page for \fBvfprintf\fP(3).
+.LP
+Output will be sent to the file stream specified for the plug-in as
+described in \fBmistral_startup\fP(3).
+If the file stream is not set to \fIstderr\fP the function will attempt
+to append a trailing newline character (\(aq\en\(aq) to the message.
+No error will be reported if appending the newline character fails, the
+message will simply be written to the file stream unchanged.
+.sp
+.SH RETURN VALUE
+Upon successful return, this function returns the number of characters
+printed (excluding the null byte used to end output to strings).
+.LP
+If an output error is encountered, a negative value is returned.
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBvfprintf\fP(3), \fBmistral_startup\fP(3)
+

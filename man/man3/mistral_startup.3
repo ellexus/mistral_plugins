@@ -1,0 +1,71 @@
+.TH MISTRAL_STARTUP 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_startup \- Function called to initialize a plug-in
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_startup(mistral_plugin *" plugin ", int " argc ", char *" argv[] ");"
+.fi
+.SH DESCRIPTION
+This function must be defined when linking with \fBplugin_control.o\fP.
+.LP
+The \fBmistral_startup()\fP function will be called by the \fImain\fP
+routine in \fBplugin_control.o\fP in order to initialize the plug-in.
+Any prerequisites to correct functioning of the plug-in such as library
+initialisation calls should be done within this function.
+.LP
+The \fIargc\fP and \fIargv\fP parameters are the standard command line
+arguments as received by the \fImain\fP routine in
+\fBplugin_control.o\fP.
+.LP
+The \fIplugin\fP structure as defined in \fI"mistral_plugin.h"\fP will
+contain the following members:
+.sp
+.RS
+.nf
+
+\fBuint64_t  \fPinterval;
+\fBuint8_t   \fPtype;
+\fBFILE     *\fPerror_log;
+.fi
+.RE
+.LP
+The passed pointer \fIplugin\fP can be saved and referenced at any time.
+.LP
+The \fIinterval\fP value will contain the period in seconds Mistral will
+wait between calls to an update plug-in.
+This value is for information only and will be set to zero at the time
+of this function call.
+.LP
+The value of \fItype\fP must be updated to one of the following integer
+constants before returning:
+.RS
+.TP 7
+\fBOUTPUT_PLUGIN\fP
+Indicates this plug-in is operating as an output plug-in.
+.TP 7
+\fBUPDATE_PLUGIN\fP
+Indicates this plug-in is operating as an update plug-in.
+.RE
+.sp
+.LP
+If the value of \fItype\fP is not set to one of these values on
+returning from \fBmistral_startup\fP, or the global variable \fBbool\fP
+\fImistral_shutdown\fP is set to true then \fBplugin_control.o\fP will
+perform a clean plug-in shutdown.
+.LP
+After returning from \fBmistral_startup\fP the \fItype\fP is for
+information only and should not be updated.
+.LP
+The value of \fIerror_log\fP defines the file stream to be used for all
+error messages produced via calls to \fBmistral_err\fP(), including
+those made by \fBplugin_control.o\fP.
+This will be initialised to \fIstderr\fP.
+If \fIerror_log\fP is set to \fIstdout\fP this will almost certainly
+disrupt communication with Mistral and prevent correct functioning of
+the plug-in.
+.sp
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBmistral_err\fP(3), \fBmistral_exit\fP(3)
+

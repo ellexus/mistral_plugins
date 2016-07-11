@@ -1,0 +1,46 @@
+.TH MISTRAL_RECEIVED_DATA_START 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_received_data_start, mistral_received_data_end \- Functions
+called on receipt of start and end of data block messages
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_received_data_start(uint64_t " block_num ", bool " block_error ");"
+.BI "void mistral_received_data_end(uint64_t " block_num ", bool " block_error ");"
+.fi
+.SH DESCRIPTION
+If either of these functions are defined when linking with
+\fBplugin_control.o\fP the appropriate function will be called when a
+start or end data block message is received from Mistral.
+.LP
+The \fBmistral_received_data_start\fP() function will be called on receipt
+of a start data block message.
+.LP
+The \fBmistral_received_data_end\fP() function will be called on receipt
+of an end data block message.
+.LP
+The \fIblock_num\fP value will be the data block number as received from
+Mistral.
+The data block number is expected to be a simple incrementing count of
+data blocks sent by Mistral starting at 1.
+.LP
+Each function is expected to be called in turn as valid data blocks are
+sent by Mistral.
+The \fIblock_num\fP value is expected to match between a call to
+\fBmistral_received_data_start\fP() and the subsequent call to
+\fBmistral_received_data_end\fP().
+.LP
+The framework defined by \fBplugin_control.o\fP will record an error
+message if an unexpected data block value is seen and call these
+functions with \fIblock_error\fP set to \fItrue\fP but will attempt to
+continue handling messages.
+This is done as the most likely failure case is dropped messages.
+.LP
+If the value of the global variable \fBbool\fP \fImistral_shutdown\fP is
+set to true by either function then \fBplugin_control.o\fP will perform
+a clean plug-in shutdown on its return.
+.LP
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP
+

@@ -1,0 +1,22 @@
+.TH MISTRAL_EXIT 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_exit \- Function called to cleanly exit a plug-in
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_exit(void);"
+.fi
+.SH DESCRIPTION
+If this function is defined when linking with \fBplugin_control.o\fP
+it will be called immediately before returning from the \fImain\fP
+routine.
+.LP
+This function is always called on a clean shutdown regardless of the
+cause.
+Any actions required to tidy up resources used by the plug-in should be
+done within this function.
+.sp
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBmistral_startup\fP(3)
+
