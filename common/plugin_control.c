@@ -15,7 +15,7 @@
 #include <stdio.h>              /* fprintf, asprintf, fdopen, vfprintf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
-#include <time.h>               /* strptime */
+#include <time.h>               /* strptime, mktime, tzset */
 #include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO */
 
 #include "plugin_control.h"
@@ -537,7 +537,15 @@ static bool parse_log_entry(const char *line)
         goto fail_log_strptime;
     }
 
-    /* Record the log event time as seconds since epoch */
+    /* Record the log event time as seconds since epoch after normalising to UTC.
+     *
+     * As Mistral will be running on the same box we can just check the timezone here but be a bit
+     * more cautious about daylight savings time setting as log messages will arrive delayed by the
+     * update interval so we may have since transitioned between states.
+     */
+    tzset();
+    log_entry->time.tm_sec -= timezone;
+    log_entry->time.tm_isdst = -1;
     log_entry->epoch.tv_sec = mktime(&log_entry->time);
 
     if (log_entry->epoch.tv_sec < 0) {

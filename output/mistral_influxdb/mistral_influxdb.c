@@ -48,14 +48,14 @@ static bool set_curl_option(CURLoption option, void *parameter)
 /*
  * influxdb_escape
  *
- * InfluxDB query strings treat commas and spaces as delimiters, if these
- * characters occur within the data to be sent they must be escaped with a
- * single backslash character.
+ * InfluxDB query strings treat commas, spaces and equals signs as delimiters,
+ * if these characters occur within the data to be sent they must be escaped
+ * with a single backslash character.
  *
  * This function allocates twice as much memory as is required to copy the
  * passed string and then copies the string character by character escaping
- * spaces and commas as they are encountered. Once the copy is complete the
- * memory is reallocated to reduce wasteage.
+ * spaces, commas and equals signs as they are encountered. Once the copy is
+ * complete the memory is reallocated to reduce wasteage.
  *
  * Parameters:
  *   string - The string whose content needs to be escaped
@@ -71,7 +71,7 @@ static char *influxdb_escape(const char *string)
     char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
     if (escaped) {
         for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
-            if (*p == ' ' || *p == ',') {
+            if (*p == ' ' || *p == ',' || *p == '=') {
                 *q++ = '\\';
             }
             *q = *p;
@@ -198,6 +198,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
+    /* Set curl to treat HTTP errors as failures */
+    if (curl_easy_setopt(easyhandle, CURLOPT_FAILONERROR, 1l) != CURLE_OK) {
+        mistral_err("Could not set curl to fail on HTTP error");
+        return;
+    }
+
     /* Set InfluxDB connection options and set precision to seconds as this is
      * what we see in logs
      */
@@ -321,7 +327,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     mistral_log *log_entry = log_list_head;
 
     while (log_entry) {
-        /* spaces and commas in strings must be escaped in the command and filenames */
+        /* spaces, commas and equals signs in strings must be escaped in the
+         * command and filenames
+         */
         char *command = influxdb_escape(log_entry->command);
         char *file = influxdb_escape(log_entry->file);
 
