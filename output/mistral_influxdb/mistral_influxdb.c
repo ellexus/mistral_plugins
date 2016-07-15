@@ -332,6 +332,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          */
         char *command = influxdb_escape(log_entry->command);
         char *file = influxdb_escape(log_entry->file);
+        const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
+        const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
 
         /* We need to write one record for every call type in the rule */
         for (size_t i = 0; i < CALL_TYPE_MAX; i++) {
@@ -352,8 +354,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                              log_entry->size_min,
                              log_entry->size_max,
                              file,
-                             log_entry->job_group_id,
-                             log_entry->job_id,
+                             job_gid,
+                             job_id,
                              log_entry->pid,
                              command,
                              log_entry->measured,
