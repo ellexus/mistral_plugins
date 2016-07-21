@@ -634,6 +634,12 @@ static bool parse_log_entry(const char *line)
         goto fail_log_size_range;
     }
 
+    /* Finally simply store the raw string */
+    if ((log_entry->size_range = strdup(comma_split[FIELD_SIZE_RANGE])) == NULL) {
+        mistral_err("Unable to allocate memory for size range: %s", comma_split[FIELD_SIZE_RANGE]);
+        goto fail_log_size_range;
+    }
+
     /* Record the measurement type */
     ssize_t measurement = find_in_array(comma_split[FIELD_MEASUREMENT], mistral_measurement_name);
     if (measurement == -1) {
@@ -644,12 +650,24 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Record the allowed rate */
+    if ((log_entry->threshold_str = strdup(comma_split[FIELD_ALLOWED])) == NULL) {
+        mistral_err("Unable to allocate memory for allowed: %s", comma_split[FIELD_ALLOWED]);
+        goto fail_log_allowed;
+    }
+
+    /* And also store its constituent parts */
     if (!parse_rate(comma_split[FIELD_ALLOWED], &log_entry->threshold, &log_entry->threshold_unit,
                     (uint64_t *)&log_entry->timeframe, &log_entry->timeframe_unit)) {
         goto fail_log_allowed;
     }
 
     /* Record the observed rate */
+    if ((log_entry->measured_str = strdup(comma_split[FIELD_OBSERVED])) == NULL) {
+        mistral_err("Unable to allocate memory for allowed: %s", comma_split[FIELD_OBSERVED]);
+        goto fail_log_observed;
+    }
+
+    /* And also store its constituent parts */
     if (!parse_rate(comma_split[FIELD_OBSERVED], &log_entry->measured, &log_entry->measured_unit,
                     (uint64_t *)&log_entry->measured_time, &log_entry->measured_time_unit)) {
         goto fail_log_observed;
@@ -799,6 +817,9 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
     if (log_entry) {
         free((void *)log_entry->label);
         free((void *)log_entry->path);
+        free((void *)log_entry->size_range);
+        free((void *)log_entry->threshold_str);
+        free((void *)log_entry->measured_str);
         free((void *)log_entry->command);
         free((void *)log_entry->file);
         free((void *)log_entry->job_group_id);
