@@ -22,8 +22,8 @@ fi
 
 # Set up the SQL command to fetch the results
 sql_cmd="SELECT scope, type, time_stamp, label, violation_path, call_type,"
-sql_cmd="$sql_cmd measurement, observed, threshold, pid, command, file_name,"
-sql_cmd="$sql_cmd group_id,id FROM log_01 a, rule_parameters b  WHERE"
+sql_cmd="$sql_cmd measurement, size_range, threshold, observed, pid, command,"
+sql_cmd="$sql_cmd file_name, group_id,id FROM log_01 a, rule_parameters b WHERE"
 sql_cmd="$sql_cmd b.rule_id = a.rule_parameters ORDER BY log_id ASC" 
 
 

@@ -33,8 +33,10 @@ CREATE TABLE rule_parameters (Rule_ID INT NOT NULL AUTO_INCREMENT,
                               Violation_Path VARCHAR(256) NOT NULL,
                               Call_Type VARCHAR(45) NOT NULL,
                               Measurement VARCHAR(13) NOT NULL,
+                              Size_Range VARCHAR(64) NOT NULL,
+                              Threshold VARCHAR(64) NOT NULL,
                               PRIMARY KEY (Rule_ID),
-                              UNIQUE KEY(Violation_Path,Call_Type,Measurement))
+                              UNIQUE KEY(Violation_Path,Call_Type,Measurement,Size_Range,Threshold))
                               ENGINE=InnoDB;
 
 CREATE TABLE control_table (Table_date DATE NOT NULL,
@@ -63,8 +65,7 @@ create procedure create_log_tables()
                      Time_Stamp DATETIME NOT NULL,
                      Label VARCHAR(256) NOT NULL,
                      Rule_Parameters INT NOT NULL,
-                     Observed VARCHAR(32) NOT NULL,
-                     Threshold VARCHAR(32) NOT NULL,
+                     Observed VARCHAR(64) NOT NULL,
                      PID INT,
                      Command VARCHAR(256),
                      File_name VARCHAR(256),

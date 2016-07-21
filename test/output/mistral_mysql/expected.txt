@@ -1,57 +1,57 @@
-local	throttle	TSDATE7 TSTIME7	label1_1	/tmp/tmp.testpath/1_1	read	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/1_1	/tmp/tmp.testpath/1_1	15432101	15432101
-local	throttle	TSDATE6 TSTIME6	label1_1	/tmp/tmp.testpath/1_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/1_1	/tmp/tmp.testpath/1_1	15432101	15432101
-local	throttle	TSDATE5 TSTIME5	label1_1	/tmp/tmp.testpath/1_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/1_1	/tmp/tmp.testpath/1_1	15432101	15432101
-local	throttle	TSDATE4 TSTIME4	label1_2a	/tmp/tmp.testpath/1_2	write	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/1_2	/tmp/tmp.testpath/1_2	15432102	15432102
-local	throttle	TSDATE3 TSTIME3	label1_2a	/tmp/tmp.testpath/1_2	read	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/1_2	/tmp/tmp.testpath/1_2	15432102	15432102
-local	throttle	TSDATE2 TSTIME2	label1_3a	/tmp/tmp.testpath/1_3	write	bandwidth	2001B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/1_3	/tmp/tmp.testpath/1_3	15432103	15432103
-local	throttle	TSDATE1 TSTIME1	label1_3a	/tmp/tmp.testpath/1_3	read	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/1_3	/tmp/tmp.testpath/1_3	15432103	15432103
-local	throttle	TSDATE7 TSTIME7	label2_1	/tmp/tmp.testpath/2_1	write	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/2_1	/tmp/tmp.testpath/2_1	25432101	25432101
-local	throttle	TSDATE6 TSTIME6	label2_1	/tmp/tmp.testpath/2_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/2_1	/tmp/tmp.testpath/2_1	25432101	25432101
-local	throttle	TSDATE5 TSTIME5	label2_1	/tmp/tmp.testpath/2_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/2_1	/tmp/tmp.testpath/2_1	25432101	25432101
-local	throttle	TSDATE4 TSTIME4	label2_2a	/tmp/tmp.testpath/2_2	read	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/2_2	/tmp/tmp.testpath/2_2	25432102	25432102
-local	throttle	TSDATE3 TSTIME3	label2_2a	/tmp/tmp.testpath/2_2	write	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/2_2	/tmp/tmp.testpath/2_2	25432102	25432102
-local	throttle	TSDATE2 TSTIME2	label2_3a	/tmp/tmp.testpath/2_3	read	bandwidth	2001B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/2_3	/tmp/tmp.testpath/2_3	25432103	25432103
-local	throttle	TSDATE1 TSTIME1	label2_3a	/tmp/tmp.testpath/2_3	write	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/2_3	/tmp/tmp.testpath/2_3	25432103	25432103
-local	throttle	TSDATE7 TSTIME7	label3_1	/tmp/tmp.testpath/3_1	read	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/3_1	/tmp/tmp.testpath/3_1	35432101	35432101
-local	throttle	TSDATE6 TSTIME6	label3_1	/tmp/tmp.testpath/3_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/3_1	/tmp/tmp.testpath/3_1	35432101	35432101
-local	throttle	TSDATE5 TSTIME5	label3_1	/tmp/tmp.testpath/3_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/3_1	/tmp/tmp.testpath/3_1	35432101	35432101
-local	throttle	TSDATE4 TSTIME4	label3_2a	/tmp/tmp.testpath/3_2	write	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/3_2	/tmp/tmp.testpath/3_2	35432102	35432102
-local	throttle	TSDATE3 TSTIME3	label3_2a	/tmp/tmp.testpath/3_2	read	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/3_2	/tmp/tmp.testpath/3_2	35432102	35432102
-local	throttle	TSDATE2 TSTIME2	label3_3a	/tmp/tmp.testpath/3_3	write	bandwidth	2001B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/3_3	/tmp/tmp.testpath/3_3	35432103	35432103
-local	throttle	TSDATE1 TSTIME1	label3_3a	/tmp/tmp.testpath/3_3	read	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/3_3	/tmp/tmp.testpath/3_3	35432103	35432103
-local	throttle	TSDATE7 TSTIME7	label4_1	/tmp/tmp.testpath/4_1	write	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/4_1	/tmp/tmp.testpath/4_1	45432101	45432101
-local	throttle	TSDATE6 TSTIME6	label4_1	/tmp/tmp.testpath/4_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/4_1	/tmp/tmp.testpath/4_1	45432101	45432101
-local	throttle	TSDATE5 TSTIME5	label4_1	/tmp/tmp.testpath/4_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/4_1	/tmp/tmp.testpath/4_1	45432101	45432101
-local	throttle	TSDATE4 TSTIME4	label4_2a	/tmp/tmp.testpath/4_2	read	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/4_2	/tmp/tmp.testpath/4_2	45432102	45432102
-local	throttle	TSDATE3 TSTIME3	label4_2a	/tmp/tmp.testpath/4_2	write	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/4_2	/tmp/tmp.testpath/4_2	45432102	45432102
-local	throttle	TSDATE2 TSTIME2	label4_3a	/tmp/tmp.testpath/4_3	read	bandwidth	2001B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/4_3	/tmp/tmp.testpath/4_3	45432103	45432103
-local	throttle	TSDATE1 TSTIME1	label4_3a	/tmp/tmp.testpath/4_3	write	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/4_3	/tmp/tmp.testpath/4_3	45432103	45432103
-local	throttle	TSDATE8 TSTIME8	label5_1	/tmp/tmp.testpath/5_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
-local	throttle	TSDATE7 TSTIME7	label5_1	/tmp/tmp.testpath/5_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
-local	throttle	TSDATE6 TSTIME6	label5_2a	/tmp/tmp.testpath/5_2	write	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/5_2	/tmp/tmp.testpath/5_2	55432102	55432102
-local	throttle	TSDATE5 TSTIME5	label5_2a	/tmp/tmp.testpath/5_2	read	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/5_2	/tmp/tmp.testpath/5_2	55432102	55432102
-local	throttle	TSDATE4 TSTIME4	label5_3a	/tmp/tmp.testpath/5_3	write	bandwidth	2001B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/5_3	/tmp/tmp.testpath/5_3	55432103	55432103
-local	throttle	TSDATE3 TSTIME3	label5_3a	/tmp/tmp.testpath/5_3	read	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/5_3	/tmp/tmp.testpath/5_3	55432103	55432103
-local	throttle	TSDATE2 TSTIME2	label5_1	/tmp/tmp.testpath/5_1	write	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
-local	throttle	TSDATE1 TSTIME1	label5_1	/tmp/tmp.testpath/5_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
-local	throttle	TSDATE7 TSTIME7	label6_1	/tmp/tmp.testpath/6_1	write	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/6_1	/tmp/tmp.testpath/6_1	65432101	65432101
-local	throttle	TSDATE6 TSTIME6	label6_1	/tmp/tmp.testpath/6_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/6_1	/tmp/tmp.testpath/6_1	65432101	65432101
-local	throttle	TSDATE5 TSTIME5	label6_1	/tmp/tmp.testpath/6_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/6_1	/tmp/tmp.testpath/6_1	65432101	65432101
-local	throttle	TSDATE4 TSTIME4	label6_2a	/tmp/tmp.testpath/6_2	read	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/6_2	/tmp/tmp.testpath/6_2	65432102	65432102
-local	throttle	TSDATE3 TSTIME3	label6_2a	/tmp/tmp.testpath/6_2	write	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/6_2	/tmp/tmp.testpath/6_2	65432102	65432102
-local	throttle	TSDATE2 TSTIME2	label6_3a	/tmp/tmp.testpath/6_3	read	bandwidth	2001B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/6_3	/tmp/tmp.testpath/6_3	65432103	65432103
-local	throttle	TSDATE1 TSTIME1	label6_3a	/tmp/tmp.testpath/6_3	write	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/6_3	/tmp/tmp.testpath/6_3	65432103	65432103
-local	throttle	TSDATE7 TSTIME7	label7_1	/tmp/tmp.testpath/7_1	write	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/7_1	/tmp/tmp.testpath/7_1	75432101	75432101
-local	throttle	TSDATE6 TSTIME6	label7_1	/tmp/tmp.testpath/7_1	read	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/7_1	/tmp/tmp.testpath/7_1	75432101	75432101
-local	throttle	TSDATE5 TSTIME5	label7_1	/tmp/tmp.testpath/7_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/7_1	/tmp/tmp.testpath/7_1	75432101	75432101
-local	throttle	TSDATE4 TSTIME4	label7_2a	/tmp/tmp.testpath/7_2	read	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/7_2	/tmp/tmp.testpath/7_2	75432102	75432102
-local	throttle	TSDATE3 TSTIME3	label7_2a	/tmp/tmp.testpath/7_2	read	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/7_2	/tmp/tmp.testpath/7_2	75432102	75432102
-local	throttle	TSDATE2 TSTIME2	label7_3a	/tmp/tmp.testpath/7_3	write	bandwidth	2001B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/7_3	/tmp/tmp.testpath/7_3	75432103	75432103
-local	throttle	TSDATE1 TSTIME1	label7_3a	/tmp/tmp.testpath/7_3	write	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/7_3	/tmp/tmp.testpath/7_3	75432103	75432103
-local	throttle	TSDATE7 TSTIME7	label8_1	/tmp/tmp.testpath/8_1	write	bandwidth	12B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/8_1	/tmp/tmp.testpath/8_1	85432101	85432101
-local	throttle	TSDATE6 TSTIME6	label8_1	/tmp/tmp.testpath/8_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/8_1	/tmp/tmp.testpath/8_1	85432101	85432101
-local	throttle	TSDATE5 TSTIME5	label8_1	/tmp/tmp.testpath/8_1	write	bandwidth	11B/50ms	10B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/8_1	/tmp/tmp.testpath/8_1	85432101	85432101
-local	throttle	TSDATE4 TSTIME4	label8_2a	/tmp/tmp.testpath/8_2	read	bandwidth	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/8_2	/tmp/tmp.testpath/8_2	85432102	85432102
-local	throttle	TSDATE3 TSTIME3	label8_2a	/tmp/tmp.testpath/8_2	read	bandwidth	201B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/8_2	/tmp/tmp.testpath/8_2	85432102	85432102
-local	throttle	TSDATE2 TSTIME2	label8_3a	/tmp/tmp.testpath/8_3	read	bandwidth	2021B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/8_3	/tmp/tmp.testpath/8_3	85432103	85432103
-local	throttle	TSDATE1 TSTIME1	label8_3a	/tmp/tmp.testpath/8_3	write	bandwidth	2010B/100ms	2000B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/8_3	/tmp/tmp.testpath/8_3	85432103	85432103
+local	throttle	TSDATE7 TSTIME7	label1_1	/tmp/tmp.testpath/1_1	read	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/1_1	/tmp/tmp.testpath/1_1	15432101	15432101
+local	throttle	TSDATE6 TSTIME6	label1_1	/tmp/tmp.testpath/1_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/1_1	/tmp/tmp.testpath/1_1	15432101	15432101
+local	throttle	TSDATE5 TSTIME5	label1_1	/tmp/tmp.testpath/1_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/1_1	/tmp/tmp.testpath/1_1	15432101	15432101
+local	throttle	TSDATE4 TSTIME4	label1_2a	/tmp/tmp.testpath/1_2	write	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/1_2	/tmp/tmp.testpath/1_2	15432102	15432102
+local	throttle	TSDATE3 TSTIME3	label1_2a	/tmp/tmp.testpath/1_2	read	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/1_2	/tmp/tmp.testpath/1_2	15432102	15432102
+local	throttle	TSDATE2 TSTIME2	label1_3a	/tmp/tmp.testpath/1_3	write	bandwidth	all	2000B/100ms	2001B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/1_3	/tmp/tmp.testpath/1_3	15432103	15432103
+local	throttle	TSDATE1 TSTIME1	label1_3a	/tmp/tmp.testpath/1_3	read	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/1_3	/tmp/tmp.testpath/1_3	15432103	15432103
+local	throttle	TSDATE7 TSTIME7	label2_1	/tmp/tmp.testpath/2_1	write	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/2_1	/tmp/tmp.testpath/2_1	25432101	25432101
+local	throttle	TSDATE6 TSTIME6	label2_1	/tmp/tmp.testpath/2_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/2_1	/tmp/tmp.testpath/2_1	25432101	25432101
+local	throttle	TSDATE5 TSTIME5	label2_1	/tmp/tmp.testpath/2_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/2_1	/tmp/tmp.testpath/2_1	25432101	25432101
+local	throttle	TSDATE4 TSTIME4	label2_2a	/tmp/tmp.testpath/2_2	read	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/2_2	/tmp/tmp.testpath/2_2	25432102	25432102
+local	throttle	TSDATE3 TSTIME3	label2_2a	/tmp/tmp.testpath/2_2	write	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/2_2	/tmp/tmp.testpath/2_2	25432102	25432102
+local	throttle	TSDATE2 TSTIME2	label2_3a	/tmp/tmp.testpath/2_3	read	bandwidth	all	2000B/100ms	2001B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/2_3	/tmp/tmp.testpath/2_3	25432103	25432103
+local	throttle	TSDATE1 TSTIME1	label2_3a	/tmp/tmp.testpath/2_3	write	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/2_3	/tmp/tmp.testpath/2_3	25432103	25432103
+local	throttle	TSDATE7 TSTIME7	label3_1	/tmp/tmp.testpath/3_1	read	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/3_1	/tmp/tmp.testpath/3_1	35432101	35432101
+local	throttle	TSDATE6 TSTIME6	label3_1	/tmp/tmp.testpath/3_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/3_1	/tmp/tmp.testpath/3_1	35432101	35432101
+local	throttle	TSDATE5 TSTIME5	label3_1	/tmp/tmp.testpath/3_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/3_1	/tmp/tmp.testpath/3_1	35432101	35432101
+local	throttle	TSDATE4 TSTIME4	label3_2a	/tmp/tmp.testpath/3_2	write	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/3_2	/tmp/tmp.testpath/3_2	35432102	35432102
+local	throttle	TSDATE3 TSTIME3	label3_2a	/tmp/tmp.testpath/3_2	read	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/3_2	/tmp/tmp.testpath/3_2	35432102	35432102
+local	throttle	TSDATE2 TSTIME2	label3_3a	/tmp/tmp.testpath/3_3	write	bandwidth	all	2000B/100ms	2001B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/3_3	/tmp/tmp.testpath/3_3	35432103	35432103
+local	throttle	TSDATE1 TSTIME1	label3_3a	/tmp/tmp.testpath/3_3	read	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/3_3	/tmp/tmp.testpath/3_3	35432103	35432103
+local	throttle	TSDATE7 TSTIME7	label4_1	/tmp/tmp.testpath/4_1	write	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/4_1	/tmp/tmp.testpath/4_1	45432101	45432101
+local	throttle	TSDATE6 TSTIME6	label4_1	/tmp/tmp.testpath/4_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/4_1	/tmp/tmp.testpath/4_1	45432101	45432101
+local	throttle	TSDATE5 TSTIME5	label4_1	/tmp/tmp.testpath/4_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/4_1	/tmp/tmp.testpath/4_1	45432101	45432101
+local	throttle	TSDATE4 TSTIME4	label4_2a	/tmp/tmp.testpath/4_2	read	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/4_2	/tmp/tmp.testpath/4_2	45432102	45432102
+local	throttle	TSDATE3 TSTIME3	label4_2a	/tmp/tmp.testpath/4_2	write	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/4_2	/tmp/tmp.testpath/4_2	45432102	45432102
+local	throttle	TSDATE2 TSTIME2	label4_3a	/tmp/tmp.testpath/4_3	read	bandwidth	all	2000B/100ms	2001B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/4_3	/tmp/tmp.testpath/4_3	45432103	45432103
+local	throttle	TSDATE1 TSTIME1	label4_3a	/tmp/tmp.testpath/4_3	write	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/4_3	/tmp/tmp.testpath/4_3	45432103	45432103
+local	throttle	TSDATE8 TSTIME8	label5_1	/tmp/tmp.testpath/5_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
+local	throttle	TSDATE7 TSTIME7	label5_1	/tmp/tmp.testpath/5_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
+local	throttle	TSDATE6 TSTIME6	label5_2a	/tmp/tmp.testpath/5_2	write	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/5_2	/tmp/tmp.testpath/5_2	55432102	55432102
+local	throttle	TSDATE5 TSTIME5	label5_2a	/tmp/tmp.testpath/5_2	read	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/5_2	/tmp/tmp.testpath/5_2	55432102	55432102
+local	throttle	TSDATE4 TSTIME4	label5_3a	/tmp/tmp.testpath/5_3	write	bandwidth	all	2000B/100ms	2001B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/5_3	/tmp/tmp.testpath/5_3	55432103	55432103
+local	throttle	TSDATE3 TSTIME3	label5_3a	/tmp/tmp.testpath/5_3	read	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/5_3	/tmp/tmp.testpath/5_3	55432103	55432103
+local	throttle	TSDATE2 TSTIME2	label5_1	/tmp/tmp.testpath/5_1	write	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
+local	throttle	TSDATE1 TSTIME1	label5_1	/tmp/tmp.testpath/5_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/5_1	/tmp/tmp.testpath/5_1	55432101	55432101
+local	throttle	TSDATE7 TSTIME7	label6_1	/tmp/tmp.testpath/6_1	write	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/6_1	/tmp/tmp.testpath/6_1	65432101	65432101
+local	throttle	TSDATE6 TSTIME6	label6_1	/tmp/tmp.testpath/6_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/6_1	/tmp/tmp.testpath/6_1	65432101	65432101
+local	throttle	TSDATE5 TSTIME5	label6_1	/tmp/tmp.testpath/6_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/6_1	/tmp/tmp.testpath/6_1	65432101	65432101
+local	throttle	TSDATE4 TSTIME4	label6_2a	/tmp/tmp.testpath/6_2	read	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/6_2	/tmp/tmp.testpath/6_2	65432102	65432102
+local	throttle	TSDATE3 TSTIME3	label6_2a	/tmp/tmp.testpath/6_2	write	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/6_2	/tmp/tmp.testpath/6_2	65432102	65432102
+local	throttle	TSDATE2 TSTIME2	label6_3a	/tmp/tmp.testpath/6_3	read	bandwidth	all	2000B/100ms	2001B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/6_3	/tmp/tmp.testpath/6_3	65432103	65432103
+local	throttle	TSDATE1 TSTIME1	label6_3a	/tmp/tmp.testpath/6_3	write	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/6_3	/tmp/tmp.testpath/6_3	65432103	65432103
+local	throttle	TSDATE7 TSTIME7	label7_1	/tmp/tmp.testpath/7_1	write	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/7_1	/tmp/tmp.testpath/7_1	75432101	75432101
+local	throttle	TSDATE6 TSTIME6	label7_1	/tmp/tmp.testpath/7_1	read	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/7_1	/tmp/tmp.testpath/7_1	75432101	75432101
+local	throttle	TSDATE5 TSTIME5	label7_1	/tmp/tmp.testpath/7_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/7_1	/tmp/tmp.testpath/7_1	75432101	75432101
+local	throttle	TSDATE4 TSTIME4	label7_2a	/tmp/tmp.testpath/7_2	read	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/7_2	/tmp/tmp.testpath/7_2	75432102	75432102
+local	throttle	TSDATE3 TSTIME3	label7_2a	/tmp/tmp.testpath/7_2	read	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/7_2	/tmp/tmp.testpath/7_2	75432102	75432102
+local	throttle	TSDATE2 TSTIME2	label7_3a	/tmp/tmp.testpath/7_3	write	bandwidth	all	2000B/100ms	2001B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/7_3	/tmp/tmp.testpath/7_3	75432103	75432103
+local	throttle	TSDATE1 TSTIME1	label7_3a	/tmp/tmp.testpath/7_3	write	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/7_3	/tmp/tmp.testpath/7_3	75432103	75432103
+local	throttle	TSDATE7 TSTIME7	label8_1	/tmp/tmp.testpath/8_1	write	bandwidth	all	10B/50ms	12B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/8_1	/tmp/tmp.testpath/8_1	85432101	85432101
+local	throttle	TSDATE6 TSTIME6	label8_1	/tmp/tmp.testpath/8_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/8_1	/tmp/tmp.testpath/8_1	85432101	85432101
+local	throttle	TSDATE5 TSTIME5	label8_1	/tmp/tmp.testpath/8_1	write	bandwidth	all	10B/50ms	11B/50ms	26025	/usr/bin/cat /tmp/tmp.testpath/8_1	/tmp/tmp.testpath/8_1	85432101	85432101
+local	throttle	TSDATE4 TSTIME4	label8_2a	/tmp/tmp.testpath/8_2	read	bandwidth	all	200B/100ms	200B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/8_2	/tmp/tmp.testpath/8_2	85432102	85432102
+local	throttle	TSDATE3 TSTIME3	label8_2a	/tmp/tmp.testpath/8_2	read	bandwidth	all	200B/100ms	201B/100ms	26039	/usr/bin/cat /tmp/tmp.testpath/8_2	/tmp/tmp.testpath/8_2	85432102	85432102
+local	throttle	TSDATE2 TSTIME2	label8_3a	/tmp/tmp.testpath/8_3	read	bandwidth	all	2000B/100ms	2021B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/8_3	/tmp/tmp.testpath/8_3	85432103	85432103
+local	throttle	TSDATE1 TSTIME1	label8_3a	/tmp/tmp.testpath/8_3	write	bandwidth	all	2000B/100ms	2010B/100ms	26045	/usr/bin/cat /tmp/tmp.testpath/8_3	/tmp/tmp.testpath/8_3	85432103	85432103
