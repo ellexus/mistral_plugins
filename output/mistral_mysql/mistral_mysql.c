@@ -1,7 +1,7 @@
 #include <errno.h>              /* errno */
 #include <getopt.h>             /* getopt_long */
 #include <inttypes.h>           /* uint32_t, uint64_t */
-#include <mysql.h>              /*  */
+#include <mysql.h>              /* mysql_init, mysql_close, mysql_stmt_*, etc */
 #include <search.h>             /* insque, remque */
 #include <stdbool.h>            /* bool */
 #include <stdio.h>              /* asprintf */
@@ -33,7 +33,22 @@ static MYSQL *con = NULL;
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
 
-/* Sets table_name to the log table corresponding to the log message date */
+/*
+ * get_log_table_name
+ *
+ * This function retrieves the name of the table that contains log records for
+ * the date of the logged event.
+ *
+ * Parameters:
+ *   log_entry      - A Mistral log record data structure containing the
+ *                    received log information.
+ *   selected_table - Pointer to the string to be populated with appropriate
+ *                    table name
+ *
+ * Returns:
+ *   true if the table name was found
+ *   false otherwise
+ */
 bool get_log_table_name(mistral_log *log_entry, char *selected_table)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
@@ -54,7 +69,9 @@ bool get_log_table_name(mistral_log *log_entry, char *selected_table)
     /* Prepares the statement for use */
     char *get_log_table_name_str =
         "SELECT table_name FROM control_table WHERE table_date= DATE_FORMAT(?,'%Y-%m-%d')";
-    if (mysql_stmt_prepare(get_table_name, get_log_table_name_str, strlen(get_log_table_name_str))) {
+    if (mysql_stmt_prepare(get_table_name, get_log_table_name_str,
+        strlen(get_log_table_name_str)))
+    {
         mistral_err("mysql_stmt_prepare(get_table_name) failed");
         mistral_err("%s", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
@@ -79,8 +96,7 @@ bool get_log_table_name(mistral_log *log_entry, char *selected_table)
     }
 
     /* Set the date to look up */
-    snprintf(log_date, STRING_SIZE, "%04d-%02d-%02d", log_entry->time.tm_year + 1900,
-             log_entry->time.tm_mon + 1, log_entry->time.tm_mday);
+    strftime(log_date, sizeof(log_date), "%F", &log_entry->time);
     str_length = strlen(log_date);
 
     /* Execute the query */
@@ -126,7 +142,22 @@ fail_get_log_table_name:
     return false;
 }
 
-/* Inserts rule parameters into table 'rule_parameters' and sets rule_id */
+/*
+ * insert_rule_parameters
+ *
+ * Inserts a record into the rule_parameters table and retrieves the related ID
+ * for the inserted record
+ *
+ * Parameters:
+ *   log_entry   - A Mistral log record data structure containing the received
+ *                 log information.
+ *   ptr_rule_id - Pointer to the string to be populated with the related record
+ *                 ID
+ *
+ * Returns:
+ *   true if the record was inserted successfully
+ *   false otherwise
+ */
 bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
 {
     static                  MYSQL_STMT *insert_rule;
@@ -147,7 +178,7 @@ bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
 
     insert_rule = mysql_stmt_init(con);
     if (!insert_rule) {
-        mistral_err(" mysql_stmt_init() out of memory for insert_rule");
+        mistral_err("mysql_stmt_init() out of memory for insert_rule");
         goto fail_insert_rule_parameters;
     }
 
@@ -224,7 +255,29 @@ fail_insert_rule_parameters:
     return false;
 }
 
-/* Sets the rule_id if already exists, else calls insert_rule_parameters */
+/*
+ * set_rule_id
+ *
+ * This function checks to see if the violated rule details are already present
+ * in the rule_parameters table and, if so, selects the related record ID. If
+ * the record does not already exist insert_rule_parameters is called to create
+ * it.
+ *
+ * While this schema creates a nicely normalised dataset it is not particularly
+ * efficient for inserts. For write efficiency it may actually be better to
+ * include the raw data in the log row.
+ *
+ * Parameters:
+ *   log_entry   - A Mistral log record data structure containing the received
+ *                 log information.
+ *   ptr_rule_id - Pointer to the string to be populated with the related record
+ *                 ID
+ *
+ * Returns:
+ *   true if the record was found or inserted successfully
+ *   false otherwise
+ *
+ */
 bool set_rule_id(mistral_log *log_entry, int *ptr_rule_id)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
@@ -243,14 +296,16 @@ bool set_rule_id(mistral_log *log_entry, int *ptr_rule_id)
 
     get_rule_id = mysql_stmt_init(con);
     if (!get_rule_id) {
-        mistral_err(" mysql_stmt_init() out of memory for get_rule_id");
+        mistral_err("mysql_stmt_init() out of memory for get_rule_id");
         goto fail_set_rule_id;
     }
 
     /* Prepares the statement for use */
     char *get_rule_params_id_str =
         "SELECT rule_id FROM rule_parameters WHERE violation_path=? AND call_type=? AND measurement=? AND threshold=?";
-    if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str, strlen(get_rule_params_id_str))) {
+    if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str,
+        strlen(get_rule_params_id_str)))
+    {
         mistral_err("mysql_stmt_prepare(get_rule_id) failed");
         mistral_err("%s", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
@@ -334,8 +389,30 @@ fail_set_rule_id:
     return false;
 }
 
-/* Inserts the log entry to log_X */
-int insert_log_to_db(char *table_name, mistral_log *log_entry,int rule_id)
+/*
+ * insert_log_to_db
+ *
+ * Inserts the log entry to in the appropriate log_XX table.
+ *
+ * This function values data integrity over raw performance and uses bind
+ * variables to construct the query. Unfortunatly MySQL is limited to inserting
+ * a single row at a time using this approach which is less perfomant than bulk
+ * inserts. This function could be re-written to create a custom insert query
+ * containing multiple insert VALUES strings (up to the limit allowed by the
+ * communication buffer size - https://dev.mysql.com/doc/refman/5.7/en/c-api.html)
+ *
+ * Parameters:
+ *   table_name  - A string containing the name of the table into which the
+ *                 record must be inserted.
+ *   log_entry   - A Mistral log record data structure containing the received
+ *                 log information.
+ *   rule_id     - The rule ID related to this log message.
+ *
+ * Returns:
+ *   true if the record was inserted successfully
+ *   false otherwise
+ */
+bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
 {
     enum fields {
         B_SCOPE = 0,
@@ -355,7 +432,7 @@ int insert_log_to_db(char *table_name, mistral_log *log_entry,int rule_id)
     static MYSQL_STMT       *insert_log;
     static MYSQL_BIND       input_bind[B_SIZE];
     static size_t           str_length[B_SIZE];
-    static const int        log_str_len = 53;           /* Fixed length of insert statement*/
+    static const int        log_str_len = 53;  /* Fixed length of insert statement */
     char                    insert_log_str[log_str_len];
     static char             timestamp[100];
     static char             *empty_field = "";
@@ -374,9 +451,9 @@ int insert_log_to_db(char *table_name, mistral_log *log_entry,int rule_id)
              table_name);
 
     if (mysql_stmt_prepare(insert_log, insert_log_str, strlen(insert_log_str))) {
-        mistral_err("mysql_stmt_prepare(insert_log),failed with statement: %s\n",
+        mistral_err("mysql_stmt_prepare(insert_log) failed with statement: %s\n",
                 insert_log_str);
-        mistral_err(" %s\n", mysql_stmt_error(insert_log));
+        mistral_err("%s\n", mysql_stmt_error(insert_log));
         goto fail_insert_log_to_db;
     }
 
@@ -445,27 +522,36 @@ fail_insert_log_to_db:
     return false;
 }
 
-/* First function called.
-* This is the main controlling function. It receives log_entry and returns true on success.
-* It get's the table name from get_log_table_name
-* If the rule_params already exists, it finds and sets rule_id to this
-* If not, it adds to the table and sets the new rule_id
-* It then writes the log to the database
-*/
+/*
+ * write_log_to_db
+ *
+ * Function called once per log message to do all the processing required to
+ * insert a log message into the appropriate log table.
+ *
+ * Parameters:
+ *   log_entry   - A Mistral log record data structure containing the received
+ *                 log information.
+ *
+ * Returns:
+ *   true if the log record was inserted successfully
+ *   false otherwise
+ */
 
 bool write_log_to_db(mistral_log *log_entry)
 {
-    static char date_today[20] = "";
+    static char last_log_date[20] = "";
     static char log_date[20] = "";
     static char table_name[6];
     int rule_id = -54;      /* magic number for error checking */
 
-    /* Checks the log date is the same as today. If so, finds the table name matching this date. */
-    snprintf(log_date, STRING_SIZE, "%04d-%02d-%02d", log_entry->time.tm_year + 1900,
-             log_entry->time.tm_mon + 1, log_entry->time.tm_mday);
+    /* Is the date on this record is the same as the last record processed? */
+    strftime(log_date, sizeof(log_date), "%F", &log_entry->time);
 
-    if (strncmp(log_date, date_today, 10) != 0) {
-        strncpy(date_today, log_date, 11);
+    if (strncmp(log_date, last_log_date, 10) != 0) {
+        /* The date is different to the last log seen, update the last seen
+         * value and look up the table name appropriate for this date.
+         */
+        strncpy(last_log_date, log_date, 11);
 
         if (!get_log_table_name(log_entry, table_name)) {
             mistral_err("get_log_table_name failed");
@@ -480,7 +566,7 @@ bool write_log_to_db(mistral_log *log_entry)
         return false;
     }
 
-    /* Inserts data into the log_X table */
+    /* Inserts data into the log_XX table */
     if (!insert_log_to_db(table_name, log_entry, rule_id)) {
         mistral_err("Inserting log failed");
         return false;
@@ -495,7 +581,7 @@ bool write_log_to_db(mistral_log *log_entry)
  * Required function that initialises the type of plug-in we are running. This
  * function is called immediately on plug-in start-up.
  *
- * In addition this plug-in needs to initialise the InfluxDB connection
+ * In addition this plug-in needs to initialise the MySQL connection
  * parameters. The stream used for error messages defaults to stderr but can
  * be overridden here by setting plugin->error_log.
  *
@@ -574,7 +660,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Makes a connection to MySQl */
     if (mysql_real_connect(con, NULL, NULL, NULL, NULL, 0, NULL, 0) == NULL) {
-        mistral_err("Unable to connect to MySQL: %s",mysql_error(con));
+        mistral_err("Unable to connect to MySQL: %s", mysql_error(con));
         mysql_close(con);
         return;
     }
@@ -616,9 +702,7 @@ void mistral_exit(void)
  * mistral_received_log
  *
  * Function called whenever a log message is received. Simply store the log
- * entry received in a linked list until we reach the end of this data block
- * as it is more efficient to send all the entries to InfluxDB in a single
- * request.
+ * entry received in a linked list until we reach the end of this data block.
  *
  * Parameters:
  *   log_entry - A Mistral log record data structure containing the received
@@ -645,8 +729,8 @@ void mistral_received_log(mistral_log *log_entry)
  *
  * Function called whenever an end of data block message is received. At this
  * point run through the linked list of log entries we have seen and send them
- * to InfluxDB. Remove each log_entry from the linked list as they are
- * processed and destroy them.
+ * to MySQL. Remove each log_entry from the linked list as they are processed
+ * and destroy them.
  *
  * No special handling of data block number errors is done beyond the message
  * logged by the main plug-in framework. Instead this function will simply
@@ -695,7 +779,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
  * but in certain failure cases this may not be true.
  *
  * On receipt of a shutdown message check to see if there are any log entries
- * stored and, if so, call mistral_received_data_end to send them to InfluxDB.
+ * stored and, if so, call mistral_received_data_end to send them to MySQL.
  *
  * Parameters:
  *   void

@@ -122,14 +122,14 @@ create procedure check_exist()
     begin
     -- If date is not in control table, set it to be updated
     IF (SELECT NOT EXISTS(SELECT 1 FROM control_table WHERE Table_date = @to_check)) THEN
-    SET @date_to_update = @to_check;
-    SET @need_truncate = 1;
-    -- Get name of oldest table
-    SET @oldest_table_name = (SELECT Table_name FROM control_table ORDER BY table_date LIMIT 0,1 FOR UPDATE);
-    SET @to_truncate = CONCAT('TRUNCATE ', @oldest_table_name,';');
-    CALL exec_qry(@to_truncate);
-    UPDATE control_table SET Table_date = @date_to_update WHERE table_name = @oldest_table_name;
-    call update_eod_tables();
+        SET @date_to_update = @to_check;
+        SET @need_truncate = 1;
+        -- Get name of oldest table
+        SET @oldest_table_name = (SELECT Table_name FROM control_table ORDER BY table_date LIMIT 0,1 FOR UPDATE);
+        SET @to_truncate = CONCAT('TRUNCATE ', @oldest_table_name,';');
+        CALL exec_qry(@to_truncate);
+        UPDATE control_table SET Table_date = @date_to_update WHERE table_name = @oldest_table_name;
+        call update_eod_tables();
     END IF;
 
     COMMIT;
