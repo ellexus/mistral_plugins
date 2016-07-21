@@ -3,7 +3,7 @@
  * Eric Martin at Ellexus - 14/03/2016
  *
  * This text file should be imported using the command "mysql -u root -p <
- * create_multiple_tables.sql". This will populate the tables needed for the
+ * populate_multiple_tables.sql". This will populate the tables needed for the
  * mistral_mysql_log plugin with random data. This is to check the correct truncating
  * procedure in the end_of_day2.sql script.
  *

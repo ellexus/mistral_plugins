@@ -5,6 +5,6 @@ It also creates a new user in the database 'mistral'@'%' identified by 'mistral'
 
 INSTRUCTIONS FOR USE
 Run " mysql -u root -p < create_multiple_tables.sql "
-Set up a CRON job to run "mysql --defaults-file=<path-to-password-file> -u mistral < end_of_day" at the end of each day.
+Set up a CRON job to run "mysql --defaults-file=<path-to-password-file> -u mistral multiple_mistral_log < end_of_day" at the end of each day.
 
 

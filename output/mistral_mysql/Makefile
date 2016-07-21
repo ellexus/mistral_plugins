@@ -1,21 +1,51 @@
 # ------------------------------------------------------------------------------
 # Set up targets and default required PHONY rules
 
-TARGETS = \
-	plugin_control.o
+PLUGIN_NAME = mistral_mysql
 
-DEPENDENCIES = \
-	plugin_control.c \
-	plugin_control.h \
-	mistral_plugin.h \
+LDFLAGS = \
+	-lmysqlclient `mysql_config --libs`
+
+INCLUDE_FLAGS = \
+	-I /usr/include/mysql
+
+TARGETS = \
+	$(PLUGIN_NAME)
+
+PLUGIN_FRAMEWORK_DIR = \
+	../../common
+
+STANDARD_OBJECTS = \
+	$(PLUGIN_FRAMEWORK_DIR)/plugin_control.o
+
+PLUGIN_OBJECTS = \
+	$(PLUGIN_NAME).o
+
+PLUGIN_DEPS = \
+	$(PLUGIN_NAME).c \
 	Makefile
 
+DIRECTORIES = \
+	$(PLUGIN_FRAMEWORK_DIR)
+
+CLEANDIRECTORIES = \
+	$(addsuffix PHONYclean,$(DIRECTORIES))
+
 .PHONY: all
-all: $(TARGETS)
+all: dirs $(TARGETS)
 
 .PHONY: clean
-clean:
-	rm -f *.o
+clean: $(CLEANDIRECTORIES)
+	rm -f *.o $(TARGETS)
+
+.PHONY: dirs $(DIRECTORIES)
+dirs: $(DIRECTORIES)
+
+$(DIRECTORIES):
+	$(MAKE) -C $@
+
+%PHONYclean:
+	$(MAKE) -C $* clean
 
 # ------------------------------------------------------------------------------
 # GCC -- just set it to gcc
@@ -24,14 +54,15 @@ GCC ?= gcc
 CC = $(GCC)
 
 # ------------------------------------------------------------------------------
-# CFLAGS -- compilation flags on all target platforms.
+# CFLAGS -- compilation flags.
 
 CFLAGS += \
+	-std=gnu99 \
 	-D_GNU_SOURCE \
 	-Wall \
-	-Wcast-align \
-	-Werror \
 	-Wextra \
+	-Werror \
+	-Wcast-align \
 	-Wformat=2 \
 	-Wmissing-noreturn \
 	-Wno-attributes \
@@ -41,7 +72,8 @@ CFLAGS += \
 	-Wunreachable-code \
 	-fPIC \
 	-pthread \
-	-std=gnu99
+	-I $(PLUGIN_FRAMEWORK_DIR) \
+	$(INCLUDE_FLAGS)
 
 
 ifneq (,$(DEBUG))
@@ -60,7 +92,9 @@ endif
 	$(GCC) $(CFLAGS) -c -o $@ $<
 
 # ------------------------------------------------------------------------------
-# and immediately override it for plugin_control!
+# Set up dependencies for the plug-in
 
-plugin_control.o: $(DEPENDENCIES)
-	$(GCC) $(CFLAGS) -c -o $@ $<
+$(PLUGIN_NAME): $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
+
+$(PLUGIN_NAME).o: $(STANDARD_DEPS) $(PLUGIN_DEPS)
+

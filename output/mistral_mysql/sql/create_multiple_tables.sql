@@ -1,31 +1,34 @@
-/* create_multiple_tables.sql
- *
- * Eric Martin at Ellexus - 08/03/2016
- *
- * This text file should be imported using the command "mysql -u root -p <
- * create_multiple_tables.sql". This will set up the MySQL databases and tables needed for the
- * mistral_mysql_log plugin.
- *
- * In summary this will :
- *  ~ Create a new database called 'multiple_mistral_log'
- *  ~ Create 30 tables within 'mistral_logs' called 'log_01 .. log_30'
- *  ~ Create a user called 'mistral' and give it :
- *      All permissions on mistral_log.*
- *     TODO : Change to grant specific permissions [ ALTER, CREATE, DROP, EXECUTE, INSERT, UPDATE ] permissions on these tables
- *
- */
+--
+-- create_multiple_tables.sql
+--
+-- Eric Martin at Ellexus - 08/03/2016
+--
+-- This text file should be imported using the command 
+--      "mysql -u root -p < create_multiple_tables.sql"
+-- This will set up the MySQL databases and tables needed for the mistral_mysql
+-- plugin.
+--
+-- In summary this will :
+--  ~ Create a new database called 'multiple_mistral_log'
+--  ~ Create 32 tables within 'mistral_logs' called 'log_01 .. log_32'
+--  ~ Create a user called 'mistral' and give it :
+--      All permissions on multiple_mistral_log.*
+--     TODO : Change to grant specific permissions [ ALTER, CREATE, DROP,
+--            EXECUTE, INSERT, UPDATE ] permissions on these tables
+--
+--
 
-# TODO Remove this when releasing
- DROP DATABASE IF EXISTS multiple_mistral_log2;
+-- Drop any existing database schema
+DROP DATABASE IF EXISTS multiple_mistral_log;
 
-# Create Database
-CREATE DATABASE multiple_mistral_log2;
+-- Create Database
+CREATE DATABASE multiple_mistral_log;
 
-# Create User Mistral And Give it Permissions
-GRANT ALL PRIVILEGES ON multiple_mistral_log2.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
+-- Create User mistral and give it permissions
+GRANT ALL PRIVILEGES ON multiple_mistral_log.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
 
-# Create Tables for control_table and rule_parameters
-USE multiple_mistral_log2;
+-- Create Tables for control_table and rule_parameters
+USE multiple_mistral_log;
 CREATE TABLE rule_parameters (Rule_ID INT NOT NULL AUTO_INCREMENT,
                               Violation_Path VARCHAR(256) NOT NULL,
                               Call_Type VARCHAR(45) NOT NULL,
@@ -57,7 +60,7 @@ create procedure create_log_tables()
 
     SET @dynamic_name = CONCAT('CREATE TABLE ', @enter_name, ' (Scope VARCHAR(6) NOT NULL,
                      Type VARCHAR(8) NOT NULL,
-                     Time_Stamp VARCHAR(20) NOT NULL,
+                     Time_Stamp DATETIME NOT NULL,
                      Label VARCHAR(256) NOT NULL,
                      Rule_Parameters INT NOT NULL,
                      Observed VARCHAR(32) NOT NULL,
@@ -91,7 +94,7 @@ create procedure populate_control_table()
 
     declare table_max int unsigned default 32;
     declare counter int unsigned default 1;
-    set @enter_date = '2016-01-01';
+    set @enter_date = CURRENT_DATE() - INTERVAL 32 DAY;
 
     start transaction;
     while counter < (table_max + 1) do
@@ -137,11 +140,10 @@ delimiter $$
 create procedure update_eod_tables()
     begin
     -- Checks that there are 1 indexes
-    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'', @oldest_table_name,'\' AND table_schema = \'multiple_mistral_log2\'');
+    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'', @oldest_table_name,'\' AND table_schema = \'multiple_mistral_log\'');
     CALL exec_qry(@index_count);
 
     IF @index_num > 1 THEN
-    SELECT 'Entered if to drop indexes';
         SET @drop = CONCAT('DROP INDEX ScopeIndex ON ', @oldest_table_name, ';');
         CALL exec_qry(@drop);
         SET @drop = CONCAT('DROP INDEX TypeIndex ON ', @oldest_table_name, ';');
@@ -175,7 +177,7 @@ create procedure update_index()
         CALL exec_qry(@to_run);
 
         -- Checks that there are 1 indexes
-        SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'', @older_table_name,'\' AND table_schema = \'multiple_mistral_log2\'');
+        SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'', @older_table_name,'\' AND table_schema = \'multiple_mistral_log\'');
         CALL exec_qry(@index_count);
 
         IF @index_num = 1 THEN
@@ -218,7 +220,7 @@ begin
 
     SET @date_today = CURRENT_DATE();
     SET @date_tomorrow = @date_today + INTERVAL 1 DAY;
-    SET @get_oldest_date = CONCAT('SET @oldest_date = (SELECT Table_date FROM control_table ORDER BY Table_date LIMIT 0,1);');
+    SET @get_oldest_date = 'SET @oldest_date = (SELECT Table_date FROM control_table ORDER BY Table_date LIMIT 0,1);';
     CALL exec_qry(@get_oldest_date);
 
     IF @oldest_date < @date_today THEN
@@ -238,7 +240,5 @@ DELIMITER ;
 
 -- -----------------------------------------------------------------------------
 
-# Runs the end of procedure to set up today and tomorrow
-SET @date_today = '2016-01-31';
-SET @date_tomorrow = @date_today + INTERVAL 1 DAY;
+-- Runs the end of day procedure to set up today and tomorrow
 CALL end_of_day();
