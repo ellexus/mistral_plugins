@@ -161,14 +161,12 @@ fail_get_log_table_name:
 bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
 {
     static                  MYSQL_STMT *insert_rule;
-    static                  MYSQL_BIND input_bind[6];
-    static unsigned long    str_length_empty;
+    static                  MYSQL_BIND input_bind[5];
     static unsigned long    str_length_vio;
     static unsigned long    str_length_call;
     static unsigned long    str_length_measure;
     static unsigned long    str_length_size_range;
     static unsigned long    str_length_threshold;
-    static char             empty_field[STRING_SIZE];
     static char             vio_path_str[STRING_SIZE];
     static char             call_type_str[STRING_SIZE];
     static char             measurement_str[STRING_SIZE];
@@ -183,7 +181,7 @@ bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
     }
 
     /* Prepares the statement for use */
-    insert_rule_parameters_str = "INSERT INTO rule_parameters VALUES(?,?,?,?,?,?)";
+    insert_rule_parameters_str = "INSERT INTO rule_parameters (rule_id, violation_path, call_type, measurement, size_range, threshold) VALUES (NULL,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_parameters_str,
                            strlen(insert_rule_parameters_str))) {
         mistral_err("mysql_stmt_prepare(insert_rule), failed");
@@ -195,12 +193,11 @@ bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
     memset(input_bind, 0, sizeof(input_bind));
 
     /* Set the variables to use for input parameters in the INSERT query */
-    BIND_STRING(input_bind, 0, empty_field, 0, str_length_empty);
-    BIND_STRING(input_bind, 1, vio_path_str, 0, str_length_vio);
-    BIND_STRING(input_bind, 2, call_type_str, 0, str_length_call);
-    BIND_STRING(input_bind, 3, measurement_str, 0, str_length_measure);
-    BIND_STRING(input_bind, 4, size_range_str, 0, str_length_size_range);
-    BIND_STRING(input_bind, 5, threshold_str, 0, str_length_threshold);
+    BIND_STRING(input_bind, 0, vio_path_str, 0, str_length_vio);
+    BIND_STRING(input_bind, 1, call_type_str, 0, str_length_call);
+    BIND_STRING(input_bind, 2, measurement_str, 0, str_length_measure);
+    BIND_STRING(input_bind, 3, size_range_str, 0, str_length_size_range);
+    BIND_STRING(input_bind, 4, threshold_str, 0, str_length_threshold);
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(insert_rule, input_bind)) {
@@ -210,13 +207,11 @@ bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
     }
 
     /* Set the values of the variables used in the query */
-    strncpy(empty_field, "", STRING_SIZE);
     strncpy(vio_path_str, log_entry->path, STRING_SIZE);
     strncpy(call_type_str, mistral_call_type_names[log_entry->call_type_mask], STRING_SIZE);
     strncpy(measurement_str, mistral_measurement_name[log_entry->measurement], STRING_SIZE);
     strncpy(size_range_str, log_entry->size_range, RATE_SIZE);
     strncpy(threshold_str, log_entry->threshold_str, RATE_SIZE);
-    str_length_empty = strlen(empty_field);
     str_length_vio = strlen(vio_path_str);
     str_length_call = strlen(call_type_str);
     str_length_measure = strlen(measurement_str);
@@ -426,16 +421,16 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
         B_FILENAME,
         B_GID,
         B_JID,
-        B_EMPTY,
         B_SIZE
     };
     static MYSQL_STMT       *insert_log;
     static MYSQL_BIND       input_bind[B_SIZE];
     static size_t           str_length[B_SIZE];
-    static const int        log_str_len = 53;  /* Fixed length of insert statement */
+    static const int        log_str_len = 155 + 6 + 1;  /* Fixed length of insert statement +
+                                                         * table name length + trailing null
+                                                         */
     char                    insert_log_str[log_str_len];
     static char             timestamp[100];
-    static char             *empty_field = "";
 
     insert_log = mysql_stmt_init(con);
     if (!insert_log) {
@@ -447,7 +442,8 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
     strftime(timestamp, sizeof(timestamp), "%F %H-%M-%S", &log_entry->time);
 
     /* Prepares the statement for use */
-    snprintf(insert_log_str, log_str_len, "INSERT INTO %s VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
+    snprintf(insert_log_str, log_str_len,
+             "INSERT INTO %s (scope, type, time_stamp, label, rule_parameters, observed, pid, command, file_name, group_id, id, log_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL)",
              table_name);
 
     if (mysql_stmt_prepare(insert_log, insert_log_str, strlen(insert_log_str))) {
@@ -472,7 +468,6 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
     BIND_STRING(input_bind, B_FILENAME, log_entry->file, 0, str_length[B_FILENAME]);
     BIND_STRING(input_bind, B_GID, log_entry->job_group_id, 0, str_length[B_GID]);
     BIND_STRING(input_bind, B_JID, log_entry->job_id, 0, str_length[B_JID]);
-    BIND_STRING(input_bind, B_EMPTY, empty_field, 0, str_length[B_EMPTY]);
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(insert_log, input_bind)) {
@@ -491,7 +486,6 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
     str_length[B_FILENAME] = strlen(log_entry->file);
     str_length[B_GID] = strlen(log_entry->job_group_id);
     str_length[B_JID] = strlen(log_entry->job_id);
-    str_length[B_EMPTY] = strlen(empty_field);
 
     /* Execute the query */
     if (mysql_stmt_execute(insert_log)) {
