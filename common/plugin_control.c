@@ -650,25 +650,25 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Record the allowed rate */
-    if ((log_entry->threshold_str = strdup(comma_split[FIELD_ALLOWED])) == NULL) {
-        mistral_err("Unable to allocate memory for allowed: %s", comma_split[FIELD_ALLOWED]);
+    if ((log_entry->threshold_str = strdup(comma_split[FIELD_THRESHOLD])) == NULL) {
+        mistral_err("Unable to allocate memory for allowed: %s", comma_split[FIELD_THRESHOLD]);
         goto fail_log_allowed;
     }
 
     /* And also store its constituent parts */
-    if (!parse_rate(comma_split[FIELD_ALLOWED], &log_entry->threshold, &log_entry->threshold_unit,
+    if (!parse_rate(comma_split[FIELD_THRESHOLD], &log_entry->threshold, &log_entry->threshold_unit,
                     (uint64_t *)&log_entry->timeframe, &log_entry->timeframe_unit)) {
         goto fail_log_allowed;
     }
 
     /* Record the observed rate */
-    if ((log_entry->measured_str = strdup(comma_split[FIELD_OBSERVED])) == NULL) {
-        mistral_err("Unable to allocate memory for allowed: %s", comma_split[FIELD_OBSERVED]);
+    if ((log_entry->measured_str = strdup(comma_split[FIELD_MEASURED])) == NULL) {
+        mistral_err("Unable to allocate memory for allowed: %s", comma_split[FIELD_MEASURED]);
         goto fail_log_observed;
     }
 
     /* And also store its constituent parts */
-    if (!parse_rate(comma_split[FIELD_OBSERVED], &log_entry->measured, &log_entry->measured_unit,
+    if (!parse_rate(comma_split[FIELD_MEASURED], &log_entry->measured, &log_entry->measured_unit,
                     (uint64_t *)&log_entry->measured_time, &log_entry->measured_time_unit)) {
         goto fail_log_observed;
     }

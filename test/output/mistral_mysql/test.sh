@@ -38,7 +38,7 @@ check_results
 if [ -z "$KEEP_TEST_OUTPUT" ];then
     # Delete the test database regardless of test status
     "$mysql_cmd" --defaults-file="$mysql_parameters" -ss -e \
-        "DROP DATABASE IF EXISTS multiple_mistral_log;" >/dev/null 2>&1
+        "DROP DATABASE IF EXISTS mistral_log;" >/dev/null 2>&1
 
     if [ $? -ne 0 ]; then
         logerr "Unable to remove test database"

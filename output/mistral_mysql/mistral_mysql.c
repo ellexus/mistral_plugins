@@ -25,7 +25,9 @@
     b[i].is_null = null_is;                         \
     b[i].length = 0;
 
+/* Define some database column sizes */
 #define RATE_SIZE 64
+#define LOG_TABLE_NAME_SIZE 6
 
 static FILE *log_file = NULL;
 static MYSQL *con = NULL;
@@ -49,7 +51,7 @@ static mistral_log *log_list_tail = NULL;
  *   true if the table name was found
  *   false otherwise
  */
-bool get_log_table_name(mistral_log *log_entry, char *selected_table)
+bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
     static MYSQL_STMT      *get_table_name;
@@ -409,6 +411,7 @@ fail_set_rule_id:
  */
 bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
 {
+    #define LOG_INSERT "INSERT INTO %s (scope, type, time_stamp, label, rule_parameters, observed, pid, command, file_name, group_id, id, log_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL)"
     enum fields {
         B_SCOPE = 0,
         B_TYPE,
@@ -426,11 +429,13 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
     static MYSQL_STMT       *insert_log;
     static MYSQL_BIND       input_bind[B_SIZE];
     static size_t           str_length[B_SIZE];
-    static const int        log_str_len = 155 + 6 + 1;  /* Fixed length of insert statement +
-                                                         * table name length + trailing null
-                                                         */
+    /* The insert statement is static aparet from the table name, allocate a char array big enough
+     * for both parts. As the format string contains %s it is two characters longer than needed once
+     * we add the max table name length hence no need to add 1 for the trailing null
+     */
+    static const int        log_str_len = sizeof(LOG_INSERT) + LOG_TABLE_NAME_SIZE;
     char                    insert_log_str[log_str_len];
-    static char             timestamp[100];
+    static char             timestamp[sizeof("YYYY-MM-DD HH-mm-SS")];
 
     insert_log = mysql_stmt_init(con);
     if (!insert_log) {
@@ -442,12 +447,10 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
     strftime(timestamp, sizeof(timestamp), "%F %H-%M-%S", &log_entry->time);
 
     /* Prepares the statement for use */
-    snprintf(insert_log_str, log_str_len,
-             "INSERT INTO %s (scope, type, time_stamp, label, rule_parameters, observed, pid, command, file_name, group_id, id, log_id) VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL)",
-             table_name);
+    snprintf(insert_log_str, log_str_len, LOG_INSERT, table_name);
 
     if (mysql_stmt_prepare(insert_log, insert_log_str, strlen(insert_log_str))) {
-        mistral_err("mysql_stmt_prepare(insert_log) failed with statement: %s\n",
+        mistral_err("mysql_stmt_prepare(insert_log) failed with statement: %s",
                 insert_log_str);
         mistral_err("%s\n", mysql_stmt_error(insert_log));
         goto fail_insert_log_to_db;
@@ -533,12 +536,12 @@ fail_insert_log_to_db:
 
 bool write_log_to_db(mistral_log *log_entry)
 {
-    static char last_log_date[20] = "";
-    static char log_date[20] = "";
-    static char table_name[6];
+    static char last_log_date[sizeof("YYYY-MM-DD")] = "";
+    static char table_name[LOG_TABLE_NAME_SIZE];
+    char log_date[sizeof("YYYY-MM-DD")] = "";
     int rule_id = -54;      /* magic number for error checking */
 
-    /* Is the date on this record is the same as the last record processed? */
+    /* Is the date on this record the same as the last record processed? */
     strftime(log_date, sizeof(log_date), "%F", &log_entry->time);
 
     if (strncmp(log_date, last_log_date, 10) != 0) {
@@ -556,13 +559,11 @@ bool write_log_to_db(mistral_log *log_entry)
     /* Sets the rule id */
     set_rule_id(log_entry, &rule_id);
     if (rule_id < 1) {
-        mistral_err("Setting rule_ID failed");
         return false;
     }
 
     /* Inserts data into the log_XX table */
     if (!insert_log_to_db(table_name, log_entry, rule_id)) {
-        mistral_err("Inserting log failed");
         return false;
     }
 

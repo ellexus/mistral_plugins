@@ -40,6 +40,7 @@ dirs: $(DIRECTORIES)
 $(DIRECTORIES):
 	$(MAKE) -C $@
 
+.PHONY: %PHONYclean
 %PHONYclean:
 	$(MAKE) -C $* clean
 

@@ -3,4 +3,4 @@ user=mistral
 password=mistral
 host=localhost
 port=3306
-database=multiple_mistral_log
+database=mistral_log
