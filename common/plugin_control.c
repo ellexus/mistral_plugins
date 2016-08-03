@@ -657,7 +657,7 @@ static bool parse_log_entry(const char *line)
 
     /* And also store its constituent parts */
     if (!parse_rate(comma_split[FIELD_THRESHOLD], &log_entry->threshold, &log_entry->threshold_unit,
-                    (uint64_t *)&log_entry->timeframe, &log_entry->timeframe_unit)) {
+                    &log_entry->timeframe, &log_entry->timeframe_unit)) {
         goto fail_log_allowed;
     }
 
@@ -669,7 +669,7 @@ static bool parse_log_entry(const char *line)
 
     /* And also store its constituent parts */
     if (!parse_rate(comma_split[FIELD_MEASURED], &log_entry->measured, &log_entry->measured_unit,
-                    (uint64_t *)&log_entry->measured_time, &log_entry->measured_time_unit)) {
+                    &log_entry->measured_time, &log_entry->measured_time_unit)) {
         goto fail_log_observed;
     }
 
