@@ -1,3 +1,4 @@
+#include <assert.h>             /* assert */
 #include <errno.h>              /* errno */
 #include <getopt.h>             /* getopt_long */
 #include <inttypes.h>           /* uint32_t, uint64_t */
@@ -158,14 +159,14 @@ fail_get_log_table_name:
  * Parameters:
  *   log_entry   - A Mistral log record data structure containing the received
  *                 log information.
- *   ptr_rule_id - Pointer to the string to be populated with the related record
- *                 ID
+ *   ptr_rule_id - Pointer to the variable to be populated with the related
+ *                 record ID
  *
  * Returns:
  *   true if the record was inserted successfully
  *   false otherwise
  */
-bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
+bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
     MYSQL_STMT   *insert_rule;
     MYSQL_BIND    input_bind[5];
@@ -234,6 +235,7 @@ bool insert_rule_parameters(mistral_log *log_entry, int *ptr_rule_id)
     }
 
     /* Sets the rule_id to this new inserted value */
+    assert(ptr_rule_id);
     *ptr_rule_id = mysql_stmt_insert_id(insert_rule);
 
     /* Close the statement */
@@ -265,15 +267,15 @@ fail_insert_rule_parameters:
  * Parameters:
  *   log_entry   - A Mistral log record data structure containing the received
  *                 log information.
- *   ptr_rule_id - Pointer to the string to be populated with the related record
- *                 ID
+ *   ptr_rule_id - Pointer to the variable to be populated with the related
+ *                 record ID
  *
  * Returns:
  *   true if the record was found or inserted successfully
  *   false otherwise
  *
  */
-bool set_rule_id(mistral_log *log_entry, int *ptr_rule_id)
+bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT *get_rule_id;
@@ -540,7 +542,7 @@ bool write_log_to_db(mistral_log *log_entry)
     static char last_log_date[DATE_LENGTH] = "";
     static char table_name[LOG_TABLE_NAME_SIZE];
     char log_date[DATE_LENGTH] = "";
-    int rule_id = -1;
+    my_ulonglong rule_id = -1;
     size_t result = -1;
 
     /* Is the date on this record the same as the last record processed? */
