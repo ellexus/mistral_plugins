@@ -410,7 +410,7 @@ fail_set_rule_id:
  *   true if the record was inserted successfully
  *   false otherwise
  */
-bool insert_log_to_db(char *table_name, mistral_log *log_entry, int rule_id)
+bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rule_id)
 {
     #define LOG_INSERT "INSERT INTO %s (scope, type, time_stamp, label, rule_parameters," \
                                        "observed, pid, command, file_name, group_id, id, log_id)" \
