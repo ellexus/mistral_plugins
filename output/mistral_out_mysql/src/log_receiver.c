@@ -12,8 +12,6 @@
 #include "log_receiver.h"
 #include "log_to_mysql.h"
 
-const char *const dr_program_name = "MISTRAL MYSQL LOG";
-
 static unsigned ver = VERSION;          /* Supported version */
 static unsigned data_count = 0;         /* Number of data blocks received */
 static bool in_data = false;            /* True, if mistral is sending data */
@@ -22,7 +20,7 @@ static bool sup_ver = false;            /* True, if supported versions were rece
 static FILE *log_fs = NULL;
 
 /* Define how long to wait for reads before shutting down. */
-const struct timeval select_wait = {
+const struct timeval shutdown_delay = {
     .tv_sec = 1,
     .tv_usec = 0,
 };
@@ -42,24 +40,23 @@ const struct timeval select_wait = {
  */
 static bool send_message_to_mistral(const char *message)
 {
-    const char *message_start = message;
     size_t message_len = strlen(message);
 
     fd_set writeset;
     struct timeval tv;
     int retval;
     FD_ZERO(&writeset);
-    FD_SET(LOG_OUTPUT, &writeset);
+    FD_SET(FD_OUTPUT, &writeset);
 
     /* Wait up to a default number of seconds. */
-    tv = select_wait;
+    tv = shutdown_delay;
 
     /* Keep trying to send data until all the message has been sent or an error
      * occurs.
      */
     while (message_len) {
         do {
-            retval = select(1 + LOG_OUTPUT, NULL, &writeset, NULL, &tv);
+            retval = select(1 + FD_OUTPUT, NULL, &writeset, NULL, &tv);
 
             if (retval == -1) {
                 char buf[256];
@@ -68,13 +65,13 @@ static bool send_message_to_mistral(const char *message)
                 return false;
             } else if (retval) {
                 ssize_t w_res =
-                    write(LOG_OUTPUT, message_start, message_len);
+                    write(FD_OUTPUT, message, message_len);
 
                 /* If we've successfully written some data, update the message
                  * pointer and length values
                  */
                 if (w_res >= 0) {
-                    message_start += w_res;
+                    message += w_res;
                     message_len -= w_res;
                 }
 
@@ -136,8 +133,6 @@ static bool send_shutdown_to_mistral()
  *
  * Function sends a start of data message
  *
- * Input:
- *   mistral_log     - Plugin configuration structure
  * Returns:
  *   False - On error
  *   True  - Otherwise
@@ -179,7 +174,8 @@ static bool send_version_to_mistral()
  */
 static int check_for_message(char *line)
 {
-    unsigned cont_count = data_count;
+    /* number of data blocks received */
+    unsigned block_count = data_count;
     int message = PLUGIN_MESSAGE_DATA_LINE;
     size_t line_len = strlen(line);
 
@@ -212,17 +208,17 @@ static int check_for_message(char *line)
             /* Strip any trailing newline for readability */
             STRIP_NEWLINE(line, line_len);
 
-            fprintf(log_fs, "Contract incomplete - saw [%s].\n", line);
-            return PLUGIN_MESSAGE_SHUTDOWN;
+            fprintf(log_fs, "Data block incomplete - saw [%s].\nLog data might be corrupted.\n", line);
+            return PLUGIN_DATA_ERR;
         }
         }
     } else {
-        /* Not in a contract so only control messages are valid */
+        /* Not in a data block so only control messages are valid */
         if (message == PLUGIN_MESSAGE_DATA_LINE && *line != '\n') {
             /* strip any trailing newline for readability */
             STRIP_NEWLINE(line, line_len);
 
-            fprintf(log_fs, "Invalid data: [%s].\n", line);
+            fprintf(log_fs, "Invalid data: [%s]. Expected a control message.\n", line);
             return PLUGIN_DATA_ERR;
         }
     }
@@ -233,7 +229,7 @@ static int check_for_message(char *line)
         /* strip any trailing newline for readability */
         STRIP_NEWLINE(line, line_len);
 
-        fprintf(log_fs, "Invalid data: [%s].\n", line);
+        fprintf(log_fs, "Invalid data: [%s]. Expected log message or PLUGIN_MESSAGE_END.\n", line);
         return PLUGIN_DATA_ERR;
     }
 
@@ -247,9 +243,8 @@ static int check_for_message(char *line)
     case PLUGIN_MESSAGE_USED_VERSION:
     case PLUGIN_MESSAGE_INTERVAL: {
         /* We should never receive this message */
-        fprintf(log_fs, "Invalid data: [%s].\n", line);
+        fprintf(log_fs, "Invalid data: [%s]. Don't expect to receive this message.\n", line);
         return PLUGIN_DATA_ERR;
-        break;
     }
     case PLUGIN_MESSAGE_SUP_VERSION: {
         /* Extract minimun and current version supported */
@@ -285,36 +280,36 @@ static int check_for_message(char *line)
 
         p = line + mistral_log_msg_len[PLUGIN_MESSAGE_DATA_START];
 
-        cont_count = strtoul(p, &end, 10);
+        block_count = strtoul(p, &end, 10);
 
-        if (cont_count <= 0 || cont_count > UINT_MAX || *end != PLUGIN_MESSAGE_SEP_C) {
+        if (block_count <= 0 || block_count > UINT_MAX || *end != PLUGIN_MESSAGE_SEP_C) {
             fprintf(log_fs, "Invalid contract count: [%s].\n", line);
             return PLUGIN_DATA_ERR;
         }
         in_data = true;
-        data_count = cont_count;
+        data_count = block_count;
         break;
     }
     case PLUGIN_MESSAGE_DATA_END: {
         /* Check if the contract number matches the last version we sent */
-        unsigned  end_cont_count = 0;
+        unsigned  end_block_count = 0;
         char *p = NULL;
         char *end = NULL;
 
         p = line + mistral_log_msg_len[PLUGIN_MESSAGE_DATA_END];
 
-        end_cont_count = strtoul(p, &end, 10);
+        end_block_count = strtoul(p, &end, 10);
 
-        if (end_cont_count <= 0 || end_cont_count > UINT_MAX ||
+        if (end_block_count <= 0 || end_block_count > UINT_MAX ||
                 *end != PLUGIN_MESSAGE_SEP_C) {
             fprintf(log_fs, "Invalid contract count: [%s].\n", line);
             return PLUGIN_DATA_ERR;
         }
 
-        if (data_count != end_cont_count ) {
+        if (data_count != end_block_count ) {
             fprintf(log_fs,
                     "Contract instance count mismatch. Saw [%d], expected [%d].\nLog data might be corrupted.\n",
-                    end_cont_count, data_count);
+                    end_block_count, data_count);
             return PLUGIN_DATA_ERR;
         }
         in_data = false;
@@ -331,7 +326,7 @@ static int check_for_message(char *line)
     return message;
 }
 
-char **str_split(const char *s, int sep, size_t *sep_count)
+static char **str_split(const char *s, int sep, size_t *sep_count)
 {
     size_t n = 1;               /* One more string than separators. */
     size_t len;                 /* Length of 's' */
@@ -369,7 +364,13 @@ char **str_split(const char *s, int sep, size_t *sep_count)
     return result;
 }
 
-bool parse_log_entry(char *line)
+/*
+ * parse_log_entry()
+ *
+ * Parse the line received. The line structure is <scope>:<type>:log_message
+ * log_message contains comma separated strings.
+ */
+static bool parse_log_entry(char *line)
 {
     bool ret = true;
     size_t sep_count;
@@ -383,9 +384,9 @@ bool parse_log_entry(char *line)
     if (sep_count != COLON_SEP_NUM) {
         fprintf(log_fs, "Invalid log message: %s\n", line);
         ret = false;
-        goto err_sc_nr; 
+        goto err_sc_nr;
     }
-    //todo check if the arrays are the right size
+
     mistral_log_entry_s log_entry = {0};
     mistral_log_msg_s msg = {0};
     log_entry.log_msg = &msg;
@@ -397,7 +398,7 @@ bool parse_log_entry(char *line)
     int i;
     char tmp_timestamp[30];
     strcpy(tmp_timestamp, semicolon_splits[2]);
-    /* Combining again timestamp because it contained ':' which was used as separator 
+    /* Combining again timestamp because it contained ':' which was used as separator
      * for the split. The timestamp string was splitted in three parts.
      */
     for (i = 3; semicolon_splits[i]; i++) {
@@ -426,31 +427,31 @@ err_comma_nr:
     return ret;
 }
 
-/* Function that reads from stdin.
- * Reads first the messages from the monitor and the contract.
- * Saves the contract in a contract_update structure.
+/*
+ * read_data_from_mistral()
+ *
+ * Function that reads from FD_INPUT file descriptor.
+ * Calls parse_log_entry() to parse the received message.
  */
 static bool read_data_from_mistral()
 {
     int retval;
     struct timeval tv;
 
-
-
     /* waiting time set to 0 */
-    tv = select_wait;
+    tv = shutdown_delay;
     fd_set readset;
 
     /* check stdin (fd 0) to see when it has input. */
     FD_ZERO(&readset);
-    FD_SET(LOG_INPUT, &readset);
+    FD_SET(FD_INPUT, &readset);
     char *line = NULL;
     size_t line_length = 0;
 
     bool ret = false;
 
     do {
-        retval = select(1 + LOG_INPUT, &readset, NULL, NULL, &tv);
+        retval = select(1 + FD_INPUT, &readset, NULL, NULL, &tv);
 
         if (retval == -1) {
             char buf[256];
@@ -503,12 +504,12 @@ read_fail_select:
     return ret;
 }
 
-bool create_tmp_err_log()
+static bool create_tmp_err_log()
 {
     int ppid = syscall(SYS_getppid);
     bool ret = false;
- 
- 
+
+
     if (ppid == -1) {
         fprintf(log_fs, "Couldn't get the parent pid.\n");
     } else {
@@ -531,7 +532,11 @@ bool create_tmp_err_log()
 
 int main(int argc, char **argv)
 {
-
+    /* The plugin runs with 2 parameters: 
+     * "-c" (mandatory) specifies the configuration file needed to connect to the DB
+     * "-o" (optional) specifies the location for the error log file
+     *      if not specified the error message will go to /tmp
+     */
     static const struct option options[] = {
         {"config", required_argument, NULL, 'c'},
         {"output", required_argument, NULL, 'o'},
@@ -568,9 +573,8 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
     }
-
     if (config_file == NULL) {
-        fprintf(stderr, "Missing option -c.\n");
+        fprintf(stderr, "Missing parameter -c. Impossible to connect to the database without specifying a configuration file.\n");
         exit(EXIT_FAILURE);
     }
 
