@@ -7,7 +7,8 @@ TARGETS = \
 DEPENDENCIES = \
 	plugin_control.c \
 	plugin_control.h \
-	mistral_plugin.h
+	mistral_plugin.h \
+	Makefile
 
 .PHONY: all
 all: $(TARGETS)

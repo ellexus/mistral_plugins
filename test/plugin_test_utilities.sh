@@ -70,7 +70,7 @@ function check_results() {
         logerr "Expected results file does not exist or is unreadable - $script_dir/expected.txt"
     else
 
-        if [ ! -a $results_dir/input.dat.sed ]; then
+        if [ ! -e $results_dir/input.dat.sed ]; then
             touch "$results_dir/input.dat.sed"
         fi
 
