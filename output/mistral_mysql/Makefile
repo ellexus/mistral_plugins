@@ -1,10 +1,13 @@
 # ------------------------------------------------------------------------------
 # Set up targets and default required PHONY rules
 
-PLUGIN_NAME = mistral_influxdb
+PLUGIN_NAME = mistral_mysql
 
 LDFLAGS = \
-	-lcurl
+	-lmysqlclient `mysql_config --libs`
+
+INCLUDE_FLAGS = \
+	-I /usr/include/mysql
 
 TARGETS = \
 	$(PLUGIN_NAME)
@@ -19,7 +22,8 @@ PLUGIN_OBJECTS = \
 	$(PLUGIN_NAME).o
 
 PLUGIN_DEPS = \
-	$(PLUGIN_NAME).c
+	$(PLUGIN_NAME).c \
+	Makefile
 
 DIRECTORIES = \
 	$(PLUGIN_FRAMEWORK_DIR)
@@ -69,7 +73,8 @@ CFLAGS += \
 	-Wunreachable-code \
 	-fPIC \
 	-pthread \
-	-I $(DIRECTORIES)
+	-I $(PLUGIN_FRAMEWORK_DIR) \
+	$(INCLUDE_FLAGS)
 
 
 ifneq (,$(DEBUG))

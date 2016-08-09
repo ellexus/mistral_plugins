@@ -68,8 +68,8 @@ const char *const mistral_log_message[PLUGIN_MESSAGE_LIMIT] = {
     X(CALL_TYPE) \
     X(SIZE_RANGE) \
     X(MEASUREMENT) \
-    X(OBSERVED) \
-    X(ALLOWED) \
+    X(MEASURED) \
+    X(THRESHOLD) \
     X(PID) \
     X(COMMAND) \
     X(FILENAME) \

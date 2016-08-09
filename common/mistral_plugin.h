@@ -160,15 +160,18 @@ typedef struct mistral_log {
     const char *path;
     uint32_t call_type_mask;
     bool call_types[CALL_TYPE_MAX];
+    const char *size_range;
     int64_t size_min;
     enum mistral_unit size_min_unit;
     int64_t size_max;
     enum mistral_unit size_max_unit;
     enum mistral_measurement measurement;
+    const char *threshold_str;
     uint64_t threshold;
     enum mistral_unit threshold_unit;
     uint64_t timeframe;
     enum mistral_unit timeframe_unit;
+    const char *measured_str;
     uint64_t measured;
     enum mistral_unit measured_unit;
     uint64_t measured_time;
