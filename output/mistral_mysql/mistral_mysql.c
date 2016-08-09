@@ -122,7 +122,7 @@ bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
 
     /* Get all returned rows locally */
     mysql_stmt_store_result(get_table_name);
-    int received = mysql_stmt_num_rows(get_table_name);
+    my_ulonglong received = mysql_stmt_num_rows(get_table_name);
 
     if (received != 1) {
         mistral_err("Expected 1 returned row but received %d", received);
@@ -227,7 +227,7 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     }
 
     /* Get the total rows affected */
-    int affected_rows = mysql_stmt_affected_rows(insert_rule);
+    my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_rule);
     if (affected_rows != 1) {
         mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %d",
                     affected_rows);
@@ -355,7 +355,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Get all returned rows locally so we can do error checking */
     mysql_stmt_store_result(get_rule_id);
-    int received = mysql_stmt_num_rows(get_rule_id);
+    my_ulonglong received = mysql_stmt_num_rows(get_rule_id);
 
     if (received == 1) {
         /* Populate the output variables with the returned data */
@@ -501,7 +501,7 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
     }
 
     /* Get the total rows affected */
-    int affected_rows = mysql_stmt_affected_rows(insert_log);
+    my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_log);
     if (affected_rows != 1) {
         mistral_err("Invalid number of rows inserted by insert_log. Expected 1, saw %d",
                     affected_rows);
@@ -542,8 +542,8 @@ bool write_log_to_db(mistral_log *log_entry)
     static char last_log_date[DATE_LENGTH] = "";
     static char table_name[LOG_TABLE_NAME_SIZE];
     char log_date[DATE_LENGTH] = "";
-    my_ulonglong rule_id = -1;
-    size_t result = -1;
+    my_ulonglong rule_id = 0;
+    size_t result = 0;
 
     /* Is the date on this record the same as the last record processed? */
     result = strftime(log_date, DATE_LENGTH, "%F", &log_entry->time);
@@ -561,8 +561,7 @@ bool write_log_to_db(mistral_log *log_entry)
     }
 
     /* Sets the rule id */
-    set_rule_id(log_entry, &rule_id);
-    if (rule_id < 1) {
+    if (! set_rule_id(log_entry, &rule_id)) {
         return false;
     }
 
