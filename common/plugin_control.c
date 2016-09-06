@@ -231,6 +231,7 @@ static bool send_message_to_mistral(enum mistral_message message)
         goto fail_send;
     }
 
+    free(message_string);
     return true;
 
 fail_send:
@@ -445,6 +446,7 @@ static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, u
         goto fail_rate_split_fields;
     }
 
+    free(rate_split);
     return true;
 
 fail_rate_split_fields:
