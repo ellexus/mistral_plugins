@@ -89,7 +89,6 @@ utcdatetime6=${utcdatetime6#* }
 utcdatetime7=${utcdatetime7#* }
 utcdatetime8=${utcdatetime8#* }
 
-
 time1=$(date --date="$refdate" +"%F %T")
 time2=$(date --date="$refdate -1 minute" +"%F %T")
 time3=$(date --date="$refdate -2 minutes" +"%F %T")
@@ -139,6 +138,9 @@ utctstime5=${utctime5#* }
 utctstime6=${utctime6#* }
 utctstime7=${utctime7#* }
 utctstime8=${utctime8#* }
+
+fullhostname=$(uname -n)
+hostname=${fullhostname%%.*}
 
 echo "s/UTCDATE1/$utcdateday1/g" > "$output"
 echo "s/UTCDATE2/$utcdateday2/g" >> "$output"
@@ -204,6 +206,8 @@ echo "s/TIME5/$datetime5/g" >> "$output"
 echo "s/TIME6/$datetime6/g" >> "$output"
 echo "s/TIME7/$datetime7/g" >> "$output"
 echo "s/TIME8/$datetime8/g" >> "$output"
+echo "s/FULLHOSTNAME/$fullhostname/g" >> "$output"
+echo "s/HOSTNAME/$hostname/g" >> "$output"
 
 # The IFS='' prevents leading and trailing whitespace from being trimed, and the
 # -n test deals with a missing trailing newline on the last line of input
