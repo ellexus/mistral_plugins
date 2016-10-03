@@ -182,6 +182,8 @@ function main() {
                 if [[ "$suffix" = "h" ]]; then
                     query_time=$((num_time * 60))
                     timeunit=hours
+                else
+                    query_time=$num_time
                 fi
                 shift
                 ;;
@@ -202,6 +204,8 @@ function main() {
                 if [[ "$suffix" = "h" ]]; then
                     query_time=$((num_time * 60))
                     timeunit=hours
+                else
+                    query_time=$num_time
                 fi
                 ;;
             -u | --user)
@@ -253,9 +257,10 @@ function main() {
     elif [[ "$outval" = "" ]]; then
         >&2 echo Error, no data returned for query
         exit -2
-    elif [[ "${outval:0:9}" = '{"error":' ]]; then
+    elif [[ "${outval:0:9}" = '{"error":' || 
+            "${outval:0:21}" = '{"results":[{"error":' ]]; then
         >&2 echo Error, InfluxDB query failed:
-        >&2 echo "  ${outval}"
+        echo "${outval}" | >&2 sed -e 's/.*error":\([^}]*\)}.*/  \1/'
         exit -3
     elif [[ "$outval" = '{"results":[{}]}' ]]; then
         if [[ "$quiet" -ne 1 ]]; then
