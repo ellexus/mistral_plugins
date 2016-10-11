@@ -958,8 +958,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (config_file == NULL) {
         mistral_err("Missing option -c");
-config_file = "/home/paulg/devel/mistral_plugins/test/output/mistral_rtm/plugin_login.cnf";
-//        return;
+        return;
     }
 
     /* Initialize a MySQL object suitable for connection */
