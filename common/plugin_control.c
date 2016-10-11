@@ -546,9 +546,10 @@ static bool parse_log_entry(const char *line)
      * update interval so we may have since transitioned between states.
      */
     tzset();
-    log_entry->time.tm_sec -= timezone;
-    log_entry->time.tm_isdst = -1;
-    log_entry->epoch.tv_sec = mktime(&log_entry->time);
+    struct tm normalised_time = log_entry->time;
+    normalised_time.tm_sec -= timezone;
+    normalised_time.tm_isdst = -1;
+    log_entry->epoch.tv_sec = mktime(&normalised_time);
 
     if (log_entry->epoch.tv_sec < 0) {
         mistral_err("Unable to convert date and time in log message: %s", line);
