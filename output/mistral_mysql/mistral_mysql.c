@@ -280,11 +280,12 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT *get_rule_id;
 
-    MYSQL_BIND    input_bind[4];
+    MYSQL_BIND    input_bind[5];
     MYSQL_BIND    output_bind[1];
     unsigned long str_length_vio;
     unsigned long str_length_call;
     unsigned long str_length_measure;
+    unsigned long str_length_size_range;
     unsigned long str_length_threshold;
 
     get_rule_id = mysql_stmt_init(con);
@@ -295,7 +296,8 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Prepares the statement for use */
     char *get_rule_params_id_str = "SELECT rule_id FROM rule_parameters WHERE violation_path=? " \
-                                   "AND call_type=? AND measurement=? AND threshold=?";
+                                   "AND call_type=? AND measurement=? AND size_range=? AND " \
+                                   "threshold=?";
     if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str,
         strlen(get_rule_params_id_str)))
     {
@@ -312,7 +314,8 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     BIND_STRING(input_bind, 0, log_entry->path, 0, str_length_vio);
     BIND_STRING(input_bind, 1, mistral_call_type_names[log_entry->call_type_mask], 0, str_length_call);
     BIND_STRING(input_bind, 2, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
-    BIND_STRING(input_bind, 3, log_entry->threshold_str, 0, str_length_threshold);
+    BIND_STRING(input_bind, 3, log_entry->size_range, 0, str_length_size_range);
+    BIND_STRING(input_bind, 4, log_entry->threshold_str, 0, str_length_threshold);
 
     /* Set the variables to use to store the values returned by the SELECT query */
     BIND_INT(output_bind, 0, ptr_rule_id, 0);
@@ -328,6 +331,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     str_length_vio = strlen(log_entry->path);
     str_length_call = strlen(mistral_call_type_names[log_entry->call_type_mask]);
     str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
+    str_length_size_range = strlen(log_entry->size_range);
     str_length_threshold = strlen(log_entry->threshold_str);
 
     /* Reset the lengths if they are larger than the column the string is being compared to. Doing
@@ -336,6 +340,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     str_length_vio = (str_length_vio > STRING_SIZE)? STRING_SIZE : str_length_vio;
     str_length_call = (str_length_call > STRING_SIZE)? STRING_SIZE : str_length_call;
     str_length_measure = (str_length_measure > MEASUREMENT_SIZE)? MEASUREMENT_SIZE : str_length_measure;
+    str_length_size_range = (str_length_size_range > RATE_SIZE)? RATE_SIZE : str_length_size_range;
     str_length_threshold = (str_length_threshold > RATE_SIZE)? RATE_SIZE : str_length_threshold;
 
 
