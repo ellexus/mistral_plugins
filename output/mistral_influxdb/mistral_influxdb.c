@@ -344,7 +344,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                              PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
                              ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
                              "job-id=%s,pid=%" PRId64 ",command=%s value=%"
-                             PRIu64 " %jd",
+                             PRIu64 " %ld",
                              (data) ? data : "", (data) ? "\n" : "",
                              mistral_measurement_name[log_entry->measurement],
                              log_entry->label,

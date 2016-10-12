@@ -4,7 +4,19 @@
 PLUGIN_NAME = mistral_influxdb
 
 LDFLAGS = \
-	-lcurl
+	`curl-config --libs`
+	# To compile statically to make the produced binary more portable it should
+	# be simply a matter of using --static-libs above however this does not seem
+	# to be well supported, either producing poor option lists, not being placed
+	# in the correct position in the link command or just simply not being
+	# supported at all.
+	# 
+	# Noteably CentOS doesn't support it. The following options have been
+	# demonstrated to work on CentOS systems that install libcurl.a 
+	# 
+	# gcc mistral_influxdb.o ../../common/plugin_control.o -o mistral_influxdb \
+	# -Wl,-Bstatic -lcurl -Wl,-Bdynamic -lgcc_s -Wl,-Bstatic -lssl -lcrypto \
+	# -Wl,-Bdynamic -lidn -Wl,-z,relro -lgssapi_krb5 -lkrb5 -lz
 
 TARGETS = \
 	$(PLUGIN_NAME)
