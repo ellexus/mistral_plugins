@@ -183,6 +183,7 @@ function main() {
                     usage "Error reading password file \"$2\" - ${password#cat: }"
                 fi
                 password_set=1
+                shift
                 ;;
             --password=*)
                 password=$(cat "${1#--password=}" 2>&1)
