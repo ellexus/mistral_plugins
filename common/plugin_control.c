@@ -231,6 +231,7 @@ static bool send_message_to_mistral(enum mistral_message message)
         goto fail_send;
     }
 
+    free(message_string);
     return true;
 
 fail_send:
@@ -398,24 +399,24 @@ static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
  * Parse a rate string in the form <data><unit>/<time><unit>.
  *
  * Parameters:
- *   s        - Standard null terminated string containing the line to be parsed.
- *   size     - Pointer to the variable to be updated with the calculated data size.
- *   unit     - Pointer to the variable to be updated with the reported data unit.
- *   time     - Pointer to the variable to be updated with the calculated time period.
- *   timeunit - Pointer to the variable to be updated with the reported time period unit.
+ *   s          - Standard null terminated string containing the line to be parsed.
+ *   size       - Pointer to the variable to be updated with the calculated data size.
+ *   unit       - Pointer to the variable to be updated with the reported data unit.
+ *   length     - Pointer to the variable to be updated with the calculated time period.
+ *   lengthunit - Pointer to the variable to be updated with the reported time period unit.
  *
  * Returns:
  *   true if the string is successfully parsed
  *   false otherwise
  */
-static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, uint64_t *time,
-                       enum mistral_unit *timeunit)
+static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, uint64_t *length,
+                       enum mistral_unit *lengthunit)
 {
     assert(s);
     assert(size);
     assert(unit);
-    assert(time);
-    assert(timeunit);
+    assert(length);
+    assert(lengthunit);
     size_t field_count;
 
     char **rate_split = str_split(s, '/', &field_count);
@@ -431,25 +432,26 @@ static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, u
         }
         /* We don't know the type of unit this will be so we will validate it is consistent later */
 
-        if (!parse_size(rate_split[1], time, timeunit)) {
+        if (!parse_size(rate_split[1], length, lengthunit)) {
             mistral_err("Unable to parse rate time period: %s", s);
-            goto fail_rate_time;
+            goto fail_rate_length;
         }
 
-        if (mistral_unit_type[*timeunit] != UNIT_CLASS_TIME) {
+        if (mistral_unit_type[*lengthunit] != UNIT_CLASS_TIME) {
             mistral_err("Unexpected unit for rate time period: %s", s);
-            goto fail_rate_timeunit;
+            goto fail_rate_lengthunit;
         }
     } else {
         mistral_err("Unable to parse rate: %s", s);
         goto fail_rate_split_fields;
     }
 
+    free(rate_split);
     return true;
 
 fail_rate_split_fields:
-fail_rate_timeunit:
-fail_rate_time:
+fail_rate_lengthunit:
+fail_rate_length:
 fail_rate_size:
     free(rate_split);
 fail_rate_split:
@@ -537,14 +539,12 @@ static bool parse_log_entry(const char *line)
         goto fail_log_strptime;
     }
 
-    /* Record the log event time as seconds since epoch after normalising to UTC.
+    /* Record the log event time as seconds since epoch mktime will normalise to UTC.
      *
-     * As Mistral will be running on the same box we can just check the timezone here but be a bit
-     * more cautious about daylight savings time setting as log messages will arrive delayed by the
-     * update interval so we may have since transitioned between states.
+     * Set the daylight savings time value to -1 as log messages will arrive delayed by the update
+     * interval so we may have since transitioned between states which will force mktime to use a
+     * "best guess".
      */
-    tzset();
-    log_entry->time.tm_sec -= timezone;
     log_entry->time.tm_isdst = -1;
     log_entry->epoch.tv_sec = mktime(&log_entry->time);
 

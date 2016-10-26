@@ -70,7 +70,6 @@ CFLAGS += \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wshadow \
-	-Wunreachable-code \
 	-fPIC \
 	-pthread \
 	-I $(PLUGIN_FRAMEWORK_DIR) \
