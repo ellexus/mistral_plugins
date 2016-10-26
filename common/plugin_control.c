@@ -539,14 +539,12 @@ static bool parse_log_entry(const char *line)
         goto fail_log_strptime;
     }
 
-    /* Record the log event time as seconds since epoch after normalising to UTC.
+    /* Record the log event time as seconds since epoch mktime will normalise to UTC.
      *
-     * As Mistral will be running on the same box we can just check the timezone here but be a bit
-     * more cautious about daylight savings time setting as log messages will arrive delayed by the
-     * update interval so we may have since transitioned between states.
+     * Set the daylight savings time value to -1 as log messages will arrive delayed by the update
+     * interval so we may have since transitioned between states which will force mktime to use a
+     * "best guess".
      */
-    tzset();
-    log_entry->time.tm_sec -= timezone;
     log_entry->time.tm_isdst = -1;
     log_entry->epoch.tv_sec = mktime(&log_entry->time);
 
