@@ -3,23 +3,19 @@
 
 PLUGIN_NAME = mistral_influxdb
 
-LDFLAGS = \
-	`curl-config --libs`
-	# To compile statically to make the produced binary more portable it should
-	# be simply a matter of using --static-libs above however this does not seem
-	# to be well supported, either producing poor option lists, not being placed
-	# in the correct position in the link command or just simply not being
-	# supported at all.
-	# 
-	# Noteably CentOS doesn't support it. The following options have been
-	# demonstrated to work on CentOS systems that install libcurl.a 
-	# 
-	# gcc mistral_influxdb.o ../../common/plugin_control.o -o mistral_influxdb \
-	# -Wl,-Bstatic -lcurl -Wl,-Bdynamic -lgcc_s -Wl,-Bstatic -lssl -lcrypto \
-	# -Wl,-Bdynamic -lidn -Wl,-z,relro -lgssapi_krb5 -lkrb5 -lz
+# ------------------------------------------------------------------------------
+# HOST_ARCH -- Native architecture, normalized to elide i386/i686
+# distinction.
+
+HOST_ARCH := $(patsubst i%86,i386,$(shell uname -m))
+$(eval $(call check_arch,$(HOST_ARCH)))
+
+LDLIBS = \
+	$(shell curl-config --libs)
 
 TARGETS = \
-	$(PLUGIN_NAME)
+	$(PLUGIN_NAME) \
+	$(PLUGIN_NAME).$(HOST_ARCH)
 
 PLUGIN_FRAMEWORK_DIR = \
 	../../common
@@ -57,9 +53,9 @@ $(DIRECTORIES):
 	$(MAKE) -C $* clean
 
 # ------------------------------------------------------------------------------
-# GCC -- just set it to gcc
+# GCC -- If possible then use the same compiler as used to compile Mistral
 
-GCC ?= gcc
+GCC ?= /usr/local/install/gcc-4.8.2/bin/gcc
 CC = $(GCC)
 
 # ------------------------------------------------------------------------------
@@ -78,7 +74,6 @@ CFLAGS += \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wshadow \
-	-fPIC \
 	-pthread \
 	-I $(DIRECTORIES)
 
@@ -87,9 +82,7 @@ ifneq (,$(DEBUG))
 CFLAGS += -gdwarf-2
 LDFLAGS += -g
 else
-CFLAGS += \
-	-O3 \
-	-fvisibility=hidden
+CFLAGS += -O3
 endif
 
 # ------------------------------------------------------------------------------
@@ -105,3 +98,6 @@ $(PLUGIN_NAME): $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
 
 $(PLUGIN_NAME).o: $(STANDARD_DEPS) $(PLUGIN_DEPS)
 
+$(PLUGIN_NAME).$(HOST_ARCH) : $(PLUGIN_NAME) $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
+	$(GCC) -o $@ $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS) \
+		$(shell ../../tools/static-link.sh $(PLUGIN_NAME) $(LDLIBS))
