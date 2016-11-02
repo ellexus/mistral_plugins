@@ -6,7 +6,7 @@
 
 function dynamiclibraries () {
     local program=$1
-    ldd ${program} | grep '=>' | awk '{print $1}' | cut -d. -f1 | sed -e "s/^lib/-l/"
+    ldd ${program} | grep '=> /' | awk '{print $1}' | cut -d. -f1 | sed -e "s/^lib/-l/"
 }
 
 # Construct the part of a command line to link a plugin using static libraries where possible.
