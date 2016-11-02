@@ -49,7 +49,7 @@ remote_build() {
     local compiled
     for compiled in "${@}"; do
         echo "remote_build - getting ${compiled}"
-        scp "${machine}:${remote}/${compiled}" "${result}"
+        scp -q "${machine}:${remote}/${compiled}" "${result}"
     done
 
     ssh "${machine}" "rm -rf ${remote}"
@@ -102,15 +102,15 @@ remote_build ellexus@10.33.0.102 ${SOURCE_DIR} ${BUILD_DIR} ${BUILD64}
 
 for PACKAGE in ${PACKAGES}; do
     PLUGIN_SRC=$(dirname ${PACKAGE})
-    PLUGIN=$(basename ${PLUGIN_SRC})
+    PLUGIN_NAME=$(basename ${PLUGIN_SRC})
     VERSION=$(cat ${PLUGIN_SRC}/VERSION)
-    PLUGIN_DST=${BUILD_DIR}/${PLUGIN}_${VERSION}
+    PLUGIN_DST=${BUILD_DIR}/${PLUGIN_NAME}_${VERSION}
     mkdir -p ${PLUGIN_DST}
 
     # Copy the plugin binaries and any files mentioned in the PACKAGE file to an
     # appropriately named directory, then create a tar file of that directory.
 
-    cp ${BUILD_DIR}/${PLUGIN}.* ${PLUGIN_DST}
+    cp ${BUILD_DIR}/${PLUGIN_NAME}.* ${PLUGIN_DST}
     tar -c --directory=${PLUGIN_SRC} --files-from=${PACKAGE} | tar -x --directory=${PLUGIN_DST}
-    tar -czf ./releases/${PLUGIN}_${VERSION}.tar.gz --directory=${BUILD_DIR} $(basename ${PLUGIN_DST})
+    tar -czf ./releases/${PLUGIN_NAME}_${VERSION}.tar.gz --directory=${BUILD_DIR} $(basename ${PLUGIN_DST})
 done
