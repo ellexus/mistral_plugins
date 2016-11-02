@@ -34,7 +34,7 @@ function main () {
     # There are some libraries, namely "-ldl", "-lrt", "-lm" and "-lpthread", which we will always
     # link dynamically.
     #
-    # The remaining libraries are the ones that we want to staically link with.
+    # The remaining libraries are the ones that we want to statically link with.
 
     for word in ${config} ; do
         case $word in
