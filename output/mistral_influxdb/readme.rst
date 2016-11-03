@@ -15,7 +15,7 @@ The plugin accepts the following command line options:
 
 -h, --host
   The name of the machine on which the database is hosted. If not specified the
-  plugin will use "localhost
+  plugin will use "localhost"
 
 -p, --password
   The password to be used when accessing the database.
@@ -25,8 +25,7 @@ The plugin accepts the following command line options:
   will use port 8086.
 
 -s, --https
-  The protocol to be used when accessing the database. If not specified the
-  plugin will use "http".
+  Use HTTPS protocol instead of HTTP when accessing the database.
 
 -u, --username
   The username to be used when accessing the database.
@@ -56,5 +55,5 @@ The options would normally be included in a plugin configuration file, such as
    END
 
 
-To enable the output plug-in you should set the ``MISTRAL_PLUGIN_CONFIG``
+To enable the output plugin you should set the ``MISTRAL_PLUGIN_CONFIG``
 environment variable to point at the plugin configuration file.
