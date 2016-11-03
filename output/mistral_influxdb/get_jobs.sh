@@ -15,7 +15,7 @@ function usage() {
     >&2 cat << EOF 
 Usage: $scriptname [OPTION...] label
 
-Return a list of unique job ids that have violated  the rule "label".
+Return a list of unique job ids that have violated the rule "label".
 
 By default $scriptname will connect to http://localhost:8086/ using database
 "mistral" and look for violations of bandwidth rules named "label" in the last
