@@ -354,7 +354,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                              log_entry->timeframe,
                              log_entry->size_min,
                              log_entry->size_max,
-                             file,
+                             (strcmp(file, "") ? file : "N/A"),
                              job_gid,
                              job_id,
                              log_entry->pid,
