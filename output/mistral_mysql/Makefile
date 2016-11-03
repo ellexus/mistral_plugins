@@ -107,9 +107,9 @@ $(PLUGIN_NAME): $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
 
 $(PLUGIN_NAME).o: $(STANDARD_DEPS) $(PLUGIN_DEPS)
 
-# Try to build a statically linked version of the plugin, but carry on if it fails. (The build
-# machines have all the necessary static libraries installed, but the libraries may not be
-# installed on other machines.)
+# Try to build a statically linked version of the plugin. (The build machines
+# have all the necessary static libraries installed, but the libraries may not
+# be installed on other machines.)
 
 $(PLUGIN_NAME).$(HOST_ARCH) : $(PLUGIN_NAME) $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
 	$(GCC) -o $@ $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS) \
