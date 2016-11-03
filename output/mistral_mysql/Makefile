@@ -17,9 +17,10 @@ INCLUDE_FLAGS := \
 	$(shell mysql_config --include)
 
 TARGETS = \
-	$(PLUGIN_NAME) \
-	$(PLUGIN_NAME).$(HOST_ARCH)
+	$(PLUGIN_NAME)
 
+PACKAGE = \
+	$(PLUGIN_NAME).$(HOST_ARCH)
 
 PLUGIN_FRAMEWORK_DIR = \
 	../../common
@@ -43,9 +44,12 @@ CLEANDIRECTORIES = \
 .PHONY: all
 all: dirs $(TARGETS)
 
+.PHONY: package
+package: dirs $(TARGETS) $(PACKAGE)
+
 .PHONY: clean
 clean: $(CLEANDIRECTORIES)
-	rm -f *.o $(TARGETS)
+	rm -f *.o $(TARGETS) $(PACKAGE)
 
 .PHONY: dirs $(DIRECTORIES)
 dirs: $(DIRECTORIES)
@@ -108,5 +112,5 @@ $(PLUGIN_NAME).o: $(STANDARD_DEPS) $(PLUGIN_DEPS)
 # installed on other machines.)
 
 $(PLUGIN_NAME).$(HOST_ARCH) : $(PLUGIN_NAME) $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
-	- $(GCC) -o $@ $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS) \
+	$(GCC) -o $@ $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS) \
 		$(shell ../../tools/static-link.sh $(PLUGIN_NAME) $(LDLIBS))

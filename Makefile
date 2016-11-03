@@ -13,6 +13,12 @@ build-mistral_mysql:
 build-mistral_influxdb:
 	$(MAKE) -C output/mistral_influxdb
 
+.PHONY: package
+package:
+	$(MAKE) -C common
+	$(MAKE) -C output/mistral_mysql package
+	$(MAKE) -C output/mistral_influxdb package
+
 .PHONY: clean
 clean:
 	$(MAKE) -C common clean

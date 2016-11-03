@@ -30,9 +30,9 @@ trap finish_term TERM INT
 
 # remote_build machine source result compiled ...
 #
-# Copy sources to a temporary directory on the remote machine and run make. The
-# remaining arguments are the compiled files which are copied back from the
-# remote machine to the result directory.
+# Copy sources to a temporary directory on the remote machine and run "make
+# package". The remaining arguments are the compiled files which are copied back
+# from the remote machine to the result directory.
 
 remote_build() {
     local machine=$1
@@ -44,7 +44,7 @@ remote_build() {
 
     local remote=$(ssh "${machine}" mktemp -d)
 
-    ( tar -cz --directory=${source} ./ | ssh "${machine}" "cd ${remote} && tar -xz && make" )
+    ( tar -cz --directory=${source} ./ | ssh "${machine}" "cd ${remote} && tar -xz && make package" )
 
     local compiled
     for compiled in "${@}"; do
