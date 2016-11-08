@@ -436,7 +436,7 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
     };
     MYSQL_STMT       *insert_log;
     MYSQL_BIND       input_bind[B_SIZE];
-    size_t           str_length[B_SIZE];
+    unsigned long    str_length[B_SIZE];
     /* The insert statement is static apart from the table name, allocate a char array big enough
      * for both parts. As the format string contains %s it is two characters longer than needed once
      * we add the max table name length hence no need to add 1 for the trailing null

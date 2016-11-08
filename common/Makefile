@@ -18,9 +18,9 @@ clean:
 	rm -f *.o
 
 # ------------------------------------------------------------------------------
-# GCC -- just set it to gcc
+# GCC -- If possible then use the same compiler as used to compile Mistral
 
-GCC ?= gcc
+GCC ?= /usr/local/install/gcc-4.8.2/bin/gcc
 CC = $(GCC)
 
 # ------------------------------------------------------------------------------
@@ -38,7 +38,6 @@ CFLAGS += \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wshadow \
-	-fPIC \
 	-pthread \
 	-std=gnu99
 
@@ -47,9 +46,7 @@ ifneq (,$(DEBUG))
 CFLAGS += -gdwarf-2
 LDFLAGS += -g
 else
-CFLAGS += \
-	-O3 \
-	-fvisibility=hidden
+CFLAGS += -O3
 endif
 
 # ------------------------------------------------------------------------------
