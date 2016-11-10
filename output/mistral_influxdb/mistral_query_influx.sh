@@ -109,7 +109,7 @@ function main() {
                     validate=${validate//${ctype}/}
                 done
                 if [[ -n "$validate" ]]; then
-                    usage "Invalid argument \"$2\" for option $1"
+                    usage "Invalid argument \"$calltype\" for option $1"
                 fi
                 calltype=${calltype//+/\\+}
                 ;;
