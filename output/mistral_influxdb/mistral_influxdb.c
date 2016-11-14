@@ -334,47 +334,42 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *file = influxdb_escape(log_entry->file);
         const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
         const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
+        char *new_data = NULL;
 
-        /* We need to write one record for every call type in the rule */
-        for (size_t i = 0; i < CALL_TYPE_MAX; i++) {
-            if (log_entry->call_types[i]) {
-                char *old_data = data;
-                if (asprintf(&data,
-                             "%s%s%s,label=%s,calltype=%s,path=%s,threshold=%"
-                             PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
-                             ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
-                             "job-id=%s,pid=%" PRId64 ",command=%s value=%"
-                             PRIu64 " %ld",
-                             (data) ? data : "", (data) ? "\n" : "",
-                             mistral_measurement_name[log_entry->measurement],
-                             log_entry->label,
-                             mistral_call_type_name[i],
-                             log_entry->path,
-                             log_entry->threshold,
-                             log_entry->timeframe,
-                             log_entry->size_min,
-                             log_entry->size_max,
-                             file,
-                             job_gid,
-                             job_id,
-                             log_entry->pid,
-                             command,
-                             log_entry->measured,
-                             log_entry->epoch.tv_sec) < 0) {
+        if (asprintf(&new_data,
+                     "%s%s%s,label=%s,calltype=%s,path=%s,threshold=%"
+                     PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
+                     ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
+                     "job-id=%s,pid=%" PRId64 ",command=%s value=%"
+                     PRIu64 " %ld",
+                     (data) ? data : "", (data) ? "\n" : "",
+                     mistral_measurement_name[log_entry->measurement],
+                     log_entry->label,
+                     mistral_call_type_names[log_entry->call_type_mask],
+                     log_entry->path,
+                     log_entry->threshold,
+                     log_entry->timeframe,
+                     log_entry->size_min,
+                     log_entry->size_max,
+                     file,
+                     job_gid,
+                     job_id,
+                     log_entry->pid,
+                     command,
+                     log_entry->measured,
+                     log_entry->epoch.tv_sec) < 0) {
 
-                    mistral_err("Could not allocate memory for log entry");
-                    free(old_data);
-                    free(file);
-                    free(command);
-                    mistral_shutdown = true;
-                    return;
-                }
-                free(old_data);
-            }
+            mistral_err("Could not allocate memory for log entry");
+            free(data);
+            free(file);
+            free(command);
+            mistral_shutdown = true;
+            return;
         }
-
+        free(data);
         free(file);
         free(command);
+        data = new_data;
 
         log_list_head = log_entry->forward;
         remque(log_entry);

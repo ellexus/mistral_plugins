@@ -82,6 +82,8 @@ function main() {
     local quiet=0
     local timeunit=minutes
     local username=
+    local calltypes=(accept access connect create delete fschange glob open read seek write)
+    local validate=
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -90,26 +92,26 @@ function main() {
                 ;;
             -c | --call-type)
                 calltype=$2
-                case "$calltype" in
-                    accept | access | connect | create | delete | fschange | \
-                    glob | open | read | seek | write)
-                        ;;
-                    *)
-                        usage "Invalid argument \"$2\" for option $1"
-                        ;;
-                esac
+                validate=$calltype
+                for ctype in ${calltypes[@]} +; do
+                    validate=${validate//${ctype}/}
+                done
+                if [[ -n "$validate" ]]; then
+                    usage "Invalid argument \"$2\" for option $1"
+                fi
+                calltype=${calltype//+/\\+}
                 shift
                 ;;
             --call-type=*)
                 calltype=${1#--call-type=}
-                case "$calltype" in
-                    accept | access | connect | create | delete | fschange | \
-                    glob | open | read | seek | write)
-                        ;;
-                    *)
-                        usage "Invalid argument \"${1#--call-type=}\" for option ${1%%=*}"
-                        ;;
-                esac
+                validate=$calltype
+                for ctype in ${calltypes[@]} +; do
+                    validate=${validate//${ctype}/}
+                done
+                if [[ -n "$validate" ]]; then
+                    usage "Invalid argument \"$calltype\" for option $1"
+                fi
+                calltype=${calltype//+/\\+}
                 ;;
             -o | --command)
                 cmd=$2
@@ -346,7 +348,7 @@ function main() {
     fi
 
     if [[ "$calltype" != "" ]]; then
-        where="$where $and \"calltype\" = '${calltype//\'/\\\'}'"
+        where="$where $and \"calltype\" =~  /${calltype//\//\\\/}/"
         and="AND"
     fi
 
