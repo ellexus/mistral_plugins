@@ -13,10 +13,12 @@ function check_db() {
 # Set up influxdb defaults but allow them to be overridden
 
 influx_protocol=${influx_protocol:-http}
-influx_host=${influx_host:-localhost}
+influx_host=${influx_host:-sql.camb.ellexus.com}
 influx_port=${influx_port:-8086}
 influx_db=${influx_db:-mistral$(date +%Y%m%d%H%M%S)}
 
+influx_user=${influx_user-ellexus}
+influx_pass=${influx_pass-ellexus}
 influx_auth=${influx_user}:${influx_pass}
 
 curl_cmd=$(which curl 2>/dev/null)
@@ -35,7 +37,7 @@ fi
 
 # Create the test database
 curl -s -POST "$influx_protocol://$influx_host:$influx_port/query" \
-    $influx_auth --data-urlencode "db=_internal" --data-urlencode \
+    -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
     "q=CREATE DATABASE $influx_db" >/dev/null 2>&1
 
 check_db "$influx_db"
@@ -55,7 +57,7 @@ run_test -d "$influx_db" -h "$influx_host" -P "$influx_port" $secure -u \
 
 # Get the results
 curl -s -GET "$influx_protocol://$influx_host:$influx_port/query?pretty=true" \
-    $influx_auth --data-urlencode "db=$influx_db" --data-urlencode \
+    -u $influx_auth --data-urlencode "db=$influx_db" --data-urlencode \
     "q=SELECT * FROM bandwidth" > $results_dir/results.txt
 
 # curl/influxdb do not always append a newline to the end of the output, do it
@@ -70,7 +72,7 @@ check_results
 if [ -z "$KEEP_TEST_OUTPUT" ];then
     # Delete the test database regardless of test status
     curl -s -POST "$influx_protocol://$influx_host:$influx_port/query" \
-        $influx_auth --data-urlencode "db=_internal" --data-urlencode \
+        -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
         "q=DROP DATABASE $influx_db" >/dev/null 2>&1
 
     check_db "$influx_db"
