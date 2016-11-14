@@ -1,75 +1,75 @@
 :PGNSUPVRSN:1:2:
 :PGNDATASRT:1:
-local#throttle#DATE8TTSTIME7,label1_1,/tmp/tmp.testpath/1_1,read,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/1_1,/tmp/tmp.testpath/1_1,15432101,15432101
-local#throttle#DATE8TTSTIME6,label1_1,/tmp/tmp.testpath/1_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/1_1,/tmp/tmp.testpath/1_1,15432101,15432101
-local#throttle#DATE8TTSTIME5,label1_1,/tmp/tmp.testpath/1_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/1_1,/tmp/tmp.testpath/1_1,15432101,15432101
-local#throttle#DATE8TTSTIME4,label1_2a,/tmp/tmp.testpath/1_2,write,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/1_2,/tmp/tmp.testpath/1_2,15432102,15432102
-local#throttle#DATE8TTSTIME3,label1_2a,/tmp/tmp.testpath/1_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/1_2,/tmp/tmp.testpath/1_2,15432102,15432102
-local#throttle#DATE8TTSTIME2,label1_3a,/tmp/tmp.testpath/1_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/1_3,/tmp/tmp.testpath/1_3,15432103,15432103
-local#throttle#DATE8TTSTIME1,label1_3a,/tmp/tmp.testpath/1_3,read,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/1_3,/tmp/tmp.testpath/1_3,15432103,15432103
+local#throttle#DATE_60_15TTIME_60_15,label1_1,/tmp/tmp.testpath/1_1,read+write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/1_1,/tmp/tmp.testpath/1_1,15432101,15432101
+local#throttle#DATE_60_5TTIME_60_5,label1_1,/tmp/tmp.testpath/1_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/1_1,/tmp/tmp.testpath/1_1,15432101,15432101
+local#throttle#DATE_60_4TTIME_60_4,label1_1,/tmp/tmp.testpath/1_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/1_1,/tmp/tmp.testpath/1_1,15432101,15432101
+local#throttle#DATE_60_3TTIME_60_3,label1_2a,/tmp/tmp.testpath/1_2,write,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/1_2,/tmp/tmp.testpath/1_2,15432102,15432102
+local#throttle#DATE_60_2TTIME_60_2,label1_2a,/tmp/tmp.testpath/1_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/1_2,/tmp/tmp.testpath/1_2,15432102,15432102
+local#throttle#DATE_60_1TTIME_60_1,label1_3a,/tmp/tmp.testpath/1_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/1_3,/tmp/tmp.testpath/1_3,15432103,15432103
+local#throttle#DATE_60_0TTIME_60_0,label1_3a,/tmp/tmp.testpath/1_3,read,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/1_3,/tmp/tmp.testpath/1_3,15432103,15432103
 :PGNDATAEND:1:
 :PGNDATASRT:2:
-local#throttle#DATE7TTSTIME7,label2_1,/tmp/tmp.testpath/2_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101
-local#throttle#DATE7TTSTIME6,label2_1,/tmp/tmp.testpath/2_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101
-local#throttle#DATE7TTSTIME5,label2_1,/tmp/tmp.testpath/2_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101
-local#throttle#DATE7TTSTIME4,label2_2a,/tmp/tmp.testpath/2_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/2_2,/tmp/tmp.testpath/2_2,25432102,25432102
-local#throttle#DATE7TTSTIME3,label2_2a,/tmp/tmp.testpath/2_2,write,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/2_2,/tmp/tmp.testpath/2_2,25432102,25432102
-local#throttle#DATE7TTSTIME2,label2_3a,/tmp/tmp.testpath/2_3,read,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/2_3,/tmp/tmp.testpath/2_3,25432103,25432103
-local#throttle#DATE7TTSTIME1,label2_3a,/tmp/tmp.testpath/2_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/2_3,/tmp/tmp.testpath/2_3,25432103,25432103
+local#throttle#DATE_45_15TTIME_45_15,label2_1,/tmp/tmp.testpath/2_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101
+local#throttle#DATE_45_5TTIME_45_5,label2_1,/tmp/tmp.testpath/2_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101
+local#throttle#DATE_45_4TTIME_45_4,label2_1,/tmp/tmp.testpath/2_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101
+local#throttle#DATE_45_3TTIME_45_3,label2_2a,/tmp/tmp.testpath/2_2,write+read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/2_2,/tmp/tmp.testpath/2_2,25432102,25432102
+local#throttle#DATE_45_2TTIME_45_2,label2_2a,/tmp/tmp.testpath/2_2,write,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/2_2,/tmp/tmp.testpath/2_2,25432102,25432102
+local#throttle#DATE_45_1TTIME_45_1,label2_3a,/tmp/tmp.testpath/2_3,read,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/2_3,/tmp/tmp.testpath/2_3,25432103,25432103
+local#throttle#DATE_45_0TTIME_45_0,label2_3a,/tmp/tmp.testpath/2_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/2_3,/tmp/tmp.testpath/2_3,25432103,25432103
 :PGNDATAEND:2:
 :PGNDATASRT:3:
-local#throttle#DATE6TTSTIME7,label3_1,/tmp/tmp.testpath/3_1,read,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/3_1,/tmp/tmp.testpath/3_1,35432101,35432101
-local#throttle#DATE6TTSTIME6,label3_1,/tmp/tmp.testpath/3_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/3_1,/tmp/tmp.testpath/3_1,35432101,35432101
-local#throttle#DATE6TTSTIME5,label3_1,/tmp/tmp.testpath/3_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/3_1,/tmp/tmp.testpath/3_1,35432101,35432101
-local#throttle#DATE6TTSTIME4,label3_2a,/tmp/tmp.testpath/3_2,write,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/3_2,/tmp/tmp.testpath/3_2,35432102,35432102
-local#throttle#DATE6TTSTIME3,label3_2a,/tmp/tmp.testpath/3_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/3_2,/tmp/tmp.testpath/3_2,35432102,35432102
-local#throttle#DATE6TTSTIME2,label3_3a,/tmp/tmp.testpath/3_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/3_3,/tmp/tmp.testpath/3_3,35432103,35432103
-local#throttle#DATE6TTSTIME1,label3_3a,/tmp/tmp.testpath/3_3,read,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/3_3,/tmp/tmp.testpath/3_3,35432103,35432103
+local#throttle#DATE_30_15TTIME_30_15,label3_1,/tmp/tmp.testpath/3_1,read,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/3_1,/tmp/tmp.testpath/3_1,35432101,35432101
+local#throttle#DATE_30_5TTIME_30_5,label3_1,/tmp/tmp.testpath/3_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/3_1,/tmp/tmp.testpath/3_1,35432101,35432101
+local#throttle#DATE_30_4TTIME_30_4,label3_1,/tmp/tmp.testpath/3_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/3_1,/tmp/tmp.testpath/3_1,35432101,35432101
+local#throttle#DATE_30_3TTIME_30_3,label3_2a,/tmp/tmp.testpath/3_2,write,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/3_2,/tmp/tmp.testpath/3_2,35432102,35432102
+local#throttle#DATE_30_2TTIME_30_2,label3_2a,/tmp/tmp.testpath/3_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/3_2,/tmp/tmp.testpath/3_2,35432102,35432102
+local#throttle#DATE_30_1TTIME_30_1,label3_3a,/tmp/tmp.testpath/3_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/3_3,/tmp/tmp.testpath/3_3,35432103,35432103
+local#throttle#DATE_30_0TTIME_30_0,label3_3a,/tmp/tmp.testpath/3_3,read,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/3_3,/tmp/tmp.testpath/3_3,35432103,35432103
 :PGNDATAEND:3:
 :PGNDATASRT:4:
-local#throttle#DATE5TTSTIME7,label4_1,/tmp/tmp.testpath/4_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101
-local#throttle#DATE5TTSTIME6,label4_1,/tmp/tmp.testpath/4_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101
-local#throttle#DATE5TTSTIME5,label4_1,/tmp/tmp.testpath/4_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101
-local#throttle#DATE5TTSTIME4,label4_2a,/tmp/tmp.testpath/4_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/4_2,/tmp/tmp.testpath/4_2,45432102,45432102
-local#throttle#DATE5TTSTIME3,label4_2a,/tmp/tmp.testpath/4_2,write,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/4_2,/tmp/tmp.testpath/4_2,45432102,45432102
-local#throttle#DATE5TTSTIME2,label4_3a,/tmp/tmp.testpath/4_3,read,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/4_3,/tmp/tmp.testpath/4_3,45432103,45432103
-local#throttle#DATE5TTSTIME1,label4_3a,/tmp/tmp.testpath/4_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/4_3,/tmp/tmp.testpath/4_3,45432103,45432103
+local#throttle#DATE_8_15TTIME_8_15,label4_1,/tmp/tmp.testpath/4_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101
+local#throttle#DATE_8_5TTIME_8_5,label4_1,/tmp/tmp.testpath/4_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101
+local#throttle#DATE_8_4TTIME_8_4,label4_1,/tmp/tmp.testpath/4_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101
+local#throttle#DATE_8_3TTIME_8_3,label4_2a,/tmp/tmp.testpath/4_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/4_2,/tmp/tmp.testpath/4_2,45432102,45432102
+local#throttle#DATE_8_2TTIME_8_2,label4_2a,/tmp/tmp.testpath/4_2,write,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/4_2,/tmp/tmp.testpath/4_2,45432102,45432102
+local#throttle#DATE_8_1TTIME_8_1,label4_3a,/tmp/tmp.testpath/4_3,read,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/4_3,/tmp/tmp.testpath/4_3,45432103,45432103
+local#throttle#DATE_8_0TTIME_8_0,label4_3a,/tmp/tmp.testpath/4_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/4_3,/tmp/tmp.testpath/4_3,45432103,45432103
 :PGNDATAEND:4:
 :PGNDATASRT:5:
-local#throttle#DATE4TTSTIME8,label5_1,/tmp/tmp.testpath/5_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
-local#throttle#DATE4TTSTIME7,label5_1,/tmp/tmp.testpath/5_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
-local#throttle#DATE4TTSTIME6,label5_2a,/tmp/tmp.testpath/5_2,write,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/5_2,/tmp/tmp.testpath/5_2,55432102,55432102
-local#throttle#DATE4TTSTIME5,label5_2a,/tmp/tmp.testpath/5_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/5_2,/tmp/tmp.testpath/5_2,55432102,55432102
-local#throttle#DATE4TTSTIME4,label5_3a,/tmp/tmp.testpath/5_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/5_3,/tmp/tmp.testpath/5_3,55432103,55432103
-local#throttle#DATE4TTSTIME3,label5_3a,/tmp/tmp.testpath/5_3,read,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/5_3,/tmp/tmp.testpath/5_3,55432103,55432103
-local#throttle#DATE4TTSTIME2,label5_1,/tmp/tmp.testpath/5_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
-local#throttle#DATE4TTSTIME1,label5_1,/tmp/tmp.testpath/5_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
+local#throttle#DATE_7_60TTIME_7_60,label5_1,/tmp/tmp.testpath/5_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
+local#throttle#DATE_7_15TTIME_7_15,label5_1,/tmp/tmp.testpath/5_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
+local#throttle#DATE_7_5TTIME_7_5,label5_2a,/tmp/tmp.testpath/5_2,write,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/5_2,/tmp/tmp.testpath/5_2,55432102,55432102
+local#throttle#DATE_7_4TTIME_7_4,label5_2a,/tmp/tmp.testpath/5_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/5_2,/tmp/tmp.testpath/5_2,55432102,55432102
+local#throttle#DATE_7_3TTIME_7_3,label5_3a,/tmp/tmp.testpath/5_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/5_3,/tmp/tmp.testpath/5_3,55432103,55432103
+local#throttle#DATE_7_2TTIME_7_2,label5_3a,/tmp/tmp.testpath/5_3,read,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/5_3,/tmp/tmp.testpath/5_3,55432103,55432103
+local#throttle#DATE_7_1TTIME_7_1,label5_1,/tmp/tmp.testpath/5_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
+local#throttle#DATE_7_0TTIME_7_0,label5_1,/tmp/tmp.testpath/5_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101
 :PGNDATAEND:5:
 :PGNDATASRT:6:
-local#throttle#DATE3TTSTIME7,label6_1,/tmp/tmp.testpath/6_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/6_1,/tmp/tmp.testpath/6_1,65432101,65432101
-local#throttle#DATE3TTSTIME6,label6_1,/tmp/tmp.testpath/6_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/6_1,/tmp/tmp.testpath/6_1,65432101,65432101
-local#throttle#DATE3TTSTIME5,label6_1,/tmp/tmp.testpath/6_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/6_1,/tmp/tmp.testpath/6_1,65432101,65432101
-local#throttle#DATE3TTSTIME4,label6_2a,/tmp/tmp.testpath/6_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/6_2,/tmp/tmp.testpath/6_2,65432102,65432102
-local#throttle#DATE3TTSTIME3,label6_2a,/tmp/tmp.testpath/6_2,write,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/6_2,/tmp/tmp.testpath/6_2,65432102,65432102
-local#throttle#DATE3TTSTIME2,label6_3a,/tmp/tmp.testpath/6_3,read,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/6_3,/tmp/tmp.testpath/6_3,65432103,65432103
-local#throttle#DATE3TTSTIME1,label6_3a,/tmp/tmp.testpath/6_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/6_3,/tmp/tmp.testpath/6_3,65432103,65432103
+local#throttle#DATE_2_15TTIME_2_15,label6_1,/tmp/tmp.testpath/6_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/6_1,/tmp/tmp.testpath/6_1,65432101,65432101
+local#throttle#DATE_2_5TTIME_2_5,label6_1,/tmp/tmp.testpath/6_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/6_1,/tmp/tmp.testpath/6_1,65432101,65432101
+local#throttle#DATE_2_4TTIME_2_4,label6_1,/tmp/tmp.testpath/6_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/6_1,/tmp/tmp.testpath/6_1,65432101,65432101
+local#throttle#DATE_2_3TTIME_2_3,label6_2a,/tmp/tmp.testpath/6_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/6_2,/tmp/tmp.testpath/6_2,65432102,65432102
+local#throttle#DATE_2_2TTIME_2_2,label6_2a,/tmp/tmp.testpath/6_2,write,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/6_2,/tmp/tmp.testpath/6_2,65432102,65432102
+local#throttle#DATE_2_1TTIME_2_1,label6_3a,/tmp/tmp.testpath/6_3,read,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/6_3,/tmp/tmp.testpath/6_3,65432103,65432103
+local#throttle#DATE_2_0TTIME_2_0,label6_3a,/tmp/tmp.testpath/6_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/6_3,/tmp/tmp.testpath/6_3,65432103,65432103
 :PGNDATAEND:6:
 :PGNDATASRT:7:
-local#throttle#DATE2TTSTIME7,label7_1,/tmp/tmp.testpath/7_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/7_1,/tmp/tmp.testpath/7_1,75432101,75432101
-local#throttle#DATE2TTSTIME6,label7_1,/tmp/tmp.testpath/7_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/7_1,/tmp/tmp.testpath/7_1,75432101,75432101
-local#throttle#DATE2TTSTIME5,label7_1,/tmp/tmp.testpath/7_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/7_1,/tmp/tmp.testpath/7_1,75432101,75432101
-local#throttle#DATE2TTSTIME4,label7_2a,/tmp/tmp.testpath/7_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/7_2,/tmp/tmp.testpath/7_2,75432102,75432102
-local#throttle#DATE2TTSTIME3,label7_2a,/tmp/tmp.testpath/7_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/7_2,/tmp/tmp.testpath/7_2,75432102,75432102
-local#throttle#DATE2TTSTIME2,label7_3a,/tmp/tmp.testpath/7_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/7_3,/tmp/tmp.testpath/7_3,75432103,75432103
-local#throttle#DATE2TTSTIME1,label7_3a,/tmp/tmp.testpath/7_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/7_3,/tmp/tmp.testpath/7_3,75432103,75432103
+local#throttle#DATE_1_15TTIME_1_15,label7_1,/tmp/tmp.testpath/7_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/7_1,/tmp/tmp.testpath/7_1,75432101,75432101
+local#throttle#DATE_1_5TTIME_1_5,label7_1,/tmp/tmp.testpath/7_1,read,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/7_1,/tmp/tmp.testpath/7_1,75432101,75432101
+local#throttle#DATE_1_4TTIME_1_4,label7_1,/tmp/tmp.testpath/7_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/7_1,/tmp/tmp.testpath/7_1,75432101,75432101
+local#throttle#DATE_1_3TTIME_1_3,label7_2a,/tmp/tmp.testpath/7_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/7_2,/tmp/tmp.testpath/7_2,75432102,75432102
+local#throttle#DATE_1_2TTIME_1_2,label7_2a,/tmp/tmp.testpath/7_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/7_2,/tmp/tmp.testpath/7_2,75432102,75432102
+local#throttle#DATE_1_1TTIME_1_1,label7_3a,/tmp/tmp.testpath/7_3,write,all,bandwidth,2001B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/7_3,/tmp/tmp.testpath/7_3,75432103,75432103
+local#throttle#DATE_1_0TTIME_1_0,label7_3a,/tmp/tmp.testpath/7_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/7_3,/tmp/tmp.testpath/7_3,75432103,75432103
 :PGNDATAEND:7:
 :PGNDATASRT:8:
-local#throttle#DATE1TTSTIME7,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101
-local#throttle#DATE1TTSTIME6,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101
-local#throttle#DATE1TTSTIME5,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101
-local#throttle#DATE1TTSTIME4,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/8_2,/tmp/tmp.testpath/8_2,85432102,85432102
-local#throttle#DATE1TTSTIME3,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/8_2,/tmp/tmp.testpath/8_2,85432102,85432102
-local#throttle#DATE1TTSTIME2,label8_3a,/tmp/tmp.testpath/8_3,read,all,bandwidth,2021B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/8_3,/tmp/tmp.testpath/8_3,85432103,85432103
-local#throttle#DATE1TTSTIME1,label8_3a,/tmp/tmp.testpath/8_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/8_3,/tmp/tmp.testpath/8_3,85432103,85432103
+local#throttle#DATE_0_15TTIME_0_15,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,12B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101
+local#throttle#DATE_0_5TTIME_0_5,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101
+local#throttle#DATE_0_4TTIME_0_4,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,26025,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101
+local#throttle#DATE_0_3TTIME_0_3,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,200B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/8_2,/tmp/tmp.testpath/8_2,85432102,85432102
+local#throttle#DATE_0_2TTIME_0_2,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,201B/100ms,200B/100ms,26039,/usr/bin/cat /tmp/tmp.testpath/8_2,/tmp/tmp.testpath/8_2,85432102,85432102
+local#throttle#DATE_0_1TTIME_0_1,label8_3a,/tmp/tmp.testpath/8_3,read,all,bandwidth,2021B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/8_3,/tmp/tmp.testpath/8_3,85432103,85432103
+local#throttle#DATE_0_0TTIME_0_0,label8_3a,/tmp/tmp.testpath/8_3,write,all,bandwidth,2010B/100ms,2000B/100ms,26045,/usr/bin/cat /tmp/tmp.testpath/8_3,/tmp/tmp.testpath/8_3,85432103,85432103
 :PGNDATAEND:8:
 :PGNSHUTDWN:
