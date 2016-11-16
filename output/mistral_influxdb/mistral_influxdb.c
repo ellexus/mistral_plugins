@@ -365,8 +365,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "%s%s%s,label=%s,calltype=%s,path=%s,threshold=%"
                      PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
                      ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
-                     "job-id=%s,pid=%" PRId64 ",command=%s,host=%s value=%"
-                     PRIu64 " %ld",
+                     "job-id=%s,pid=%" PRId64 ",command=%s,host=%s,scope=%s,"
+                     "logtype=%s value=%" PRIu64 " %ld",
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
@@ -382,6 +382,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->pid,
                      command,
                      hostname,
+                     mistral_scope_name[log_entry->scope],
+                     mistral_contract_name[log_entry->contract_type],
                      log_entry->measured,
                      log_entry->epoch.tv_sec) < 0) {
 
