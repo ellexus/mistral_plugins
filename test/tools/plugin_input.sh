@@ -53,6 +53,11 @@ for day in 60 45 30 8 7 2 1 0; do
     done
 done
 
+fullhostname=$(uname -n)
+hostname=${fullhostname%%.*}
+echo "s/FULLHOSTNAME/$fullhostname/g" >> "$output"
+echo "s/HOSTNAME/$hostname/g" >> "$output"
+
 # The IFS='' prevents leading and trailing whitespace from being trimed, and the
 # -n test deals with a missing trailing newline on the last line of input
 while IFS='' read -r line || [ -n "$line" ]; do
