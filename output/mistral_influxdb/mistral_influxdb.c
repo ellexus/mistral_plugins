@@ -239,7 +239,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Attempt to store the hostname */
     char *temp_hostname = getenv("HOSTNAME");
-    if(temp_hostname) {
+    if (temp_hostname) {
         hostname = strdup(temp_hostname);
     }
 
