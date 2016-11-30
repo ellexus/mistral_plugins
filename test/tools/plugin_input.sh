@@ -40,7 +40,6 @@ fi
 refdate=$(date +"%a %b %e %T %Z %Y")
 echo "# Reference date: $refdate" > "$output"
 # Set up some substitution variables
-
 for day in 60 45 30 8 7 2 1 0; do
     for mins in 60 15 5 4 3 2 1 0; do
         eval "utcdate${day}time${mins}=\$(date -u --date=\"$refdate -$day days -$mins minutes\" +\"%F %T\")"

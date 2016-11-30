@@ -3,14 +3,24 @@
 
 PLUGIN_NAME = mistral_rtm
 
-LDFLAGS = \
-	-lmysqlclient `mysql_config --libs`
+# ------------------------------------------------------------------------------
+# HOST_ARCH -- Native architecture, normalized to elide i386/i686
+# distinction.
 
-INCLUDE_FLAGS = \
-	-I /usr/include/mysql
+HOST_ARCH := $(patsubst i%86,i386,$(shell uname -m))
+$(eval $(call check_arch,$(HOST_ARCH)))
+
+LDLIBS := \
+	$(shell mysql_config --libs)
+
+INCLUDE_FLAGS := \
+	$(shell mysql_config --include)
 
 TARGETS = \
 	$(PLUGIN_NAME)
+
+PACKAGE = \
+	$(PLUGIN_NAME).$(HOST_ARCH)
 
 PLUGIN_FRAMEWORK_DIR = \
 	../../common
@@ -34,9 +44,12 @@ CLEANDIRECTORIES = \
 .PHONY: all
 all: dirs $(TARGETS)
 
+.PHONY: package
+package: dirs $(TARGETS) $(PACKAGE)
+
 .PHONY: clean
 clean: $(CLEANDIRECTORIES)
-	rm -f *.o $(TARGETS)
+	rm -f *.o $(TARGETS) $(PACKAGE)
 
 .PHONY: dirs $(DIRECTORIES)
 dirs: $(DIRECTORIES)
@@ -49,9 +62,9 @@ $(DIRECTORIES):
 	$(MAKE) -C $* clean
 
 # ------------------------------------------------------------------------------
-# GCC -- just set it to gcc
+# GCC -- If possible then use the same compiler as used to compile Mistral
 
-GCC ?= gcc
+GCC ?= /usr/local/install/gcc-4.8.2/bin/gcc
 CC = $(GCC)
 
 # ------------------------------------------------------------------------------
@@ -70,8 +83,6 @@ CFLAGS += \
 	-Wpointer-arith \
 	-Wredundant-decls \
 	-Wshadow \
-	-fPIC \
-	-pthread \
 	-I $(PLUGIN_FRAMEWORK_DIR) \
 	$(INCLUDE_FLAGS)
 
@@ -80,9 +91,7 @@ ifneq (,$(DEBUG))
 CFLAGS += -gdwarf-2
 LDFLAGS += -g
 else
-CFLAGS += \
-	-O3 \
-	-fvisibility=hidden
+CFLAGS += -O3
 endif
 
 # ------------------------------------------------------------------------------
@@ -98,3 +107,10 @@ $(PLUGIN_NAME): $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
 
 $(PLUGIN_NAME).o: $(STANDARD_DEPS) $(PLUGIN_DEPS)
 
+# Try to build a statically linked version of the plugin. (The build machines
+# have all the necessary static libraries installed, but the libraries may not
+# be installed on other machines.)
+
+$(PLUGIN_NAME).$(HOST_ARCH) : $(PLUGIN_NAME) $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
+	$(GCC) -o $@ $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS) \
+		$(shell ../../tools/static-link.sh $(PLUGIN_NAME) $(LDLIBS))

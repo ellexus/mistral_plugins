@@ -55,6 +55,7 @@ static char project[STRING_SIZE] = "";
 static char escaped_project[STRING_SIZE * 2 + 1] = "";
 static char last_log_date[DATE_LENGTH] = "";
 static my_ulonglong submit_time = 0;
+uint64_t cluster_id;
 
 char *log_insert = NULL;
 size_t log_insert_len = 0;
@@ -196,7 +197,7 @@ fail_get_log_table_name:
 bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
     MYSQL_STMT   *insert_rule;
-    MYSQL_BIND    input_bind[6];
+    MYSQL_BIND    input_bind[7];
     unsigned long str_length_vio;
     unsigned long str_length_label;
     unsigned long str_length_call;
@@ -212,9 +213,10 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     }
 
     /* Prepares the statement for use */
-    insert_rule_parameters_str = "INSERT INTO rule_parameters (rule_id, label, violation_path," \
-                                 "call_type, measurement, size_range, threshold) VALUES" \
-                                 "(NULL,?,?,?,?,?,?)";
+    insert_rule_parameters_str = "INSERT INTO rule_parameters (rule_id, label," \
+                                 "violation_path, call_type, measurement," \
+                                 "size_range, threshold, cluster_id) VALUES" \
+                                 "(NULL,?,?,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_parameters_str,
                            strlen(insert_rule_parameters_str))) {
         mistral_err("mysql_stmt_prepare(insert_rule), failed");
@@ -232,6 +234,7 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
+    BIND_INT(input_bind, 6, &cluster_id, 0);
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(insert_rule, input_bind)) {
@@ -366,7 +369,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT *get_rule_id;
 
-    MYSQL_BIND    input_bind[6];
+    MYSQL_BIND    input_bind[7];
     MYSQL_BIND    output_bind[1];
     rule_param    *this_rule;
     void          *found;
@@ -436,6 +439,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
+    BIND_INT(input_bind, 6, &cluster_id, 0);
 
     /* Set the variables to use to store the values returned by the SELECT query */
     BIND_INT(output_bind, 0, ptr_rule_id, 0);
@@ -632,10 +636,12 @@ char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
 
     }
 
-    #define LOG_VALUES "('%s', '%s', '%s', '%s', '%s', %llu, %lu, '%s'," \
-                       " %lu, %ld, '%s', '%s', '%s', IF(%llu > 0, %llu, NULL)," \
+    #define LOG_VALUES "('%s', '%s', '%s', '%s', '%s', %llu, %" PRIu64 "," \
+                       " '%s', %" PRIu64 ", %" PRId64 ", '%s', '%s', '%s'," \
+                       " IF(%llu > 0, %llu, NULL)," \
                        " IF(%lu > 0, %lu, NULL), '%s', IF(%llu > 0, %llu, NULL)," \
-                       " IF(%lu > 0, %lu, NULL), FROM_UNIXTIME(%llu), NULL)"
+                       " IF(%lu > 0, %lu, NULL), FROM_UNIXTIME(%llu), NULL, %" \
+                       PRIu64 ")"
 
     if (asprintf(&values_string,
                  LOG_VALUES,
@@ -657,7 +663,8 @@ char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
                  log_entry->job_id,
                  temp_id, temp_id,
                  temp_array_idx, temp_array_idx,
-                 submit_time) < 0) {
+                 submit_time,
+                 cluster_id) < 0) {
         mistral_err("build_values_string failed to allocate memory in asprintf");
         goto fail_build_values_string;
     }
@@ -879,6 +886,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     /* Returning without setting plug-in type will cause a clean exit */
 
     const struct option options[] = {
+        {"cluster-id", required_argument, NULL, 'i'},
         {"defaults-file", required_argument, NULL, 'c'},
         {"error", required_argument, NULL, 'o'},
         {"output", required_argument, NULL, 'o'},
@@ -897,6 +905,16 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'o':
             error_file = optarg;
             break;
+        case 'i':{
+            char *end = NULL;
+            unsigned long tmp_id = strtoul(optarg, &end, 10);
+            if (tmp_id <= 0 || !end || *end) {
+                mistral_err("Invalid cluster id specified '%s', using '1'", optarg);
+                tmp_id = 1;
+            }
+            cluster_id = (uint64_t)tmp_id;
+            break;
+        }
         default:
             return;
         }
@@ -1141,7 +1159,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                          "project, rule_parameters, observed, observed_unit," \
                          "observed_time, pid, command, file_name, group_id," \
                          "group_job_id, group_job_array_index, id, job_id," \
-                         "job_array_index, submit_time, log_id) VALUES %s",
+                         "job_array_index, submit_time, log_id, cluster_id) " \
+                         "VALUES %s",
                          table_name,
                          values) < 0) {
                 mistral_err("Unable to allocate memory for log insert");

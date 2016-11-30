@@ -36,8 +36,9 @@ CREATE TABLE rule_parameters (Rule_ID INT NOT NULL AUTO_INCREMENT,
                               Measurement VARCHAR(13) NOT NULL,
                               Size_Range VARCHAR(64) NOT NULL,
                               Threshold VARCHAR(64) NOT NULL,
+                              Cluster_ID INTEGER UNSIGNED DEFAULT "1",
                               PRIMARY KEY (Rule_ID),
-                              UNIQUE KEY(Label,Violation_Path,Call_Type,Measurement,Size_Range,Threshold))
+                              UNIQUE KEY(Label,Violation_Path,Call_Type,Measurement,Size_Range,Threshold,Cluster_ID))
                               ENGINE=InnoDB;
 
 CREATE TABLE control_table (Table_date DATE NOT NULL,
@@ -77,6 +78,7 @@ CREATE PROCEDURE create_log_tables()
                          Group_Job_ID BIGINT UNSIGNED,
                          Group_Job_Array_Index INTEGER UNSIGNED,
                          ID VARCHAR(256),
+                         Cluster_ID INTEGER UNSIGNED DEFAULT "1",
                          Job_ID BIGINT UNSIGNED,
                          Job_Array_Index INTEGER UNSIGNED,
                          Submit_Time TIMESTAMP NOT NULL,
@@ -164,6 +166,8 @@ CREATE PROCEDURE update_eod_tables()
         CALL exec_qry(@drop);
         SET @drop = CONCAT('DROP INDEX IDsIndex ON ', @oldest_table_name, ';');
         CALL exec_qry(@drop);
+        SET @drop = CONCAT('DROP INDEX Job ON ', @oldest_table_name, ';');
+        CALL exec_qry(@drop);
     END IF;
     COMMIT;
 END $$
@@ -201,6 +205,8 @@ CREATE PROCEDURE update_index()
             SET @index_hostname = CONCAT('ALTER TABLE ', @older_table_name,' ADD INDEX LabelHostname(Hostname);');
             CALL exec_qry(@index_hostname);
             SET @index_ids = CONCAT('ALTER TABLE ', @older_table_name,' ADD INDEX IDsIndex(Group_ID, ID);');
+            CALL exec_qry(@index_ids);
+            SET @index_ids = CONCAT('ALTER TABLE ', @older_table_name,' ADD INDEX Job(Cluster_ID, Job_ID, Job_Array_Index, Submit_Time);');
             CALL exec_qry(@index_ids);
         END IF;
         SET counter = counter + 1;

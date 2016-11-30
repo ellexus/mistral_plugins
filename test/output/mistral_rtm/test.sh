@@ -24,15 +24,15 @@ fi
 sql_cmd="SELECT scope, type, time_stamp, label, violation_path, call_type,"
 sql_cmd="$sql_cmd measurement, size_range, threshold, observed, observed_time,"
 sql_cmd="$sql_cmd pid, command, file_name, group_job_id, group_job_array_index,"
-sql_cmd="$sql_cmd job_id, job_array_index, submit_time, hostname, project FROM"
-sql_cmd="$sql_cmd log_01 a, rule_parameters b WHERE b.rule_id ="
-sql_cmd="$sql_cmd a.rule_parameters ORDER BY log_id ASC" 
+sql_cmd="$sql_cmd job_id, job_array_index, submit_time, hostname, project,"
+sql_cmd="$sql_cmd a.cluster_id FROM log_01 a, rule_parameters b WHERE "
+sql_cmd="$sql_cmd b.rule_id = a.rule_parameters ORDER BY log_id ASC" 
 
 export LSB_MCPU_HOSTS="host1 2 host2 2 host3 1 ${HOSTNAME%%.*} 1"
 export LSB_JOBFILENAME=$plugin_dir/.lsbatch/1472658176.61902
 export LSB_PROJECT_NAME=default
 
-run_test --defaults-file="$mysql_parameters"
+run_test --defaults-file="$mysql_parameters" --cluster-id=2
 
 # Get the results
 "$mysql_cmd" --defaults-file="$mysql_parameters" -ss -e "$sql_cmd" \
