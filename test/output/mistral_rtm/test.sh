@@ -13,7 +13,7 @@ fi
 
 # Create the test database
 "$mysql_cmd" --defaults-file="$mysql_admin_parameters" \
-    < "$plugin_dir"/sql/create_multiple_tables.sql
+    < "$plugin_dir"/sql/create_mistral.sql
 
 if [ $? -ne 0 ]; then
     logerr "Error creating test database"
@@ -21,11 +21,11 @@ if [ $? -ne 0 ]; then
 fi
 
 # Set up the SQL command to fetch the results
-sql_cmd="SELECT scope, type, time_stamp, label, violation_path, call_type,"
+sql_cmd="SELECT scope, type, time, label, violation_path, call_type,"
 sql_cmd="$sql_cmd measurement, size_range, threshold, observed, observed_time,"
-sql_cmd="$sql_cmd pid, command, file_name, group_job_id, group_job_array_index,"
-sql_cmd="$sql_cmd job_id, job_array_index, submit_time, hostname, project,"
-sql_cmd="$sql_cmd a.cluster_id FROM log_01 a, rule_parameters b WHERE "
+sql_cmd="$sql_cmd pid, command, file_name, group_jobid, group_indexid,"
+sql_cmd="$sql_cmd jobid, indexid, submit_time, host, project,"
+sql_cmd="$sql_cmd a.clusterid FROM mistral_events a, rule_parameters b WHERE "
 sql_cmd="$sql_cmd b.rule_id = a.rule_parameters ORDER BY log_id ASC" 
 
 export LSB_MCPU_HOSTS="host1 2 host2 2 host3 1 ${HOSTNAME%%.*} 1"

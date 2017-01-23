@@ -7,22 +7,18 @@
 #include <search.h>             /* insque, remque */
 #include <stdbool.h>            /* bool */
 #include <stdio.h>              /* asprintf */
-#include <stdlib.h>             /* calloc, realloc, free, getenv */
+#include <stdlib.h>             /* calloc, free, getenv */
 #include <string.h>             /* strerror_r, strdup, strchr */
 #include <unistd.h>             /* gethostname */
-
 
 #include "mistral_plugin.h"
 
 /* Define some database column sizes */
 #define RATE_SIZE 64
-#define LOG_TABLE_NAME_SIZE 6
 #define STRING_SIZE 256
 #define MEASUREMENT_SIZE 13
 
-#define DATE_FORMAT "YYYY-MM-DD"
 #define DATETIME_FORMAT "YYYY-MM-DD HH-mm-SS"
-#define DATE_LENGTH sizeof(DATE_FORMAT)
 #define DATETIME_LENGTH sizeof(DATETIME_FORMAT)
 
 #define BIND_STRING(b, i, str, null_is, str_len)    \
@@ -53,7 +49,6 @@ static char hostname[STRING_SIZE] = "";
 static char escaped_hostname[STRING_SIZE * 2 + 1] = "";
 static char project[STRING_SIZE] = "";
 static char escaped_project[STRING_SIZE * 2 + 1] = "";
-static char last_log_date[DATE_LENGTH] = "";
 static my_ulonglong submit_time = 0;
 uint64_t cluster_id;
 
@@ -69,114 +64,6 @@ typedef struct rule_param {
     my_ulonglong rule_id;
     char threshold[RATE_SIZE + 1];
 } rule_param;
-/*
- * get_log_table_name
- *
- * This function retrieves the name of the table that contains log records for
- * the date of the logged event.
- *
- * Parameters:
- *   log_entry      - A Mistral log record data structure containing the
- *                    received log information.
- *   selected_table - Pointer to the string to be populated with appropriate
- *                    table name
- *
- * Returns:
- *   true if the table name was found
- *   false otherwise
- */
-bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
-{
-    /* Allocates memory for a MYSQL_STMT and initializes it */
-    MYSQL_STMT      *get_table_name;
-    MYSQL_BIND      input_bind[1];
-    MYSQL_BIND      output_bind[1];
-    unsigned long   str_length;
-    unsigned long   result_str_length;
-    char            log_date[STRING_SIZE];
-
-    get_table_name = mysql_stmt_init(con);
-    if (!get_table_name) {
-        mistral_err("mysql_stmt_init() out of memory for get_table_name");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
-        goto fail_get_log_table_name;
-    }
-
-    /* Prepares the statement for use */
-    char *get_log_table_name_str =
-        "SELECT table_name FROM control_table WHERE table_date = DATE_FORMAT(?,'%Y-%m-%d')";
-    if (mysql_stmt_prepare(get_table_name, get_log_table_name_str,
-                           strlen(get_log_table_name_str)))
-    {
-        mistral_err("mysql_stmt_prepare(get_table_name) failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
-        goto fail_get_log_table_name;
-    }
-
-    /* Initialise the bind data structures */
-    memset(input_bind, 0, sizeof(input_bind));
-    memset(output_bind, 0, sizeof(output_bind));
-
-    /* Set the variables to use for input parameters in the SELECT query */
-    BIND_STRING(input_bind, 0, log_date, 0, str_length);
-
-    /* Set the variables to use to store the values returned by the SELECT query */
-    BIND_STRING(output_bind, 0, selected_table, 0, result_str_length);
-
-
-    /* Connect the input variables to the prepared query */
-    if (mysql_stmt_bind_param(get_table_name, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(get_table_name) failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
-        goto fail_get_log_table_name;
-    }
-
-    /* Set the date to look up */
-    strftime(log_date, sizeof(log_date), "%F", &log_entry->time);
-    str_length = strlen(log_date);
-
-    /* Execute the query */
-    if (mysql_stmt_execute(get_table_name)) {
-        mistral_err("mysql_stmt_execute(get_table_name), failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
-        goto fail_get_log_table_name;
-    }
-
-    /* Connect the output variables to the results of the query */
-    if (mysql_stmt_bind_result(get_table_name, output_bind)) {
-        mistral_err("mysql_stmt_bind_result(get_table_name), failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
-    }
-
-    /* Get all returned rows locally */
-    mysql_stmt_store_result(get_table_name);
-    my_ulonglong received = mysql_stmt_num_rows(get_table_name);
-
-    if (received != 1) {
-        mistral_err("Expected 1 returned row but received %d", received);
-        goto fail_get_log_table_name;
-    }
-
-    /* Populate the output variables with the returned data */
-    if (mysql_stmt_fetch(get_table_name)) {
-        mistral_err("mysql_stmt_fetch(get_table_name), failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
-        goto fail_get_log_table_name;
-    }
-
-    /* Close the statement */
-    if (mysql_stmt_close(get_table_name)) {
-        mistral_err("Failed while closing the statement get_table_name");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
-        goto fail_get_log_table_name;
-    }
-
-    return true;
-
-fail_get_log_table_name:
-    mistral_err("get_log_table_name failed!");
-    return false;
-}
 
 /*
  * insert_rule_parameters
@@ -1097,38 +984,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 {
     UNUSED(block_num);
     UNUSED(block_error);
-    static char table_name[LOG_TABLE_NAME_SIZE];
-    char log_date[DATE_LENGTH] = "";
-    size_t result = 0;
     my_ulonglong rule_id = 0;
 
     mistral_log *log_entry = log_list_head;
 
     while (log_entry) {
-        /* Is the date on this record the same as the last record processed? */
-        result = strftime(log_date, DATE_LENGTH, "%F", &log_entry->time);
-
-        if (result > 0 && strncmp(log_date, last_log_date, DATE_LENGTH) != 0) {
-            /* The date is different to the last log seen - send any updates
-             * pending for the last table to the database.
-             */
-            if (log_insert) {
-                if(!insert_log_to_db()) {
-                    mistral_err("Insert log entry on date change failed");
-                    mistral_shutdown = true;
-                    return;
-                }
-            }
-
-            strncpy(last_log_date, log_date, DATE_LENGTH);
-
-            if (!get_log_table_name(log_entry, table_name)) {
-                mistral_err("get_log_table_name failed");
-                mistral_shutdown = true;
-                return;
-            }
-        }
-
         /* Get (or create) the appropriate rule id for this log entry */
         if (! set_rule_id(log_entry, &rule_id)) {
             mistral_shutdown = true;
@@ -1138,7 +998,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *values = build_values_string(log_entry, rule_id);
         size_t values_len = strlen(values);
 
-        /* The default maximum communication buffer size is 1MB (see 
+        /* The default maximum communication buffer size is 1MB (see
          * https://dev.mysql.com/doc/refman/5.7/en/c-api.html.
          * Let's assume that this has not been reduced. Check if this record
          * will fit within the buffer. If not we need to send the currently
@@ -1155,14 +1015,12 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         if (log_insert_len == 0) {
             /* Create the insert statement */
             if (asprintf(&log_insert,
-                         "INSERT INTO %s (scope, type, time_stamp, hostname," \
-                         "project, rule_parameters, observed, observed_unit," \
-                         "observed_time, pid, command, file_name, group_id," \
-                         "group_job_id, group_job_array_index, id, job_id," \
-                         "job_array_index, submit_time, log_id, cluster_id) " \
-                         "VALUES %s",
-                         table_name,
-                         values) < 0) {
+                         "INSERT INTO mistral_events (scope, type, time," \
+                         "host, project, rule_parameters, observed," \
+                         "observed_unit, observed_time, pid, command," \
+                         "file_name, groupid, group_jobid, group_indexid, id," \
+                         "jobid, indexid, submit_time, log_id, clusterid) "\
+                         "VALUES %s", values) < 0) {
                 mistral_err("Unable to allocate memory for log insert");
                 mistral_shutdown = true;
                 return;
