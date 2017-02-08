@@ -10,16 +10,17 @@ every machine that will run jobs under Mistral.
 Process Summary
 ---------------
 The schema creation script creates a database called "mistral_log". Within it are 2 tables:
-the mistral_events table and a rule_parameters table. A user "'mistral'@'%'" is created and
+the mistral_events table and a mistral_rule_parameters table. A user "'mistral'@'%'" is created and
 granted all privileges on "mistral_log".
 
 The plug-in uses a single table to store Mistral data with data rotation handled by the LSF Spectrum
 RTM system. The data is the same as would be output from Mistral to a log file. Each field is stored
-in a separate column with the exception of those stored in the "rule_parameters" table (see below).
+in a separate column with the exception of those stored in the "mistral_rule_parameters" table (see
+below).
 
-The "rule_parameters" table converts unique combinations of "Label, Violation path, Call-Type,
-Size-Range, Measurement and Threshold" into integer indexes which are then stored in the log tables.
-The rule_parameters table is never cleared.
+The "mistral_rule_parameters" table converts unique combinations of "Label, Violation path,
+Call-Type, Size-Range, Measurement and Threshold" into integer indexes which are then stored in the
+events table. The mistral_rule_parameters table is never cleared.
 
 Password Hiding
 ---------------

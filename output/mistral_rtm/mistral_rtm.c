@@ -63,6 +63,7 @@ typedef struct rule_param {
     char size_range[RATE_SIZE + 1];
     my_ulonglong rule_id;
     char threshold[RATE_SIZE + 1];
+    my_ulonglong cluster_id;
 } rule_param;
 
 /*
@@ -100,10 +101,10 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     }
 
     /* Prepares the statement for use */
-    insert_rule_parameters_str = "INSERT INTO rule_parameters (rule_id, label," \
-                                 "violation_path, call_type, measurement," \
-                                 "size_range, threshold, cluster_id) VALUES" \
-                                 "(NULL,?,?,?,?,?,?,?)";
+    insert_rule_parameters_str = "INSERT INTO mistral_rule_parameters" \
+                                 "(rule_id, label, violation_path, call_type," \
+                                 "measurement, size_range, threshold," \
+                                 "clusterid) VALUES (NULL,?,?,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_parameters_str,
                            strlen(insert_rule_parameters_str))) {
         mistral_err("mysql_stmt_prepare(insert_rule), failed");
@@ -225,6 +226,16 @@ static int rule_compare(const void *p, const void *q)
     }
 
     retval = strcmp(rule1->threshold, rule2->threshold);
+    if (retval) {
+        return retval;
+    }
+
+    tmpval = rule1->cluster_id - rule2->cluster_id;
+    if (tmpval < 0) {
+        retval = -1;
+    } else if (tmpval > 0) {
+        retval = 1;
+    }
 
     return retval;
 }
@@ -232,9 +243,9 @@ static int rule_compare(const void *p, const void *q)
  * set_rule_id
  *
  * This function checks to see if the violated rule details are already present
- * in the rule_parameters table and, if so, selects the related record ID. If
- * the record does not already exist insert_rule_parameters is called to create
- * it.
+ * in the mistral_rule_parameters table and, if so, selects the related record
+ * ID. If the record does not already exist insert_rule_parameters is called to
+ * create it.
  *
  * While this schema creates a nicely normalised dataset it is not particularly
  * efficient for inserts. For write efficiency it may actually be better to
@@ -276,6 +287,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
         this_rule->measurement = log_entry->measurement;
         strncpy(this_rule->size_range, log_entry->size_range, RATE_SIZE);
         strncpy(this_rule->threshold, log_entry->threshold_str, RATE_SIZE);
+        this_rule->cluster_id = cluster_id;
 
         found = tsearch((void *)this_rule, &rule_root, rule_compare);
         if (found == NULL) {
@@ -304,9 +316,11 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     }
 
     /* Prepares the statement for use */
-    char *get_rule_params_id_str = "SELECT rule_id FROM rule_parameters WHERE label=? AND " \
-                                   "violation_path=? AND call_type=? AND measurement=? AND " \
-                                   "size_range=? AND threshold=?";
+    char *get_rule_params_id_str = "SELECT rule_id FROM mistral_rule_parameters " \
+                                   "WHERE label=? AND violation_path=? " \
+                                   "AND call_type=? AND measurement=? AND " \
+                                   "size_range=? AND threshold=? AND " \
+                                   "clusterid=?";
     if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str,
         strlen(get_rule_params_id_str)))
     {

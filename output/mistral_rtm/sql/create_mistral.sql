@@ -29,7 +29,7 @@ GRANT ALL PRIVILEGES ON mistral_log.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
 USE mistral_log;
 
 -- rule_parameters maintains a list of unique contract rules seen by the plug-in
-CREATE TABLE rule_parameters (
+CREATE TABLE mistral_rule_parameters (
     rule_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     label VARCHAR(256) NOT NULL,
     violation_path VARCHAR(256) NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE rule_parameters (
     measurement VARCHAR(13) NOT NULL,
     size_range VARCHAR(64) NOT NULL,
     threshold VARCHAR(64) NOT NULL,
-    cluster_id INTEGER UNSIGNED DEFAULT "1",
+    clusterid INTEGER UNSIGNED DEFAULT "1",
     PRIMARY KEY (rule_id),
     UNIQUE KEY (
         label,
@@ -46,7 +46,7 @@ CREATE TABLE rule_parameters (
         measurement,
         size_range,
         threshold,
-        cluster_id
+        clusterid
     )
 )
 ENGINE=InnoDB;
@@ -81,6 +81,6 @@ CREATE TABLE mistral_events (
     INDEX host_idx (host),
     INDEX ids_idx (groupid, id),
     INDEX job_idx (clusterid, jobid, indexid, submit_time),
-    FOREIGN KEY (rule_parameters) REFERENCES rule_parameters(rule_id)
+    FOREIGN KEY (rule_parameters) REFERENCES mistral_rule_parameters(rule_id)
 )
 ENGINE=InnoDB;

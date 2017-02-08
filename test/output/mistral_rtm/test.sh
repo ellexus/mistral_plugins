@@ -25,8 +25,8 @@ sql_cmd="SELECT scope, type, time, label, violation_path, call_type,"
 sql_cmd="$sql_cmd measurement, size_range, threshold, observed, observed_time,"
 sql_cmd="$sql_cmd pid, command, file_name, group_jobid, group_indexid,"
 sql_cmd="$sql_cmd jobid, indexid, submit_time, host, project,"
-sql_cmd="$sql_cmd a.clusterid FROM mistral_events a, rule_parameters b WHERE "
-sql_cmd="$sql_cmd b.rule_id = a.rule_parameters ORDER BY log_id ASC" 
+sql_cmd="$sql_cmd a.clusterid FROM mistral_events a, mistral_rule_parameters b "
+sql_cmd="$sql_cmd WHERE b.rule_id = a.rule_parameters ORDER BY log_id ASC" 
 
 export LSB_MCPU_HOSTS="host1 2 host2 2 host3 1 ${HOSTNAME%%.*} 1"
 export LSB_JOBFILENAME=$plugin_dir/.lsbatch/1472658176.61902
