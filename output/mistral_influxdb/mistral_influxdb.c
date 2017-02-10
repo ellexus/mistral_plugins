@@ -7,7 +7,6 @@
 #include <stdio.h>              /* asprintf */
 #include <stdlib.h>             /* calloc, realloc, free */
 #include <string.h>             /* strerror_r */
-#include <unistd.h>             /* gethostname */
 
 #include "mistral_plugin.h"
 
@@ -17,7 +16,6 @@ static char curl_error[CURL_ERROR_SIZE] = "";
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
-static char *hostname = NULL;
 
 /*
  * set_curl_option
@@ -236,29 +234,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
-
-    /* Attempt to store the hostname */
-    char *temp_hostname = getenv("HOSTNAME");
-    if (temp_hostname) {
-        hostname = strdup(temp_hostname);
-    }
-
-    if (hostname == NULL) {
-        char dns_hostname[1024];
-        if(gethostname(dns_hostname, sizeof(dns_hostname)) != -1) {
-            hostname = strdup(dns_hostname);
-        }
-    }
-
-    if (hostname == NULL) {
-        hostname = strdup("N/A");
-    } else {
-        /* Remove any domain */
-        char *domain = strchr(hostname, '.');
-        if (domain) {
-            *domain = '\0';
-        }
-    }
 }
 
 /*
@@ -288,7 +263,6 @@ void mistral_exit(void)
         curl_easy_cleanup(easyhandle);
     }
     curl_global_cleanup();
-    free(hostname);
 }
 
 /*
@@ -366,7 +340,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
                      ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
                      "job-id=%s,pid=%" PRId64 ",command=%s,host=%s,scope=%s,"
-                     "logtype=%s value=%" PRIu64 " %ld",
+                     "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 " value=%"
+                     PRIu64 " %ld",
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
@@ -381,9 +356,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      job_id,
                      log_entry->pid,
                      command,
-                     hostname,
+                     log_entry->hostname,
                      mistral_scope_name[log_entry->scope],
                      mistral_contract_name[log_entry->contract_type],
+                     log_entry->cpu,
+                     log_entry->mpi_rank,
                      log_entry->measured,
                      log_entry->epoch.tv_sec) < 0) {
 
