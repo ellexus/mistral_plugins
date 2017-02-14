@@ -74,6 +74,9 @@ The \fI"mistral_plugin.h"\fP header shall also declare the structure
 \fBconst char               *\fPfile;
 \fBconst char               *\fPjob_group_id;
 \fBconst char               *\fPjob_id;
+\fBconst char               *\fPhostname;
+\fBuint32_t                  \fPcpu;
+\fBint32_t                   \fPmpi_rank;
 .fi
 .RE
 .LP
@@ -505,7 +508,7 @@ contributed the most to the violation of the rule.
 The \fBcommand\fP will be set to point at a string containing the
 command line of the process that contributed the most to the violation
 of the rule.
-The command will be trunctated at 256 characters.
+The command will be truncated at 1405 characters.
 .LP
 The \fBfile\fP will be set to point at a string containing the canonical
 name of the file that was accessed by the I/O operation that first
@@ -516,6 +519,16 @@ job group identifier for the job group that violated the rule.
 .LP
 The \fBjob_id\fP will be set to point at a string containing the
 job identifier for the job that violated the rule.
+.LP
+The \fBhostname\fP element will be set to point at a string containing
+the fully qualified name of the execution host the job was running on.
+.LP
+The \fBcpu\fP element will be set to the CPU number the process that
+contributed the most to the violation of the rule was running on when
+it last performed qualifying I/O.
+.LP
+The \fBmpi_rank\fP element will be set to the MPI rank number of the
+process that contributed the most to the violation of the rule.
 .LP
 The following shall be declared as a variable:
 .sp
