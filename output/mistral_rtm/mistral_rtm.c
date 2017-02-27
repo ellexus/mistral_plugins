@@ -104,9 +104,9 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     }
 
     /* Prepares the statement for use */
-    insert_rule_parameters_str = "INSERT INTO mistral_rule_parameters" \
-                                 "(rule_id, label, violation_path, call_type," \
-                                 "measurement, size_range, threshold," \
+    insert_rule_parameters_str = "INSERT INTO mistral_rule_parameters"
+                                 "(rule_id, label, violation_path, call_type,"
+                                 "measurement, size_range, threshold,"
                                  "clusterid) VALUES (NULL,?,?,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_parameters_str,
                            strlen(insert_rule_parameters_str))) {
@@ -146,8 +146,8 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Execute the query */
     if (mysql_stmt_execute(insert_rule)) {
-        mistral_err("mysql_stmt_execute(insert_rule), failed\n");
-        mistral_err("%s\n", mysql_stmt_error(insert_rule));
+        mistral_err("mysql_stmt_execute(insert_rule), failed");
+        mistral_err("%s", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
@@ -305,7 +305,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
             return true;
         }
     } else {
-        mistral_err("Unable to allocate memory for rule in tsearch");
+        mistral_err("Unable to allocate memory for rule to be used in tsearch");
         goto fail_set_rule_id;
     }
     /* If we have got here this is the first time we have seen this rule - see
@@ -402,6 +402,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
         this_rule->rule_id = *ptr_rule_id;
     } else if (received == 0) {
         if (!insert_rule_parameters(log_entry, ptr_rule_id)) {
+            tdelete((void *)this_rule, &rule_root, rule_compare);
             goto fail_set_rule_id;
         }
         /* Store the freshly inserted ID in the tsearch tree */
@@ -432,7 +433,8 @@ fail_set_rule_id:
  *
  *
  * Parameters:
- *   input_str   - A string containing the Job ID to parse
+ *   input_str   - A string containing the Job ID to parse in format
+ *                 "job-id[array-idx]"
  *   job_id      - The address of a my_ulonglong variable used to hold the
  *                 parsed job ID
  *   array_idx   - The address of a unsigned long variable used to hold the
@@ -442,7 +444,7 @@ fail_set_rule_id:
  *   true if the string was parsed succesfully
  *   false otherwise
  */
-bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigned long *array_idx)
+static bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigned long *array_idx)
 {
     char *s = (char *)input_str;
     char *end = NULL;
@@ -485,7 +487,7 @@ bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigned long 
  *   A pointer to the string containing the VALUES string or
  *   NULL on error
  */
-char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
+static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
 {
     /* Set up variables to hold the mysql escaped version of potentially
      * unsafe strings
@@ -656,7 +658,7 @@ static void get_lsf_hostname(void)
         /* If the number of hosts is odd then there is at least one repeated separator as each host
          * name is also followed by a count of CPUs which we will discard.
          */
-        num_hosts = (num_hosts - num_hosts % 2) / 2;
+        num_hosts = num_hosts / 2;
         if (num_hosts > 0) {
             host_arr = calloc(num_hosts, sizeof(char *));
         }

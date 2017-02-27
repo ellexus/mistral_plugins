@@ -14,7 +14,7 @@ build-mistral_influxdb:
 	$(MAKE) -C output/mistral_influxdb
 
 .PHONY: build-mistral_rtm
-build-mistral_mysql:
+build-mistral_rtm:
 	$(MAKE) -C output/mistral_rtm
 
 .PHONY: package
