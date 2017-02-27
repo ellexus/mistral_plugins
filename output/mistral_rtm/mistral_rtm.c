@@ -1,6 +1,7 @@
 #include <assert.h>             /* assert */
 #include <ctype.h>              /* isdigit */
 #include <errno.h>              /* errno */
+#include <fcntl.h>              /* open */
 #include <getopt.h>             /* getopt_long */
 #include <inttypes.h>           /* uint32_t, uint64_t */
 #include <mysql.h>              /* mysql_init, mysql_close, mysql_stmt_*, etc */
@@ -9,6 +10,8 @@
 #include <stdio.h>              /* asprintf */
 #include <stdlib.h>             /* calloc, free, getenv */
 #include <string.h>             /* strerror_r, strdup, strchr */
+#include <sys/stat.h>           /* open, umask */
+#include <sys/types.h>          /* open, umask */
 #include <unistd.h>             /* gethostname */
 
 #include "mistral_plugin.h"
@@ -790,6 +793,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"cluster-id", required_argument, NULL, 'i'},
         {"defaults-file", required_argument, NULL, 'c'},
         {"error", required_argument, NULL, 'o'},
+        {"mode", required_argument, NULL, 'm'},
         {"output", required_argument, NULL, 'o'},
         {0, 0, 0, 0},
     };
@@ -797,8 +801,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *config_file = NULL;
     const char *error_file = NULL;
     int opt;
+    mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "c:o:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "c:i:m:o:", options, NULL)) != -1) {
         switch (opt) {
         case 'c':
             config_file = optarg;
@@ -814,6 +819,27 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                 tmp_id = 1;
             }
             cluster_id = (uint64_t)tmp_id;
+            break;
+        }
+        case 'm':{
+            char *end = NULL;
+            unsigned long tmp_mode = strtoul(optarg, &end, 8);
+            if (tmp_mode <= 0 || !end || *end) {
+                tmp_mode = 0;
+            }
+            new_mode = (mode_t)tmp_mode;
+
+            if (new_mode <= 0 || new_mode > 0777)
+            {
+                mistral_err("Invalid mode '%s' specified, using default", optarg);
+                new_mode = 0;
+            }
+
+            if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
+            {
+                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default", optarg);
+                new_mode = 0;
+            }
             break;
         }
         default:
@@ -862,7 +888,17 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (error_file != NULL) {
-        log_file = fopen(error_file, "a");
+        if (new_mode > 0) {
+            mode_t old_mask = umask(00);
+            int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
+            if (fd >= 0) {
+                log_file = fdopen(fd, "a");
+            }
+            umask(old_mask);
+        } else {
+            log_file = fopen(error_file, "a");
+        }
+
         if (!log_file) {
             char buf[256];
             mistral_err("Could not open error file %s: %s", error_file,
@@ -905,6 +941,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     if (mysql_real_connect(con, NULL, NULL, NULL, NULL, 0, NULL, 0) == NULL) {
         mistral_err("Unable to connect to MySQL: %s", mysql_error(con));
         mysql_close(con);
+        con = NULL;
         return;
     }
 
