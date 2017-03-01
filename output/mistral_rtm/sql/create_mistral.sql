@@ -32,7 +32,7 @@ USE mistral_log;
 CREATE TABLE mistral_rule_parameters (
     rule_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
     label VARCHAR(256) NOT NULL,
-    violation_path VARCHAR(1405) NOT NULL,
+    violation_path VARCHAR(256) NOT NULL,
     call_type VARCHAR(45) NOT NULL,
     measurement VARCHAR(13) NOT NULL,
     size_range VARCHAR(64) NOT NULL,
