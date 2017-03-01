@@ -19,6 +19,7 @@
 /* Define some database column sizes */
 #define RATE_SIZE 64
 #define STRING_SIZE 256
+#define LONG_STRING_SIZE 1405
 #define MEASUREMENT_SIZE 13
 
 #define DATETIME_FORMAT "YYYY-MM-DD HH-mm-SS"
@@ -27,7 +28,7 @@
 #define BIND_STRING(b, i, str, null_is, str_len)    \
     b[i].buffer_type = MYSQL_TYPE_STRING;           \
     b[i].buffer = (char *)str;                      \
-    b[i].buffer_length = STRING_SIZE;               \
+    b[i].buffer_length = LONG_STRING_SIZE;          \
     b[i].is_null = null_is;                         \
     b[i].length = &str_len;
 
@@ -60,7 +61,7 @@ size_t log_insert_len = 0;
 
 typedef struct rule_param {
     char label[STRING_SIZE + 1];
-    char path[STRING_SIZE + 1];
+    char path[LONG_STRING_SIZE + 1];
     uint32_t call_types;
     enum mistral_measurement measurement;
     char size_range[RATE_SIZE + 1];
@@ -285,7 +286,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     this_rule = calloc(1, sizeof(rule_param));
     if (this_rule) {
         strncpy(this_rule->label, log_entry->label, STRING_SIZE);
-        strncpy(this_rule->path, log_entry->path, STRING_SIZE);
+        strncpy(this_rule->path, log_entry->path, LONG_STRING_SIZE);
         this_rule->call_types = log_entry->call_type_mask;
         this_rule->measurement = log_entry->measurement;
         strncpy(this_rule->size_range, log_entry->size_range, RATE_SIZE);
@@ -366,7 +367,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Reset the lengths if they are larger than the column the string is being
      * compared to. Doing it this way round avoids calling strlen twice.
      */
-    str_length_vio = (str_length_vio > STRING_SIZE)? STRING_SIZE : str_length_vio;
+    str_length_vio = (str_length_vio > LONG_STRING_SIZE)? LONG_STRING_SIZE : str_length_vio;
     str_length_call = (str_length_call > STRING_SIZE)? STRING_SIZE : str_length_call;
     str_length_measure = (str_length_measure > MEASUREMENT_SIZE)? MEASUREMENT_SIZE : str_length_measure;
     str_length_size_range = (str_length_size_range > RATE_SIZE)? RATE_SIZE : str_length_size_range;
@@ -492,8 +493,8 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
     /* Set up variables to hold the mysql escaped version of potentially
      * unsafe strings
      */
-    char escaped_command[STRING_SIZE * 2 + 1];
-    char escaped_filename[STRING_SIZE * 2 + 1];
+    char escaped_command[LONG_STRING_SIZE * 2 + 1];
+    char escaped_filename[LONG_STRING_SIZE * 2 + 1];
     char escaped_groupid[STRING_SIZE * 2 + 1];
     char escaped_id[STRING_SIZE * 2 + 1];
     char timestamp[DATETIME_LENGTH];
