@@ -38,6 +38,23 @@
     b[i].is_null = null_is;                         \
     b[i].length = 0;
 
+#define DBG_LOW   1
+#define DBG_MED   2
+#define DBG_HIGH  4
+#define DBG_ENTRY 8
+#define DBG_ALL (DBG_LOW | DBG_MED | DBG_HIGH | DBG_ENTRY)
+/* Uncomment the following line at set it at the appropriate level to enable debug messages */
+#define SHOWDEBUG DBG_ALL
+
+#ifdef SHOWDEBUG
+    #define DEBUG_OUTPUT(level, format, ...)        \
+        if (level & SHOWDEBUG) {                    \
+            mistral_err("DEBUG at %d:%s " format "\n", __LINE__, __func__, ##__VA_ARGS__); \
+        }
+#else
+    #define DEBUG_OUTPUT(level, format, ...) {};
+#endif
+
 static FILE *log_file = NULL;
 static MYSQL *con = NULL;
 
@@ -88,6 +105,7 @@ typedef struct rule_param {
  */
 bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p, %p", log_entry, ptr_rule_id);
     MYSQL_STMT   *insert_rule;
     MYSQL_BIND    input_bind[7];
     unsigned long str_length_vio;
@@ -171,10 +189,12 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
         goto fail_insert_rule_parameters;
     }
 
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return true;
 
 fail_insert_rule_parameters:
     mistral_err("insert_rule_parameters failed");
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
     return false;
 }
 
@@ -194,6 +214,7 @@ fail_insert_rule_parameters:
  */
 static int rule_compare(const void *p, const void *q)
 {
+    DEBUG_OUTPUT(DBG_HIGH, "Entering function"); /* This is quite verbose so don't use DBG_ENTRY */
     const rule_param *rule1 = p;
     const rule_param *rule2 = q;
     int retval = 0;
@@ -201,11 +222,13 @@ static int rule_compare(const void *p, const void *q)
 
     retval = strcmp(rule1->label, rule2->label);
     if (retval) {
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
         return retval;
     }
 
     retval = strcmp(rule1->path, rule2->path);
     if (retval) {
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
         return retval;
     }
 
@@ -216,21 +239,25 @@ static int rule_compare(const void *p, const void *q)
         retval = 1;
     }
     if (retval) {
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
         return retval;
     }
 
     retval = rule1->measurement - rule2->measurement;
     if (retval) {
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
         return retval;
     }
 
     retval = strcmp(rule1->size_range, rule2->size_range);
     if (retval) {
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
         return retval;
     }
 
     retval = strcmp(rule1->threshold, rule2->threshold);
     if (retval) {
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
         return retval;
     }
 
@@ -241,6 +268,7 @@ static int rule_compare(const void *p, const void *q)
         retval = 1;
     }
 
+    DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
     return retval;
 }
 /*
@@ -268,6 +296,7 @@ static int rule_compare(const void *p, const void *q)
  */
 bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p, %p", log_entry, ptr_rule_id);
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT *get_rule_id;
 
@@ -303,6 +332,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
             *ptr_rule_id = (*(rule_param **)found)->rule_id;
             free(this_rule);
             this_rule = NULL;
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
             return true;
         }
     } else {
@@ -420,10 +450,12 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
         goto fail_set_rule_id;
     }
 
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return true;
 
 fail_set_rule_id:
     mistral_err("Set_rule_ID failed!");
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
     return false;
 }
 
@@ -447,23 +479,28 @@ fail_set_rule_id:
  */
 static bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigned long *array_idx)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %s, %p, %p", input_str, job_id, array_idx);
     char *s = (char *)input_str;
     char *end = NULL;
     errno = 0;
     *job_id = (my_ulonglong) strtoull(s, &end, 10);
     if (errno || !end || job_id == 0 || s == end || (end && *end != '\0' && *end != '[')) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return false;
     } else if (end && *end == '\0') {
         *array_idx = 0;
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
         return true;
     }
 
     s = end + 1;
     *array_idx = strtoul(s, &end, 10);
     if (errno || !end || s == end || *end != ']') {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return false;
     }
 
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return true;
 }
 /*
@@ -490,6 +527,7 @@ static bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigne
  */
 static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p, %llu", log_entry, rule_id);
     /* Set up variables to hold the mysql escaped version of potentially
      * unsafe strings
      */
@@ -576,10 +614,12 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
         goto fail_build_values_string;
     }
 
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return values_string;
 
 fail_build_values_string:
     mistral_err("build_values_string failed!\n");
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
     return NULL;
 }
 
@@ -598,6 +638,7 @@ fail_build_values_string:
  */
 bool insert_log_to_db(void)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     /* Close the statement */
     if (mysql_real_query(con, log_insert, log_insert_len)) {
         mistral_err("Failed while inserting log entry");
@@ -609,10 +650,12 @@ bool insert_log_to_db(void)
     log_insert = NULL;
     log_insert_len = 0;
 
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return true;
 
 fail_insert_log_to_db:
     mistral_err("Insert_log_to_db failed!\n");
+    DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
     return false;
 }
 
@@ -630,6 +673,7 @@ fail_insert_log_to_db:
  */
 static void get_lsf_hostname(void)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     char env_hostname[STRING_SIZE];
     char *temp_hostname = getenv("HOSTNAME");
     if(temp_hostname) {
@@ -790,6 +834,7 @@ static void get_lsf_hostname(void)
  */
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function %d, %p, %p", argc, argv, plugin);
     /* Returning without setting plug-in type will cause a clean exit */
 
     const struct option options[] = {
@@ -846,6 +891,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             break;
         }
         default:
+            DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
             return;
         }
     }
@@ -916,6 +962,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (config_file == NULL) {
         mistral_err("Missing option -c");
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }
 
@@ -924,6 +971,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (con == NULL) {
         mistral_err("Unable to initialise MySQL: %s", mysql_error(con));
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }
 
@@ -932,6 +980,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     if (opt_ret) {
         mistral_err("Couldn't get MYSQL_READ_DEFAULT_FILE option: %s. File path %s %d",
                     mysql_error(con),  config_file, opt_ret);
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }
 
@@ -945,12 +994,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         mistral_err("Unable to connect to MySQL: %s", mysql_error(con));
         mysql_close(con);
         con = NULL;
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }
 
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
 }
 
 /*
@@ -968,7 +1019,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
  */
 void mistral_exit(void)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     if (log_list_head) {
+        DEBUG_OUTPUT(DBG_LOW, "Log entries existed at exit");
         mistral_received_data_end(0, false);
     }
 
@@ -1000,6 +1053,7 @@ void mistral_exit(void)
  */
 void mistral_received_log(mistral_log *log_entry)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p", log_entry);
     if (!log_list_head) {
         /* Initialise linked list */
         log_list_head = log_entry;
@@ -1036,6 +1090,7 @@ void mistral_received_log(mistral_log *log_entry)
  */
 void mistral_received_data_end(uint64_t block_num, bool block_error)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entered function, %"PRIu64", %d", block_num, block_error);
     UNUSED(block_num);
     UNUSED(block_error);
     my_ulonglong rule_id = 0;
@@ -1043,9 +1098,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     mistral_log *log_entry = log_list_head;
 
     while (log_entry) {
+        DEBUG_OUTPUT(DBG_MED, "Processing log entry, %p", log_entry);
         /* Get (or create) the appropriate rule id for this log entry */
         if (! set_rule_id(log_entry, &rule_id)) {
             mistral_shutdown = true;
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
             return;
         }
 
@@ -1059,14 +1116,18 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          * built insert statement to MySQL and start a new statement.
          */
         if(log_insert_len + values_len + 2 > 1000000) {
+            DEBUG_OUTPUT(DBG_MED, "Buffer full, sending data to db, %zd, %zd", log_insert_len,
+                         values_len);
             if(!insert_log_to_db()) {
                 mistral_err("Insert log entry on max buffer size failed");
                 mistral_shutdown = true;
+                DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
             }
         }
 
         if (log_insert_len == 0) {
+            DEBUG_OUTPUT(DBG_HIGH, "Buffer empty, creating new statement");
             /* Create the insert statement */
             if (asprintf(&log_insert,
                          "INSERT INTO mistral_events (scope, type, time," \
@@ -1077,21 +1138,25 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                          "VALUES %s", values) < 0) {
                 mistral_err("Unable to allocate memory for log insert");
                 mistral_shutdown = true;
+                DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
             }
             log_insert_len = strlen(log_insert);
         } else {
+            DEBUG_OUTPUT(DBG_HIGH, "Buffer exists, appending new row");
             /* Append values on the insert statement */
             char *old_log_insert = log_insert;
             if (asprintf(&log_insert, "%s,%s", log_insert, values) < 0) {
                 mistral_err("Unable to allocate memory for log insert");
                 mistral_shutdown = true;
                 free(old_log_insert);
+                DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
             }
             free(old_log_insert);
             log_insert_len += values_len + 1;
         }
+        DEBUG_OUTPUT(DBG_HIGH, "Current query length %zd", log_insert_len);
 
         free(values);
         log_list_head = log_entry->forward;
@@ -1099,16 +1164,22 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         mistral_destroy_log_entry(log_entry);
 
         log_entry = log_list_head;
+        DEBUG_OUTPUT(DBG_HIGH, "next log entry, %p", log_entry);
     }
     log_list_tail = NULL;
 
+    DEBUG_OUTPUT(DBG_MED, "All logs processed, sending data to db, %p, %p, %zd", log_list_head,
+                 log_list_tail, log_insert_len);
+    DEBUG_OUTPUT(DBG_HIGH, "SQL %s", log_insert);
     /* Send any log entries to the database that are still pending */
     if(!insert_log_to_db()) {
         mistral_err("Insert log entry at end of block failed");
         mistral_shutdown = true;
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }
 
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return;
 }
 
@@ -1130,7 +1201,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
  */
 void mistral_received_shutdown(void)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     if (log_list_head) {
+        DEBUG_OUTPUT(DBG_LOW, "Log entries existed when shutdown seen");
         mistral_received_data_end(0, false);
     }
 }
