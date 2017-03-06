@@ -24,7 +24,7 @@ events table. The mistral_rule_parameters table is never cleared.
 
 Password Hiding
 ---------------
-MySQL requires a password for each user. If scripts are to be ran automatically, the easiest way
+MySQL requires a password for each user. If scripts are to be run automatically, the easiest way
 to protect passwords is to include them in a config file and change the permissions of this file
 to be read only to the user. MySQL can read in a config file using the tag "--defaults-file=".
 This config file should be of the format ::

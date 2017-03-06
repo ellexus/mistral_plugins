@@ -89,7 +89,6 @@ CFLAGS += \
 
 ifneq (,$(DEBUG))
 CFLAGS += -gdwarf-2
-LDFLAGS += -g
 else
 CFLAGS += -O3
 endif

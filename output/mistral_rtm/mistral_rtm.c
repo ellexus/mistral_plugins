@@ -71,10 +71,10 @@ static char escaped_hostname[STRING_SIZE * 2 + 1] = "";
 static char project[STRING_SIZE] = "";
 static char escaped_project[STRING_SIZE * 2 + 1] = "";
 static my_ulonglong submit_time = 0;
-uint64_t cluster_id;
+static uint64_t cluster_id;
 
-char *log_insert = NULL;
-size_t log_insert_len = 0;
+static char *log_insert = NULL;
+static size_t log_insert_len = 0;
 
 typedef struct rule_param {
     char label[STRING_SIZE + 1];
@@ -103,7 +103,7 @@ typedef struct rule_param {
  *   true if the record was inserted successfully
  *   false otherwise
  */
-bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
+static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p, %p", log_entry, ptr_rule_id);
     MYSQL_STMT   *insert_rule;
@@ -294,7 +294,7 @@ static int rule_compare(const void *p, const void *q)
  *   false otherwise
  *
  */
-bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
+static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p, %p", log_entry, ptr_rule_id);
     /* Allocates memory for a MYSQL_STMT and initializes it */
@@ -314,12 +314,16 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* First let's check if we have seen the rule before */
     this_rule = calloc(1, sizeof(rule_param));
     if (this_rule) {
-        strncpy(this_rule->label, log_entry->label, STRING_SIZE);
-        strncpy(this_rule->path, log_entry->path, STRING_SIZE);
+        strncpy(this_rule->label, log_entry->label, STRING_SIZE - 1);
+        this_rule->label[STRING_SIZE - 1] = '\0';
+        strncpy(this_rule->path, log_entry->path, STRING_SIZE - 1);
+        this_rule->path[STRING_SIZE - 1] = '\0';
         this_rule->call_types = log_entry->call_type_mask;
         this_rule->measurement = log_entry->measurement;
-        strncpy(this_rule->size_range, log_entry->size_range, RATE_SIZE);
-        strncpy(this_rule->threshold, log_entry->threshold_str, RATE_SIZE);
+        strncpy(this_rule->size_range, log_entry->size_range, RATE_SIZE - 1);
+        this_rule->size_range[RATE_SIZE - 1] = '\0';
+        strncpy(this_rule->threshold, log_entry->threshold_str, RATE_SIZE - 1);
+        this_rule->threshold[RATE_SIZE - 1] = '\0';
         this_rule->cluster_id = cluster_id;
 
         found = tsearch((void *)this_rule, &rule_root, rule_compare);
@@ -474,7 +478,7 @@ fail_set_rule_id:
  *                 parsed job array index
  *
  * Returns:
- *   true if the string was parsed succesfully
+ *   true if the string was parsed successfully
  *   false otherwise
  */
 static bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigned long *array_idx)
@@ -636,7 +640,7 @@ fail_build_values_string:
  *   true if the records were inserted successfully
  *   false otherwise
  */
-bool insert_log_to_db(void)
+static bool insert_log_to_db(void)
 {
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     /* Close the statement */
@@ -678,6 +682,7 @@ static void get_lsf_hostname(void)
     char *temp_hostname = getenv("HOSTNAME");
     if(temp_hostname) {
         strncpy(env_hostname, temp_hostname, STRING_SIZE - 1);
+        env_hostname[STRING_SIZE - 1] = '\0';
     } else {
         env_hostname[0] = '\0';
     }
@@ -693,30 +698,32 @@ static void get_lsf_hostname(void)
     size_t num_hosts = 1;
     if(temp_lsb_hosts) {
         lsb_hosts = strdup(temp_lsb_hosts);
-        /* Convert this into an array of hostname strings - first count separators */
-        char sep = ' ';
-        for (size_t i = 0; lsb_hosts[i]; i++) {
-            if (lsb_hosts[i] == sep) {
-                num_hosts++;
+        if (lsb_hosts) {
+            /* Convert this into an array of hostname strings - first count separators */
+            char sep = ' ';
+            for (size_t i = 0; lsb_hosts[i]; i++) {
+                if (lsb_hosts[i] == sep) {
+                    num_hosts++;
+                }
             }
-        }
-        /* If the number of hosts is odd then there is at least one repeated separator as each host
-         * name is also followed by a count of CPUs which we will discard.
-         */
-        num_hosts = num_hosts / 2;
-        if (num_hosts > 0) {
-            host_arr = calloc(num_hosts, sizeof(char *));
-        }
-        if (host_arr) {
-            char **p = host_arr;
-            char *q = NULL;
-            *p = strtok_r(lsb_hosts, " ", &q);
-            p++;
-            if(strtok_r(NULL, " ", &q)) {
-                while ((*p = strtok_r(NULL, " ", &q))) {
-                    p++;
-                    if(!strtok_r(NULL, " ", &q)) {
-                        break;
+            /* If the number of hosts is odd then there is at least one repeated separator as each
+             * host name is also followed by a count of CPUs which we will discard.
+             */
+            num_hosts = num_hosts / 2;
+            if (num_hosts > 0) {
+                host_arr = calloc(num_hosts, sizeof(char *));
+            }
+            if (host_arr) {
+                char **p = host_arr;
+                char *q = NULL;
+                *p = strtok_r(lsb_hosts, " ", &q);
+                p++;
+                if(strtok_r(NULL, " ", &q)) {
+                    while ((*p = strtok_r(NULL, " ", &q))) {
+                        p++;
+                        if(!strtok_r(NULL, " ", &q)) {
+                            break;
+                        }
                     }
                 }
             }
@@ -727,7 +734,7 @@ static void get_lsf_hostname(void)
      *
      * Host name checks in order (move on if the test fails or results in an empty string):
      *  Use $HOSTNAME if it is in $LSB_MCPU_HOSTS exactly
-     *  Remove any domain componant from $HOSTNAME and use this if it is in $LSB_MCPU_HOSTS
+     *  Remove any domain component from $HOSTNAME and use this if it is in $LSB_MCPU_HOSTS
      *  Repeat the tests above with hostname provided by gethostname() instead of $HOSTNAME
      *  Use the first node listed in LSB_MCPU_HOSTS
      *  **Print warning before progressing**
@@ -739,7 +746,8 @@ static void get_lsf_hostname(void)
         char *p = NULL;
         for (size_t i = 0; host_arr[i]; i++) {
             if (!strcmp(host_arr[i], env_hostname)) {
-                strncpy(hostname, env_hostname, STRING_SIZE);
+                strncpy(hostname, env_hostname, STRING_SIZE - 1);
+                hostname[STRING_SIZE - 1] = '\0';
                 break;
             }
         }
@@ -751,7 +759,8 @@ static void get_lsf_hostname(void)
 
                 for (size_t i = 0; host_arr[i]; i++) {
                     if (!strcmp(host_arr[i], env_hostname)) {
-                        strncpy(hostname, env_hostname, STRING_SIZE);
+                        strncpy(hostname, env_hostname, STRING_SIZE - 1);
+                        hostname[STRING_SIZE - 1] = '\0';
                         break;
                     }
                 }
@@ -761,7 +770,8 @@ static void get_lsf_hostname(void)
         if (hostname[0] == '\0') {
             for (size_t i = 0; host_arr[i]; i++) {
                 if (!strcmp(host_arr[i], dns_hostname)) {
-                    strncpy(hostname, dns_hostname, STRING_SIZE);
+                    strncpy(hostname, dns_hostname, STRING_SIZE - 1);
+                    hostname[STRING_SIZE - 1] = '\0';
                     break;
                 }
             }
@@ -774,7 +784,8 @@ static void get_lsf_hostname(void)
 
                 for (size_t i = 0; host_arr[i]; i++) {
                     if (!strcmp(host_arr[i], dns_hostname)) {
-                        strncpy(hostname, dns_hostname, STRING_SIZE);
+                        strncpy(hostname, dns_hostname, STRING_SIZE - 1);
+                        hostname[STRING_SIZE - 1] = '\0';
                         break;
                     }
                 }
@@ -782,7 +793,8 @@ static void get_lsf_hostname(void)
         }
 
         if (hostname[0] == '\0' && host_arr[0]) {
-            strncpy(hostname, host_arr[0], STRING_SIZE);
+            strncpy(hostname, host_arr[0], STRING_SIZE - 1);
+            hostname[STRING_SIZE - 1] = '\0';
         }
 
         free(lsb_hosts);
@@ -797,18 +809,21 @@ static void get_lsf_hostname(void)
         if (p) {
             *p = '\0';
         }
-        strncpy(hostname, env_hostname, STRING_SIZE);
+        strncpy(hostname, env_hostname, STRING_SIZE - 1);
+        hostname[STRING_SIZE - 1] = '\0';
 
         if (hostname[0] == '\0') {
             p = strchr(dns_hostname, '.');
             if (p) {
                 *p = '\0';
             }
-            strncpy(hostname, dns_hostname, STRING_SIZE);
+            strncpy(hostname, dns_hostname, STRING_SIZE - 1);
+            hostname[STRING_SIZE - 1] = '\0';
         }
 
         if (hostname[0] == '\0') {
-            strncpy(hostname, "localhost", STRING_SIZE);
+            strncpy(hostname, "localhost", STRING_SIZE - 1);
+            hostname[STRING_SIZE - 1] = '\0';
         }
     }
 }
@@ -903,6 +918,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     char *job_project = getenv("LSB_PROJECT_NAME");
     if(job_project) {
         strncpy(project, job_project, STRING_SIZE - 1);
+        project[STRING_SIZE - 1] = '\0';
     } else {
         mistral_err("Unable to find job project");
         /* Do not treat this as fatal */
