@@ -38,22 +38,19 @@
     b[i].is_null = null_is;                         \
     b[i].length = 0;
 
-#define DBG_LOW   1
-#define DBG_MED   2
-#define DBG_HIGH  4
-#define DBG_ENTRY 8
-#define DBG_ALL (DBG_LOW | DBG_MED | DBG_HIGH | DBG_ENTRY)
-/* Uncomment the following line at set it at the appropriate level to enable debug messages */
-#define SHOWDEBUG DBG_ALL
+enum debug_states {
+    DBG_LOW = 0,
+    DBG_MED,
+    DBG_HIGH,
+    DBG_ENTRY,
+    DBG_LIMIT
+};
 
-#ifdef SHOWDEBUG
-    #define DEBUG_OUTPUT(level, format, ...)        \
-        if (level & SHOWDEBUG) {                    \
-            mistral_err("DEBUG at %d:%s " format "\n", __LINE__, __func__, ##__VA_ARGS__); \
-        }
-#else
-    #define DEBUG_OUTPUT(level, format, ...) {};
-#endif
+/* Define debug output function as a macro so we can use mistral_err */
+#define DEBUG_OUTPUT(level, format, ...)        \
+if ((2 << level) & debug_level) {               \
+    mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
+}
 
 static FILE *log_file = NULL;
 static MYSQL *con = NULL;
@@ -72,6 +69,7 @@ static char project[STRING_SIZE] = "";
 static char escaped_project[STRING_SIZE * 2 + 1] = "";
 static my_ulonglong submit_time = 0;
 static uint64_t cluster_id;
+static unsigned long debug_level = 0;
 
 static char *log_insert = NULL;
 static size_t log_insert_len = 0;
@@ -87,6 +85,43 @@ typedef struct rule_param {
     my_ulonglong cluster_id;
 } rule_param;
 
+
+static void usage(const char *name)
+{
+    /* This may be called before options have been processed so errors will go to stderr.
+     * While this is designed to be run with Mistral to make the messages understandable
+     * on a terminal add an explicit newline to each line. This will result is a second newline
+     * in Mistral log messages and the log file.
+     */
+    mistral_err("Usage:\n");
+    mistral_err("  %s -c config [-i id] [-o file] [-m octal-mode]\n", name);
+    mistral_err("\n");
+    mistral_err("  --defaults-file=config\n");
+    mistral_err("  -c config\n");
+    mistral_err("     Location of a MySQL formatted options file \"config\" that\n");
+    mistral_err("     contains database connection configuration.\n");
+    mistral_err("\n");
+    mistral_err("  --debug=level\n");
+    mistral_err("  -d level\n");
+    mistral_err("     Output debug information. The value of level must be an integer\n");
+    mistral_err("     between 1 and 4.\n");
+    mistral_err("\n");
+    mistral_err("  --cluster-id=id\n");
+    mistral_err("  -i id\n");
+    mistral_err("     Integer cluster ID. Defaults to 1 if not specified.\n");
+    mistral_err("\n");
+    mistral_err("  --output=file\n");
+    mistral_err("  -o file\n");
+    mistral_err("     Specify location for error log. If not specified all errors will\n");
+    mistral_err("     be output on stderr and handled by Mistral error logging.\n");
+    mistral_err("\n");
+    mistral_err("  --mode=octal-mode\n");
+    mistral_err("  -m octal-mode\n");
+    mistral_err("     Permissions used to create the error log file specified by the -o\n");
+    mistral_err("     option.\n");
+    mistral_err("\n");
+    return;
+}
 /*
  * insert_rule_parameters
  *
@@ -855,6 +890,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const struct option options[] = {
         {"cluster-id", required_argument, NULL, 'i'},
         {"defaults-file", required_argument, NULL, 'c'},
+        {"debug", required_argument, NULL, 'd'},
         {"error", required_argument, NULL, 'o'},
         {"mode", required_argument, NULL, 'm'},
         {"output", required_argument, NULL, 'o'},
@@ -871,9 +907,17 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'c':
             config_file = optarg;
             break;
-        case 'o':
-            error_file = optarg;
+        case 'd':{
+            char *end = NULL;
+            unsigned long tmp_level = strtoul(optarg, &end, 10);
+            if (tmp_level <= 0 || !end || *end || tmp_level > DBG_LIMIT) {
+                mistral_err("Invalid debug level '%s', using '1'", optarg);
+                tmp_level = 1;
+            }
+            /* For now just allow cumulative debug levels rather than selecting messages */
+            debug_level = (2 << tmp_level) - 1;
             break;
+        }
         case 'i':{
             char *end = NULL;
             unsigned long tmp_id = strtoul(optarg, &end, 10);
@@ -905,10 +949,38 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             break;
         }
+        case 'o':
+            error_file = optarg;
+            break;
         default:
+            usage(argv[0]);
             DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
             return;
         }
+    }
+
+    if (error_file != NULL) {
+        if (new_mode > 0) {
+            mode_t old_mask = umask(00);
+            int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
+            if (fd >= 0) {
+                log_file = fdopen(fd, "a");
+            }
+            umask(old_mask);
+        } else {
+            log_file = fopen(error_file, "a");
+        }
+
+        if (!log_file) {
+            char buf[256];
+            mistral_err("Could not open error file %s: %s", error_file,
+                        strerror_r(errno, buf, sizeof buf));
+        }
+    }
+
+    /* If we've opened an error log file use it in preference to stderr */
+    if (log_file) {
+        plugin->error_log = log_file;
     }
 
     /* Get the current machine hostname as expected by LSF */
@@ -952,32 +1024,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         /* Do not treat this as fatal */
     }
 
-    if (error_file != NULL) {
-        if (new_mode > 0) {
-            mode_t old_mask = umask(00);
-            int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
-            if (fd >= 0) {
-                log_file = fdopen(fd, "a");
-            }
-            umask(old_mask);
-        } else {
-            log_file = fopen(error_file, "a");
-        }
-
-        if (!log_file) {
-            char buf[256];
-            mistral_err("Could not open error file %s: %s", error_file,
-                        strerror_r(errno, buf, sizeof buf));
-        }
-    }
-
-    /* If we've opened an error log file use it in preference to stderr */
-    if (log_file) {
-        plugin->error_log = log_file;
-    }
-
     if (config_file == NULL) {
         mistral_err("Missing option -c");
+        usage(argv[0]);
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }
