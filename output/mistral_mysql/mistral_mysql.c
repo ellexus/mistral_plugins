@@ -417,9 +417,10 @@ fail_set_rule_id:
  */
 bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rule_id)
 {
-    #define LOG_INSERT "INSERT INTO %s (scope, type, time_stamp, label, rule_parameters," \
-                                       "observed, pid, command, file_name, group_id, id, log_id)" \
-                                       "VALUES (?,?,?,?,?,?,?,?,?,?,?,NULL)"
+    #define LOG_INSERT "INSERT INTO %s (scope, type, time_stamp, label, rule_parameters, "  \
+                                       "observed, hostname, pid, cpu, command, file_name, " \
+                                       "group_id, id, mpi_rank, log_id)"                    \
+                                       "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,NULL)"
     enum fields {
         B_SCOPE = 0,
         B_TYPE,
@@ -427,11 +428,14 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
         B_LABEL,
         B_RULE_ID,
         B_OBSERVED,
+        B_HOSTNAME,
         B_PID,
+        B_CPU,
         B_COMMAND,
         B_FILENAME,
         B_GID,
         B_JID,
+        B_MPI_RANK,
         B_SIZE
     };
     MYSQL_STMT       *insert_log;
@@ -474,11 +478,14 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
     BIND_STRING(input_bind, B_LABEL, log_entry->label, 0, str_length[B_LABEL]);
     BIND_INT(input_bind, B_RULE_ID, &rule_id, 0);
     BIND_STRING(input_bind, B_OBSERVED, log_entry->measured_str, 0, str_length[B_OBSERVED]);
+    BIND_STRING(input_bind, B_HOSTNAME, log_entry->hostname, 0, str_length[B_HOSTNAME]);
     BIND_INT(input_bind, B_PID, &log_entry->pid, 0);
+    BIND_INT(input_bind, B_CPU, &log_entry->cpu, 0);
     BIND_STRING(input_bind, B_COMMAND, log_entry->command, 0, str_length[B_COMMAND]);
     BIND_STRING(input_bind, B_FILENAME, log_entry->file, 0, str_length[B_FILENAME]);
     BIND_STRING(input_bind, B_GID, log_entry->job_group_id, 0, str_length[B_GID]);
     BIND_STRING(input_bind, B_JID, log_entry->job_id, 0, str_length[B_JID]);
+    BIND_INT(input_bind, B_MPI_RANK, &log_entry->mpi_rank, -1);
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(insert_log, input_bind)) {

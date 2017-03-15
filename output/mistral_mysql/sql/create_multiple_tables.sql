@@ -3,7 +3,7 @@
 --
 -- Eric Martin at Ellexus - 08/03/2016
 --
--- This text file should be imported using the command 
+-- This text file should be imported using the command
 --      "mysql -u root -p < create_multiple_tables.sql"
 -- This will set up the MySQL databases and tables needed for the mistral_mysql
 -- plugin.
@@ -66,11 +66,14 @@ CREATE PROCEDURE create_log_tables()
                          Label VARCHAR(256) NOT NULL,
                          Rule_Parameters INT NOT NULL,
                          Observed VARCHAR(64) NOT NULL,
+                         Hostname VARCHAR(256),
                          PID INT,
+                         CPU INT,
                          Command VARCHAR(256),
                          File_name VARCHAR(256),
                          Group_ID VARCHAR(256),
                          ID VARCHAR(256),
+                         MPI_RANK INT,
                          Log_ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY)
                          ENGINE=InnoDB;');
         PREPARE cl from @dynamic_name;

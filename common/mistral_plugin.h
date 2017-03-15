@@ -176,11 +176,14 @@ typedef struct mistral_log {
     enum mistral_unit measured_unit;
     uint64_t measured_time;
     enum mistral_unit measured_time_unit;
+    const char *hostname;
     int64_t pid;
+    int32_t cpu;
     const char *command;
     const char *file;
     const char *job_group_id;
     const char *job_id;
+    int32_t mpi_rank;
 } mistral_log;
 
 typedef struct mistral_header {

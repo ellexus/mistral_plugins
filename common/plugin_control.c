@@ -673,6 +673,12 @@ static bool parse_log_entry(const char *line)
         goto fail_log_observed;
     }
 
+    /* Record the hostname */
+    if ((log_entry->hostname = strdup(comma_split[FIELD_HOSTNAME])) == NULL) {
+        mistral_err("Unable to allocate memory for hostname: %s", comma_split[FIELD_HOSTNAME]);
+        goto fail_log_hostname;
+    }
+
     /* Record the pid - because pid_t varies from machine to machine use an int64_t to be safe */
     char *end = NULL;
     errno = 0;
@@ -681,6 +687,16 @@ static bool parse_log_entry(const char *line)
     if (!end || *end != '\0' || end == comma_split[FIELD_PID] || errno) {
         mistral_err("Invalid PID seen: [%s].", comma_split[FIELD_PID]);
         goto fail_log_pid;
+    }
+
+    /* Record the CPU number. */
+    end = NULL;
+    errno = 0;
+    log_entry->cpu = (int32_t)strtol(comma_split[FIELD_CPU], &end, 10);
+
+    if (!end || *end != '\0' || end == comma_split[FIELD_CPU] || errno) {
+        mistral_err("Invalid CPU seen: [%s].", comma_split[FIELD_CPU]);
+        goto fail_log_cpu;
     }
 
     /* Record the command
@@ -758,6 +774,16 @@ static bool parse_log_entry(const char *line)
         goto fail_log_job;
     }
 
+    /* Record the MPI rank. */
+    end = NULL;
+    errno = 0;
+    log_entry->mpi_rank = (int32_t)strtol(comma_split[FIELD_MPI_RANK], &end, 10);
+
+    if (!end || *end != '\0' || end == comma_split[FIELD_MPI_RANK] || errno) {
+        mistral_err("Invalid MPI rank seen: [%s].", comma_split[FIELD_MPI_RANK]);
+        goto fail_log_mpi_rank;
+    }
+
     CALL_IF_DEFINED(mistral_received_log, log_entry);
 
     free(size_range_split);
@@ -766,13 +792,16 @@ static bool parse_log_entry(const char *line)
     free(comma_split);
     return true;
 
+fail_log_mpi_rank:
 fail_log_job:
 fail_log_group:
 fail_log_filename:
     free(filename);
 fail_log_command:
     free(command);
+fail_log_cpu:
 fail_log_pid:
+fail_log_hostname:
 fail_log_observed:
 fail_log_allowed:
 fail_log_measurement:

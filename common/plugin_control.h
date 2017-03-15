@@ -62,19 +62,22 @@ const char *const mistral_log_message[PLUGIN_MESSAGE_LIMIT] = {
 };
 
 #define LOG_FIELD(X) \
-    X(TIMESTAMP) \
-    X(LABEL) \
-    X(PATH) \
-    X(CALL_TYPE) \
-    X(SIZE_RANGE) \
-    X(MEASUREMENT) \
-    X(MEASURED) \
-    X(THRESHOLD) \
-    X(PID) \
-    X(COMMAND) \
-    X(FILENAME) \
-    X(JOB_GROUP_ID) \
-    X(JOB_ID)
+    X(TIMESTAMP)     \
+    X(LABEL)         \
+    X(PATH)          \
+    X(CALL_TYPE)     \
+    X(SIZE_RANGE)    \
+    X(MEASUREMENT)   \
+    X(MEASURED)      \
+    X(THRESHOLD)     \
+    X(HOSTNAME)      \
+    X(PID)           \
+    X(CPU)           \
+    X(COMMAND)       \
+    X(FILENAME)      \
+    X(JOB_GROUP_ID)  \
+    X(JOB_ID)        \
+    X(MPI_RANK)
 
 enum mistral_log_fields {
 #define X(P) FIELD_ ## P,
