@@ -12,7 +12,7 @@
 #include <stdarg.h>             /* va_start, va_list, va_end */
 #include <stdbool.h>            /* bool */
 #include <stdint.h>             /* uint64_t, UINT64_MAX */
-#include <stdio.h>              /* fprintf, asprintf, fdopen, vfprintf */
+#include <stdio.h>              /* fprintf, asprintf, vfprintf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
 #include <time.h>               /* strptime, mktime, tzset */
@@ -58,7 +58,7 @@ int mistral_err(const char *format, ...)
     char *file_fmt = NULL;
     char *fmt = (char *)format;
 
-    if (mistral_plugin_info.error_log != stderr) {
+    if (mistral_plugin_info.error_log != stderr && format[strlen(format) - 1] != '\n') {
         if (asprintf(&file_fmt, "%s\n", format) >= 0) {
             fmt = file_fmt;
         }
@@ -674,6 +674,18 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Record the hostname */
+    if ((log_entry->full_hostname = strdup(comma_split[FIELD_HOSTNAME])) == NULL) {
+        mistral_err("Unable to allocate memory for full hostname: %s", comma_split[FIELD_HOSTNAME]);
+        goto fail_log_fullhost;
+
+    }
+
+    /* Now we've stored the full hostname save a version trunctated at the first '.' */
+    char *dot;
+    if ((dot = strchr(comma_split[FIELD_HOSTNAME], '.'))) {
+        *dot = '\0';
+    }
+
     if ((log_entry->hostname = strdup(comma_split[FIELD_HOSTNAME])) == NULL) {
         mistral_err("Unable to allocate memory for hostname: %s", comma_split[FIELD_HOSTNAME]);
         goto fail_log_host;
@@ -804,6 +816,7 @@ fail_log_command:
 fail_log_cpu:
 fail_log_pid:
 fail_log_host:
+fail_log_fullhost:
 fail_log_observed:
 fail_log_allowed:
 fail_log_measurement:
@@ -856,6 +869,7 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
         free((void *)log_entry->job_group_id);
         free((void *)log_entry->job_id);
         free((void *)log_entry->hostname);
+        free((void *)log_entry->full_hostname);
         free((void *)log_entry);
     }
 }

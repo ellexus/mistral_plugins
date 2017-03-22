@@ -1,17 +1,22 @@
 .PHONY: all
-all: build-common build-mistral_mysql build-mistral_influxdb build-mistral_rtm
+all: build-common build-mistral_graphite build-mistral_influxdb \
+	build-mistral_mysql build-mistral_rtm
 
 .PHONY: build-common
 build-common:
 	$(MAKE) -C common
 
-.PHONY: build-mistral_mysql
-build-mistral_mysql:
-	$(MAKE) -C output/mistral_mysql
+.PHONY: build-mistral_graphite
+build-mistral_graphite:
+	$(MAKE) -C output/mistral_graphite
 
 .PHONY: build-mistral_influxdb
 build-mistral_influxdb:
 	$(MAKE) -C output/mistral_influxdb
+
+.PHONY: build-mistral_mysql
+build-mistral_mysql:
+	$(MAKE) -C output/mistral_mysql
 
 .PHONY: build-mistral_rtm
 build-mistral_rtm:
