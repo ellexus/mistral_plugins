@@ -1,0 +1,6 @@
+[client]
+user=mistral
+password=mistral
+host=localhost
+port=3306
+database=mistral_log

@@ -116,7 +116,11 @@ for PACKAGE in ${PACKAGES}; do
     # Copy the plugin binaries and any files mentioned in the PACKAGE file to an
     # appropriately named directory, then create a tar file of that directory.
 
-    cp ${BUILD_DIR}/${PLUGIN_NAME}.* ${PLUGIN_DST}
+    for binary in ${BUILD_DIR}/${PLUGIN_NAME}.*; do
+        arch=${binary#${BUILD_DIR}/${PLUGIN_NAME}.}
+        mkdir -p ${PLUGIN_DST}/${arch}
+        cp $binary ${PLUGIN_DST}/${arch}/${PLUGIN_NAME}
+    done
     tar -c --directory=${PLUGIN_SRC} --files-from=${PACKAGE} | tar -x --directory=${PLUGIN_DST}
     tar -czf ./releases/${PLUGIN_NAME}_${VERSION}.tar.gz --directory=${BUILD_DIR} $(basename ${PLUGIN_DST})
 done
