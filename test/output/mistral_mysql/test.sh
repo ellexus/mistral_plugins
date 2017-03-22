@@ -22,9 +22,10 @@ fi
 
 # Set up the SQL command to fetch the results
 sql_cmd="SELECT scope, type, time_stamp, label, violation_path, call_type,"
-sql_cmd="$sql_cmd measurement, size_range, threshold, observed, pid, command,"
-sql_cmd="$sql_cmd file_name, group_id,id FROM log_01 a, rule_parameters b WHERE"
-sql_cmd="$sql_cmd b.rule_id = a.rule_parameters ORDER BY log_id ASC" 
+sql_cmd="$sql_cmd measurement, size_range, threshold, observed, host, pid, cpu,"
+sql_cmd="$sql_cmd command, file_name, group_id, id, mpi_rank FROM log_01 a,"
+sql_cmd="$sql_cmd rule_parameters b WHERE b.rule_id = a.rule_parameters"
+sql_cmd="$sql_cmd ORDER BY log_id ASC" 
 
 
 run_test --defaults-file="$mysql_parameters"

@@ -673,6 +673,12 @@ static bool parse_log_entry(const char *line)
         goto fail_log_observed;
     }
 
+    /* Record the hostname */
+    if ((log_entry->hostname = strdup(comma_split[FIELD_HOSTNAME])) == NULL) {
+        mistral_err("Unable to allocate memory for hostname: %s", comma_split[FIELD_HOSTNAME]);
+        goto fail_log_host;
+    }
+
     /* Record the pid - because pid_t varies from machine to machine use an int64_t to be safe */
     char *end = NULL;
     errno = 0;
@@ -683,11 +689,21 @@ static bool parse_log_entry(const char *line)
         goto fail_log_pid;
     }
 
+    /* Record the CPU ID - this is inlikely to be large but use a uint32_t to future proof */
+    end = NULL;
+    errno = 0;
+    log_entry->cpu = (uint32_t)strtoul(comma_split[FIELD_CPU], &end, 10);
+
+    if (!end || *end != '\0' || end == comma_split[FIELD_CPU] || errno) {
+        mistral_err("Invalid CPU ID seen: [%s].", comma_split[FIELD_CPU]);
+        goto fail_log_cpu;
+    }
+
     /* Record the command
      *
      * Now we need to make an assumption. As it is currently coded we do nothing to escape commas in
-     * commands or file names. The command is limited to 256 characters though. Assuming we have
-     * more than four fields left keep on appending them to the command until either the length
+     * commands or file names. The command is truncated after roughly 1.5kB though. Assuming we have
+     * more than five fields left keep on appending them to the command until either the length
      * limit is reached or we have the right number of fields left.
      */
     size_t field = FIELD_COMMAND;
@@ -712,7 +728,7 @@ static bool parse_log_entry(const char *line)
         }
         field++;
     } while (field < log_field_count - (FIELD_MAX - FIELD_COMMAND) &&
-             strlen(command) + strlen(comma_split[field]) + 2 <= 256);
+             strlen(command) + strlen(comma_split[field]) + 2 <= PLUGIN_MESSAGE_CMD_LEN);
 
     log_entry->command = command;
 
@@ -746,16 +762,28 @@ static bool parse_log_entry(const char *line)
 
     log_entry->file = filename;
 
+    size_t offset = field - FIELD_FILENAME - 1;
+
     /* Record the job group id */
-    if ((log_entry->job_group_id = (const char *)strdup(comma_split[field++])) == NULL) {
-        mistral_err("Unable to allocate memory for job group id: %s", comma_split[field - 1]);
+    if ((log_entry->job_group_id = (const char *)strdup(comma_split[FIELD_JOB_GROUP_ID + offset])) == NULL) {
+        mistral_err("Unable to allocate memory for job group id: %s", comma_split[FIELD_JOB_GROUP_ID + offset]);
         goto fail_log_group;
     }
 
     /* Record the job id */
-    if ((log_entry->job_id = (const char *)strdup(comma_split[field++])) == NULL) {
-        mistral_err("Unable to allocate memory for job id: %s", comma_split[field - 1]);
+    if ((log_entry->job_id = (const char *)strdup(comma_split[FIELD_JOB_ID + offset])) == NULL) {
+        mistral_err("Unable to allocate memory for job id: %s", comma_split[FIELD_JOB_ID + offset]);
         goto fail_log_job;
+    }
+
+    /* Record the MPI Rank */
+    end = NULL;
+    errno = 0;
+    log_entry->mpi_rank = (int32_t)strtol(comma_split[FIELD_MPI_RANK + offset], &end, 10);
+
+    if (!end || *end != '\0' || end == comma_split[FIELD_MPI_RANK + offset] || errno) {
+        mistral_err("Invalid MPI rank seen: [%s].", comma_split[FIELD_MPI_RANK + offset]);
+        goto fail_log_mpi_rank;
     }
 
     CALL_IF_DEFINED(mistral_received_log, log_entry);
@@ -766,13 +794,16 @@ static bool parse_log_entry(const char *line)
     free(comma_split);
     return true;
 
+fail_log_mpi_rank:
 fail_log_job:
 fail_log_group:
 fail_log_filename:
     free(filename);
 fail_log_command:
     free(command);
+fail_log_cpu:
 fail_log_pid:
+fail_log_host:
 fail_log_observed:
 fail_log_allowed:
 fail_log_measurement:
@@ -824,6 +855,7 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
         free((void *)log_entry->file);
         free((void *)log_entry->job_group_id);
         free((void *)log_entry->job_id);
+        free((void *)log_entry->hostname);
         free((void *)log_entry);
     }
 }

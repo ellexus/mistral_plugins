@@ -60,18 +60,21 @@ CREATE PROCEDURE create_log_tables()
         ELSE set @enter_name = concat('log_',log_counter);
         END IF;
 
-        SET @dynamic_name = CONCAT('CREATE TABLE ', @enter_name, ' (Scope VARCHAR(6) NOT NULL,
-                         Type VARCHAR(8) NOT NULL,
-                         Time_Stamp DATETIME NOT NULL,
-                         Label VARCHAR(256) NOT NULL,
-                         Rule_Parameters INT NOT NULL,
-                         Observed VARCHAR(64) NOT NULL,
-                         PID INT,
-                         Command VARCHAR(256),
-                         File_name VARCHAR(256),
-                         Group_ID VARCHAR(256),
-                         ID VARCHAR(256),
-                         Log_ID INT NOT NULL AUTO_INCREMENT PRIMARY KEY)
+        SET @dynamic_name = CONCAT('CREATE TABLE ', @enter_name, ' (scope VARCHAR(6) NOT NULL,
+                         type VARCHAR(8) NOT NULL,
+                         time_stamp DATETIME NOT NULL,
+                         label VARCHAR(256) NOT NULL,
+                         rule_parameters INT NOT NULL,
+                         observed VARCHAR(64) NOT NULL,
+                         host VARCHAR(256),
+                         pid INT,
+                         cpu INT,
+                         command VARCHAR(1405),
+                         file_name VARCHAR(1405),
+                         group_iD VARCHAR(256),
+                         id VARCHAR(256),
+                         mpi_rank INT,
+                         log_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY)
                          ENGINE=InnoDB;');
         PREPARE cl from @dynamic_name;
         EXECUTE cl;

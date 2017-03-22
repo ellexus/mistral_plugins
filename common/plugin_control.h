@@ -19,7 +19,7 @@ size_t mistral_call_type_len[CALL_TYPE_MAX] = {
 };
 
 /* Version of the API used by the plug-in */
-#define MISTRAL_API_VERSION 2
+#define MISTRAL_API_VERSION 3
 
 /* Define the number of fields in the plugin message string */
 #define PLUGIN_MESSAGE_FIELDS 3
@@ -28,6 +28,9 @@ size_t mistral_call_type_len[CALL_TYPE_MAX] = {
 #define PLUGIN_MESSAGE_SEP_C ':'
 #define PLUGIN_MESSAGE_SEP_S ":"
 #define PLUGIN_MESSAGE_END PLUGIN_MESSAGE_SEP_S
+
+/* Define the maximum length of a command line in a Mistral log message */
+#define PLUGIN_MESSAGE_CMD_LEN 1405
 
 /* Set up message type strings */
 #define PLUGIN_MESSAGE(X) \
@@ -70,11 +73,14 @@ const char *const mistral_log_message[PLUGIN_MESSAGE_LIMIT] = {
     X(MEASUREMENT) \
     X(MEASURED) \
     X(THRESHOLD) \
+    X(HOSTNAME) \
     X(PID) \
+    X(CPU) \
     X(COMMAND) \
     X(FILENAME) \
     X(JOB_GROUP_ID) \
-    X(JOB_ID)
+    X(JOB_ID) \
+    X(MPI_RANK)
 
 enum mistral_log_fields {
 #define X(P) FIELD_ ## P,
