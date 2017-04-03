@@ -81,6 +81,7 @@ CREATE TABLE mistral_events (
     INDEX host_idx (host),
     INDEX ids_idx (groupid, id),
     INDEX job_idx (clusterid, jobid, indexid, submit_time),
+    INDEX search_idx (clusterid, jobid, indexid, submit_time, time),
     FOREIGN KEY (rule_parameters) REFERENCES mistral_rule_parameters(rule_id)
 )
 ENGINE=InnoDB;
