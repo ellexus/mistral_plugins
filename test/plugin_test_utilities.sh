@@ -9,10 +9,14 @@ script_path=$(readlink -f "$0")
 script_dir=$(dirname "$script_path")
 test_root=$(readlink -f "$script_dir/../..")
 test_tools="$test_root/tools"
+test_timestamp=$(date +%Y%m%d%H%M%S)
 repo_root=$(readlink -f "$test_root/..")
 plugin_dir="$repo_root${script_dir#$test_root}"
 plugin_name=$(basename "$plugin_dir")
 plugin_path="$plugin_dir/$plugin_name"
+
+# Make the test start time available to other scripts
+export test_timestamp
 
 # Create an output directory for files created by the test
 if [ $# -eq 0 ]; then

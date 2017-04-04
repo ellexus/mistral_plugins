@@ -73,6 +73,41 @@ static void usage(const char *name)
 }
 
 /*
+ * graphite_escape
+ *
+ * Graphite metrics will use interpret both '.' and '/' charcters as separators
+ * so if these characters occur within the data e.g. in the path or job ID they
+ * must be replaced. To be paranoid this function will replace '/' with ':' and
+ * any other non-alphanumeric, hyphen or underscore characters with hyphens.
+ *
+ * This function duplicates the passed string and then replaces each character
+ * encountered.
+ *
+ * Parameters:
+ *   string - The string whose content needs to be escaped
+ *
+ * Returns:
+ *   A pointer to newly allocated memory containing the escaped string or
+ *   NULL on error
+ */
+static char *graphite_escape(const char *string)
+{
+    char *escaped = strdup(string);
+    if (escaped) {
+        for (char *p = escaped; *p; p++) {
+            if (*p == '/') {
+                *p = ':';
+            } else if (!isalnum(*p) && *p != '_') {
+                *p = '-';
+            }
+        }
+        return escaped;
+    } else {
+        return NULL;
+    }
+}
+
+/*
  * mistral_startup
  *
  * Required function that initialises the type of plug-in we are running. This
@@ -347,27 +382,18 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     mistral_log *log_entry = log_list_head;
 
     while (log_entry) {
-        const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
-        const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
         char *data = NULL;
 
-        /* Graphite will turn path elements into namespace entries so replace any forward slash
-         * chracters with ':' and non-alphanumeric characters with '_'.  This is overkill but it
-         * does have the virtue of being simple.
-         */
-        char *path = strdup(log_entry->path);
-        if (path) {
-            for (char *p = path; *p != '\0'; p++) {
-                if (*p == '/') {
-                    *p = ':';
-                } else if (!isalnum(*p)) {
-                    *p = '_';
-                }
-            }
-        } else {
-            mistral_err("Could not allocate memory for path");
-            mistral_shutdown = true;
-            return;
+        char *job_gid = graphite_escape(log_entry->job_group_id);
+        char *job_id = graphite_escape(log_entry->job_id);
+        char *path = graphite_escape(log_entry->path);
+        if (job_gid[0] == 0) {
+            free(job_gid);
+            job_gid = strdup("None");
+        }
+        if (job_id[0] == 0) {
+            free(job_id);
+            job_id = strdup("None");
         }
 
         if (asprintf(&data,
@@ -390,8 +416,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             mistral_shutdown = true;
             return;
         }
-        //mistral_err("PMG DEBUG sending [%s]\n", data);
         free(path);
+        free(job_id);
+        free(job_gid);
 
         /* As send needs to send data atomically send each log message separately */
         if (send(graphite_fd, data, strlen(data), 0) == -1) {
