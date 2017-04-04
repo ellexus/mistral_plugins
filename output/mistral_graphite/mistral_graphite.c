@@ -141,8 +141,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"host", required_argument, NULL, 'h'},
         {"instance", required_argument, NULL, 'i'},
         {"mode", required_argument, NULL, 'm'},
-        {"password", required_argument, NULL, 'p'},
-        {"port", required_argument, NULL, 'P'},
+        {"password", required_argument, NULL, 'P'},
+        {"port", required_argument, NULL, 'p'},
         {"username", required_argument, NULL, 'u'},
         {0, 0, 0, 0},
     };
@@ -150,7 +150,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *error_file = NULL;
     const char *host = "localhost";
     const char *password = NULL;
-    const char *port = NULL;
+    const char *port = "2003";
     const char *username = NULL;
     int family = AF_UNSPEC;
     int gai_retval;
