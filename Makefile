@@ -25,13 +25,15 @@ build-mistral_rtm:
 .PHONY: package
 package:
 	$(MAKE) -C common
-	$(MAKE) -C output/mistral_mysql package
+	$(MAKE) -C output/mistral_graphite package
 	$(MAKE) -C output/mistral_influxdb package
+	$(MAKE) -C output/mistral_mysql package
 	$(MAKE) -C output/mistral_rtm package
 
 .PHONY: clean
 clean:
 	$(MAKE) -C common clean
-	$(MAKE) -C output/mistral_mysql clean
+	$(MAKE) -C output/mistral_graphite clean
 	$(MAKE) -C output/mistral_influxdb clean
+	$(MAKE) -C output/mistral_mysql clean
 	$(MAKE) -C output/mistral_rtm clean
