@@ -123,9 +123,6 @@ static char *graphite_escape(const char *string)
  * parameters. The stream used for error messages defaults to stderr but can
  * be overridden here by setting plugin->error_log.
  *
- * Note that username and password are not currently used, but the code is
- * retained from a plug-in template for future use.
- *
  * Parameters:
  *   plugin - A pointer to the plug-in information structure. This function
  *            must set plugin->type before returning, if it doesn't the plug-in
@@ -147,17 +144,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"host", required_argument, NULL, 'h'},
         {"instance", required_argument, NULL, 'i'},
         {"mode", required_argument, NULL, 'm'},
-        {"password", required_argument, NULL, 'P'},
         {"port", required_argument, NULL, 'p'},
-        {"username", required_argument, NULL, 'u'},
         {0, 0, 0, 0},
     };
 
     const char *error_file = NULL;
     const char *host = "localhost";
-    const char *password = NULL;
     const char *port = "2003";
-    const char *username = NULL;
     int family = AF_UNSPEC;
     int gai_retval;
     int opt;
@@ -165,7 +158,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     struct addrinfo *addrs;
     struct addrinfo hints;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:u:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:", options, NULL)) != -1) {
         switch (opt) {
         case '4':
             family = AF_INET;
@@ -203,9 +196,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             break;
         }
-        case 'P':
-            password = optarg;
-            break;
         case 'p':{
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
@@ -216,9 +206,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             port = optarg;
             break;
         }
-        case 'u':
-            username = optarg;
-            break;
         default:
             usage(argv[0]);
             return;
@@ -297,8 +284,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
-    UNUSED(username);
-    UNUSED(password);
 }
 
 /*
