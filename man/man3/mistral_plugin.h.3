@@ -75,6 +75,7 @@ The \fI"mistral_plugin.h"\fP header shall also declare the structure
 \fBconst char               *\fPjob_group_id;
 \fBconst char               *\fPjob_id;
 \fBconst char               *\fPhostname;
+\fBconst char               *\fPfull_hostname;
 \fBuint32_t                  \fPcpu;
 \fBint32_t                   \fPmpi_rank;
 .fi
@@ -521,7 +522,12 @@ The \fBjob_id\fP will be set to point at a string containing the
 job identifier for the job that violated the rule.
 .LP
 The \fBhostname\fP element will be set to point at a string containing
-the fully qualified name of the execution host the job was running on.
+the name of the execution host the job was running on with any domain
+component removed.
+.LP
+The \fBfull_hostname\fP element will be set to point at a string
+containing the fully qualified name of the execution host the job was
+running on.
 .LP
 The \fBcpu\fP element will be set to the CPU number the process that
 contributed the most to the violation of the rule was running on when
