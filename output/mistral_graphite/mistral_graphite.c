@@ -41,7 +41,7 @@ static void usage(const char *name)
      * on a terminal add an explicit newline to each line.
      */
     mistral_err("Usage:\n");
-    mistral_err("  %s [-e file] [-m octal-mode]\n", name);
+    mistral_err("  %s [-i metric] [-h host] [-p port] [-e file] [-m octal-mode] [-4|-6]\n", name);
     mistral_err("\n");
     mistral_err("  -4\n");
     mistral_err("     Use IPv4 only. This is the default behaviour.\n");
@@ -58,6 +58,12 @@ static void usage(const char *name)
     mistral_err("  -h hostname\n");
     mistral_err("     The hostname of the Graphite server with which to establish a connection.\n");
     mistral_err("     If not specified the plug-in will default to \"localhost\".\n");
+    mistral_err("\n");
+    mistral_err("  --instance=metric\n");
+    mistral_err("  -i metric\n");
+    mistral_err("     Set the root metric node name the plug-in should create data under. This\n");
+    mistral_err("     value can contain '.' characters to allow more precise classification\n");
+    mistral_err("     of metrics.  Defaults to \"mistral\".\n");
     mistral_err("\n");
     mistral_err("  --mode=octal-mode\n");
     mistral_err("  -m octal-mode\n");

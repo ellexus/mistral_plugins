@@ -1,56 +1,56 @@
 Mistral Influxdb plugin
 =======================
 
-This plugin receives violation data from Mistral and enters it into an Influxdb
+This plugin receives violation data from Mistral and enters it into a Graphite
 database.
 
 The plugin accepts the following command line options:
 
--d, --database
-  The name of the database. If not specified the database will be called
-  "mistral".
+-4
+  Use IPv4 only. This is the default behaviour.
 
--e, --error
-  The name of the file to which any error messages will be written.
+-6
+  Use IPv6 only.
 
--h, --host
-  The name of the machine on which the database is hosted. If not specified the
-  plugin will use "localhost"
+--error=file
+-e file
+  Specify location for error log. If not specified all errors will
+  be output on stderr and handled by Mistral error logging.
 
--p, --password
-  The password to be used when accessing the database.
+--host=hostname
+-h hostname
+  The hostname of the Graphite server with which to establish a connection.
+  If not specified the plug-in will default to "localhost".
 
--P, --port
-  The port to be used when accessing the database. If not specified the plugin
-  will use port 8086.
+--instance=metric
+-i metric
+  Set the root metric node name the plug-in should create data under. This
+  value can contain '.' characters to allow more precise classification
+  of metrics.  Defaults to "mistral".
 
--s, --https
-  Use HTTPS protocol instead of HTTP when accessing the database.
+--mode=octal-mode
+-m octal-mode
+  Permissions used to create the error log file specified by the -o
+  option.
 
--u, --username
-  The username to be used when accessing the database.
+--port=port
+-p port
+  Specifies the port to connect to on the Graphite server host.
+  If not specified the plug-in will default to "2003".
 
 The options would normally be included in a plugin configuration file, such as
 
 ::
    PLUGIN,OUTPUT
 
-   PLUGIN_PATH,/path/to/mistral_influxdb.x86_64
+   PLUGIN_PATH,/path/to/mistral_graphite
 
    INTERVAL,5
 
-   PLUGIN_OPTION,--database
-   PLUGIN_OPTION,mistral
-   PLUGIN_OPTION,--host
-   PLUGIN_OPTION,10.33.0.186
-   PLUGIN_OPTION,--port
-   PLUGIN_OPTION,8086
-   PLUGIN_OPTION,--username
-   PLUGIN_OPTION,myname
-   PLUGIN_OPTION,--password
-   PLUGIN_OPTION,secret
-   PLUGIN_OPTION,--error
-   PLUGIN_OPTION,/path/to/mistral_influxdb.log
+   PLUGIN_OPTION,--instance=mistral.$USER
+   PLUGIN_OPTION,--host=10.33.0.186
+   PLUGIN_OPTION,--port=2003
+   PLUGIN_OPTION,--error=/path/to/mistral_graphite.log
 
    END
 
