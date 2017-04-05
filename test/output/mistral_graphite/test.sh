@@ -32,7 +32,7 @@ sleep 2
 curl -s -GET "$graphite_protocol://$graphite_host/render?format=raw" \
     --data-urlencode "from=$fromdate" \
     --data-urlencode "until=$todate" \
-    --data-urlencode "target=${graphite_db}.*.*.*.*.*.*.*.*.*.*" \
+    --data-urlencode "target=${graphite_db}.*.*.*.*.*.*.*.*.*.*.*.*" \
     > $results_dir/results.txt
 
 check_results

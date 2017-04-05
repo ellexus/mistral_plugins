@@ -397,8 +397,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         }
 
         if (asprintf(&data,
-                     "%s.%s.%s.%s.%s.%s.%s.%s.%s.%"PRIu32".%"PRId32" %"PRIu64 " %ld\n",
+                     "%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%"PRIu32".%"PRId32" %"PRIu64 " %ld\n",
                      schema,
+                     mistral_scope_name[log_entry->scope],
+                     mistral_contract_name[log_entry->contract_type],
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
                      path,
