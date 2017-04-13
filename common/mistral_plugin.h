@@ -182,6 +182,7 @@ typedef struct mistral_log {
     const char *job_group_id;
     const char *job_id;
     const char *hostname;
+    const char *full_hostname;
     uint32_t cpu;
     int32_t mpi_rank;
 } mistral_log;

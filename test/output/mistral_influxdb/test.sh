@@ -4,7 +4,7 @@
 
 function check_db() {
     local db_name=$1
-    db_test=$(curl -s -GET "$influx_protocol://$influx_host:$influx_port/query" \
+    db_test=$(curl -s --get "$influx_protocol://$influx_host:$influx_port/query" \
               -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
               "q=SHOW DATABASES")
 
@@ -36,7 +36,7 @@ if [ $? -ge 1 ]; then
 fi
 
 # Create the test database
-curl -s -POST "$influx_protocol://$influx_host:$influx_port/query" \
+curl -s "$influx_protocol://$influx_host:$influx_port/query" \
     -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
     "q=CREATE DATABASE $influx_db" >/dev/null 2>&1
 
@@ -56,7 +56,7 @@ run_test -d "$influx_db" -h "$influx_host" -P "$influx_port" $secure -u \
     "$influx_user" -p "$influx_pass"
 
 # Get the results
-curl -s -GET "$influx_protocol://$influx_host:$influx_port/query?pretty=true" \
+curl -s --get "$influx_protocol://$influx_host:$influx_port/query?pretty=true" \
     -u $influx_auth --data-urlencode "db=$influx_db" --data-urlencode \
     "q=SELECT * FROM bandwidth" > $results_dir/results.txt
 
@@ -71,7 +71,7 @@ check_results
 
 if [ -z "$KEEP_TEST_OUTPUT" ];then
     # Delete the test database regardless of test status
-    curl -s -POST "$influx_protocol://$influx_host:$influx_port/query" \
+    curl -s "$influx_protocol://$influx_host:$influx_port/query" \
         -u $influx_auth --data-urlencode "db=_internal" --data-urlencode \
         "q=DROP DATABASE $influx_db" >/dev/null 2>&1
 

@@ -1,0 +1,13 @@
+{
+  "template" : "mistral-*",
+  "mappings": {
+    "_default_": {
+      "properties": {
+        "@timestamp": {
+          "type": "date",
+          "format": "strict_date_optional_time||epoch_millis||epoch_second"
+        }
+      }
+    }
+  }
+}

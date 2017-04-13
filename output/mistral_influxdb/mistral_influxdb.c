@@ -10,6 +10,22 @@
 
 #include "mistral_plugin.h"
 
+enum debug_states {
+    DBG_LOW = 0,
+    DBG_MED,
+    DBG_HIGH,
+    DBG_ENTRY,
+    DBG_LIMIT
+};
+
+/* Define debug output function as a macro so we can use mistral_err */
+#define DEBUG_OUTPUT(level, format, ...)        \
+if ((2 << level) & debug_level) {               \
+    mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
+}
+
+static unsigned long debug_level = 0;
+
 static FILE *log_file = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
@@ -36,12 +52,16 @@ static mistral_log *log_list_tail = NULL;
  */
 static bool set_curl_option(CURLoption option, void *parameter)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %ld, %p", (long)option, parameter);
 
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
         mistral_err("Could not set curl URL option: %s", curl_error);
         mistral_shutdown = true;
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return false;
     }
+
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return true;
 }
 
@@ -66,6 +86,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
  */
 static char *influxdb_escape(const char *string)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %s", string);
     size_t len = strlen(string);
 
     char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
@@ -78,11 +99,14 @@ static char *influxdb_escape(const char *string)
         }
         char *small_escaped = realloc(escaped, (strlen(escaped) + 1) * sizeof(char));
         if (small_escaped) {
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, partial success");
             return small_escaped;
         } else {
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
             return escaped;
         }
     } else {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return NULL;
     }
 }
@@ -109,10 +133,12 @@ static char *influxdb_escape(const char *string)
  */
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function %d, %p, %p", argc, argv, plugin);
     /* Returning without setting plug-in type will cause a clean exit */
 
     static const struct option options[] = {
         {"database", required_argument, NULL, 'd'},
+        {"debug", required_argument, NULL, 'D'},
         {"error", required_argument, NULL, 'e'},
         {"host", required_argument, NULL, 'h'},
         {"password", required_argument, NULL, 'p'},
@@ -131,11 +157,22 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *protocol = "http";
     int opt;
 
-    while ((opt = getopt_long(argc, argv, "d:e:h:p:P:su:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "d:D:e:h:p:P:su:", options, NULL)) != -1) {
         switch (opt) {
         case 'd':
             database = optarg;
             break;
+        case 'D':{
+            char *end = NULL;
+            unsigned long tmp_level = strtoul(optarg, &end, 10);
+            if (tmp_level <= 0 || !end || *end || tmp_level > DBG_LIMIT) {
+                mistral_err("Invalid debug level '%s', using '1'", optarg);
+                tmp_level = 1;
+            }
+            /* For now just allow cumulative debug levels rather than selecting messages */
+            debug_level = (2 << tmp_level) - 1;
+            break;
+        }
         case 'e':
             error_file = optarg;
             break;
@@ -162,6 +199,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             username = optarg;
             break;
         default:
+            DEBUG_OUTPUT(DBG_HIGH, "Leaving function, bad option failed");
             return;
         }
     }
@@ -182,6 +220,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (curl_global_init(CURL_GLOBAL_ALL)) {
         mistral_err("Could not initialise curl");
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
         return;
     }
 
@@ -190,17 +229,20 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (!easyhandle) {
         mistral_err("Could not initialise curl handle");
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
         return;
     }
 
     if (curl_easy_setopt(easyhandle, CURLOPT_ERRORBUFFER, curl_error) != CURLE_OK) {
         mistral_err("Could not set curl error buffer");
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
         return;
     }
 
     /* Set curl to treat HTTP errors as failures */
     if (curl_easy_setopt(easyhandle, CURLOPT_FAILONERROR, 1l) != CURLE_OK) {
         mistral_err("Could not set curl to fail on HTTP error");
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
         return;
     }
 
@@ -211,10 +253,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=s", protocol, host,
                  port, database) < 0) {
         mistral_err("Could not allocate memory for connection URL");
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
         return;
     }
 
     if (!set_curl_option(CURLOPT_URL, url)) {
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
         return;
     }
 
@@ -223,12 +267,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     if (asprintf(&auth, "%s:%s", (username)? username : "",
                                  (password)? password : "" ) < 0) {
         mistral_err("Could not allocate memory for authentication");
+        DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
         return;
     }
 
     if (strcmp(auth, ":")) {
         if (curl_easy_setopt(easyhandle, CURLOPT_USERPWD, auth) != CURLE_OK) {
             mistral_err("Could not set up authentication");
+            DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
             return;
         }
     }
@@ -251,7 +297,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
  */
 void mistral_exit(void)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     if (log_list_head) {
+        DEBUG_OUTPUT(DBG_LOW, "Log entries existed at exit");
         mistral_received_data_end(0, false);
     }
 
@@ -263,6 +311,7 @@ void mistral_exit(void)
         curl_easy_cleanup(easyhandle);
     }
     curl_global_cleanup();
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
 }
 
 /*
@@ -282,6 +331,7 @@ void mistral_exit(void)
  */
 void mistral_received_log(mistral_log *log_entry)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p", log_entry);
     if (!log_list_head) {
         /* Initialise linked list */
         log_list_head = log_entry;
@@ -291,6 +341,7 @@ void mistral_received_log(mistral_log *log_entry)
         insque(log_entry, log_list_tail);
         log_list_tail = log_entry;
     }
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
 }
 
 /*
@@ -318,6 +369,7 @@ void mistral_received_log(mistral_log *log_entry)
  */
 void mistral_received_data_end(uint64_t block_num, bool block_error)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entered function, %"PRIu64", %d", block_num, block_error);
     UNUSED(block_num);
     UNUSED(block_error);
 
@@ -369,6 +421,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             free(file);
             free(command);
             mistral_shutdown = true;
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
             return;
         }
         free(data);
@@ -387,15 +440,18 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     if (data) {
         if (!set_curl_option(CURLOPT_POSTFIELDS, data)) {
             mistral_shutdown = true;
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
             return;
         }
 
         if (curl_easy_perform(easyhandle) != CURLE_OK) {
             mistral_err("Could not run curl query: %s", curl_error);
             mistral_shutdown = true;
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         }
     }
     free(data);
+    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
 }
 
 /*
@@ -416,7 +472,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
  */
 void mistral_received_shutdown(void)
 {
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     if (log_list_head) {
+        DEBUG_OUTPUT(DBG_LOW, "Log entries existed when shutdown seen");
         mistral_received_data_end(0, false);
     }
 }
