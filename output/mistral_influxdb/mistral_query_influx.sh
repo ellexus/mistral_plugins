@@ -368,7 +368,7 @@ function main() {
 
     # Unfortunately InfluxDB's implementation of DISTINCT seems unreliable. We
     # have to select everything and run the output through "sort -u".
-    outval=$(curl -s $auth -GET $protocol://$host:$port/query --data-urlencode \
+    outval=$(curl -s $auth --get $protocol://$host:$port/query --data-urlencode \
         "db=${database//\"/\\\"}" --data-urlencode \
         "q=SELECT \"job-id\", \"label\", \"value\" \
         FROM \"$measurement\" \
