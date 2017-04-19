@@ -1,5 +1,6 @@
 #include <curl/curl.h>          /* CURL *, CURLoption, etc */
 #include <errno.h>              /* errno */
+#include <fcntl.h>              /* open */
 #include <getopt.h>             /* getopt_long */
 #include <inttypes.h>           /* uint32_t, uint64_t */
 #include <search.h>             /* insque, remque */
@@ -7,6 +8,8 @@
 #include <stdio.h>              /* asprintf */
 #include <stdlib.h>             /* calloc, realloc, free */
 #include <string.h>             /* strerror_r */
+#include <sys/stat.h>           /* open, umask */
+#include <sys/types.h>          /* open, umask */
 
 #include "mistral_plugin.h"
 
@@ -63,6 +66,67 @@ static bool set_curl_option(CURLoption option, void *parameter)
 
     DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return true;
+}
+
+/*
+ * usage
+ *
+ * Output a usage message via mistral_err.
+ *
+ * Parameters:
+ *   name   - A pointer to a string containing arg[0]
+ *
+ * Returns:
+ *   void
+ */
+static void usage(const char *name)
+{
+    /* This may be called before options have been processed so errors will go
+     * to stderr. While this is designed to be run with Mistral to make the
+     * messages understandable on a terminal add an explicit newline to each
+     * line.
+     */
+    mistral_err("Usage:\n");
+    mistral_err("  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s]\n", name);
+    mistral_err("\n");
+    mistral_err("  --error=file\n");
+    mistral_err("  -e file\n");
+    mistral_err("     Specify location for error log. If not specified all errors will\n");
+    mistral_err("     be output on stderr and handled by Mistral error logging.\n");
+    mistral_err("\n");
+    mistral_err("  --host=hostname\n");
+    mistral_err("  -h hostname\n");
+    mistral_err("     The hostname of the InfluxDB server with which to establish a connection.\n");
+    mistral_err("     If not specified the plug-in will default to \"localhost\".\n");
+    mistral_err("\n");
+    mistral_err("  --database=database_name\n");
+    mistral_err("  -d database_name\n");
+    mistral_err("     Set the InfluxDB database to be used for storing data.\n");
+    mistral_err("     Defaults to \"mistral\".\n");
+    mistral_err("\n");
+    mistral_err("  --mode=octal-mode\n");
+    mistral_err("  -m octal-mode\n");
+    mistral_err("     Permissions used to create the error log file specified by the -e\n");
+    mistral_err("     option.\n");
+    mistral_err("\n");
+    mistral_err("  --password=secret\n");
+    mistral_err("  -p secret\n");
+    mistral_err("     The password required to access the InfluxDB server if needed.\n");
+    mistral_err("\n");
+    mistral_err("  --port=number\n");
+    mistral_err("  -P number\n");
+    mistral_err("     Specifies the port to connect to on the InfluxDB server host.\n");
+    mistral_err("     If not specified the plug-in will default to \"8086\".\n");
+    mistral_err("\n");
+    mistral_err("  --ssl\n");
+    mistral_err("  -s\n");
+    mistral_err("     Connect to the InfluxDB server via secure HTTP.\n");
+    mistral_err("\n");
+    mistral_err("  --username=user\n");
+    mistral_err("  -u user\n");
+    mistral_err("     The username required to access the InfluxDB server if needed.\n");
+    mistral_err("\n");
+    return;
 }
 
 /*
@@ -141,6 +205,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"debug", required_argument, NULL, 'D'},
         {"error", required_argument, NULL, 'e'},
         {"host", required_argument, NULL, 'h'},
+        {"mode", required_argument, NULL, 'm'},
         {"password", required_argument, NULL, 'p'},
         {"port", required_argument, NULL, 'P'},
         {"https", no_argument, NULL, 's'},
@@ -156,8 +221,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *username = NULL;
     const char *protocol = "http";
     int opt;
+    mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "d:D:e:h:p:P:su:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:su:", options, NULL)) != -1) {
         switch (opt) {
         case 'd':
             database = optarg;
@@ -179,6 +245,27 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'h':
             host = optarg;
             break;
+        case 'm':{
+            char *end = NULL;
+            unsigned long tmp_mode = strtoul(optarg, &end, 8);
+            if (tmp_mode <= 0 || !end || *end) {
+                tmp_mode = 0;
+            }
+            new_mode = (mode_t)tmp_mode;
+
+            if (new_mode <= 0 || new_mode > 0777)
+            {
+                mistral_err("Invalid mode '%s' specified, using default", optarg);
+                new_mode = 0;
+            }
+
+            if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
+            {
+                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default", optarg);
+                new_mode = 0;
+            }
+            break;
+        }
         case 'p':
             password = optarg;
             break;
@@ -187,6 +274,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
                 mistral_err("Invalid port specified %s", optarg);
+                DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
                 return;
             }
             port = (uint16_t)tmp_port;
@@ -199,13 +287,24 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             username = optarg;
             break;
         default:
-            DEBUG_OUTPUT(DBG_HIGH, "Leaving function, bad option failed");
+            usage(argv[0]);
+            DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
             return;
         }
     }
 
     if (error_file != NULL) {
-        log_file = fopen(error_file, "a");
+        if (new_mode > 0) {
+            mode_t old_mask = umask(00);
+            int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
+            if (fd >= 0) {
+                log_file = fdopen(fd, "a");
+            }
+            umask(old_mask);
+        } else {
+            log_file = fopen(error_file, "a");
+        }
+
         if (!log_file) {
             char buf[256];
             mistral_err("Could not open error file %s: %s", error_file,
@@ -444,8 +543,14 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
 
-        if (curl_easy_perform(easyhandle) != CURLE_OK) {
-            mistral_err("Could not run curl query: %s", curl_error);
+        CURLcode ret=curl_easy_perform(easyhandle);
+        if (ret != CURLE_OK) {
+            /* Depending on the version of curl used during compilation
+             * curl_error may not be populated. If this is the case , look up
+             * the less detailed error based on return code instead.
+             */
+            mistral_err("Could not run curl query: %s",
+                        (*curl_error != '\0')? curl_error : curl_easy_strerror(ret));
             mistral_shutdown = true;
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         }
