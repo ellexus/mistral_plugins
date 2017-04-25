@@ -87,7 +87,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
 {
 
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
-        mistral_err("Could not set curl URL option: %s", curl_error);
+        mistral_err("Could not set curl URL option: %s\n", curl_error);
         mistral_shutdown = true;
         return false;
     }
@@ -291,13 +291,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
             if (new_mode <= 0 || new_mode > 0777)
             {
-                mistral_err("Invalid mode '%s' specified, using default", optarg);
+                mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
             if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
             {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default", optarg);
+                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
                 new_mode = 0;
             }
             break;
@@ -309,7 +309,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
-                mistral_err("Invalid port specified %s", optarg);
+                mistral_err("Invalid port specified %s\n", optarg);
                 return;
             }
             port = (uint16_t)tmp_port;
@@ -341,7 +341,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
         if (!log_file) {
             char buf[256];
-            mistral_err("Could not open error file %s: %s", error_file,
+            mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
     }
@@ -530,7 +530,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
         /* Calculate UTC time */
         if (gmtime_r(&log_entry->epoch.tv_sec, &utc_time) == NULL) {
-            mistral_err("Unable to calculate UTC time for log message: %ld",
+            mistral_err("Unable to calculate UTC time for log message: %ld\n",
                         log_entry->epoch.tv_sec);
             free(data);
             mistral_shutdown = true;
@@ -640,7 +640,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
              * curl_error may not be populated. If this is the case , look up
              * the less detailed error based on return code instead.
              */
-            mistral_err("Could not run curl query: %s",
+            mistral_err("Could not run curl query: %s\n",
                         (*curl_error != '\0')? curl_error : curl_easy_strerror(ret));
             mistral_shutdown = true;
         }

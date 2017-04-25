@@ -26,8 +26,8 @@ OPTIONS:
                     accept, access, connect, create, delete, fschange, glob,
                     open, read, seek or write.
   -d, --database    Name of the database to use.
-  -f  --filename    Limit the query to the provided filename. Used as a regular
-                    expression in a sub-string match.
+  -f  --filename    Limit the query to the provided filename. Used as a match
+                    phrase on the file name field.
   -g, --group       Limit the query to the provided job group ID.
   -h, --host        Hostname to use for connection.
   -i, --pid         Limit the query to the provided PID.
@@ -36,8 +36,8 @@ OPTIONS:
                     seek-distance, min-latency, max-latency, mean-latency or
                     total-latency.
   -n, --port        Port number to use for connection.
-  -o, --command     Limit the query to the provided command. Used as a regular
-                    expression in a sub-string match.
+  -o, --command     Limit the query to the provided command. Used as a match
+                    phrase on the command field.
   -p, --password    Filename that contains the connection password. Implies -u.
   -q, --quiet       Suppress informative messages.
   -r, --rule        Limit the query to the provided rule label.
