@@ -58,7 +58,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %ld, %p", (long)option, parameter);
 
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
-        mistral_err("Could not set curl URL option: %s", curl_error);
+        mistral_err("Could not set curl URL option: %s\n", curl_error);
         mistral_shutdown = true;
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return false;
@@ -82,9 +82,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
 static void usage(const char *name)
 {
     /* This may be called before options have been processed so errors will go
-     * to stderr. While this is designed to be run with Mistral to make the
-     * messages understandable on a terminal add an explicit newline to each
-     * line.
+     * to stderr.
      */
     mistral_err("Usage:\n");
     mistral_err("  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s]\n", name);
@@ -232,7 +230,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             char *end = NULL;
             unsigned long tmp_level = strtoul(optarg, &end, 10);
             if (tmp_level <= 0 || !end || *end || tmp_level > DBG_LIMIT) {
-                mistral_err("Invalid debug level '%s', using '1'", optarg);
+                mistral_err("Invalid debug level '%s', using '1'\n", optarg);
                 tmp_level = 1;
             }
             /* For now just allow cumulative debug levels rather than selecting messages */
@@ -255,13 +253,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
             if (new_mode <= 0 || new_mode > 0777)
             {
-                mistral_err("Invalid mode '%s' specified, using default", optarg);
+                mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
             if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
             {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default", optarg);
+                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
                 new_mode = 0;
             }
             break;
@@ -273,7 +271,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
-                mistral_err("Invalid port specified %s", optarg);
+                mistral_err("Invalid port specified %s\n", optarg);
                 DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed");
                 return;
             }
@@ -307,7 +305,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
         if (!log_file) {
             char buf[256];
-            mistral_err("Could not open error file %s: %s", error_file,
+            mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
     }
@@ -549,7 +547,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
              * curl_error may not be populated. If this is the case , look up
              * the less detailed error based on return code instead.
              */
-            mistral_err("Could not run curl query: %s",
+            mistral_err("Could not run curl query: %s\n",
                         (*curl_error != '\0')? curl_error : curl_easy_strerror(ret));
             mistral_shutdown = true;
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");

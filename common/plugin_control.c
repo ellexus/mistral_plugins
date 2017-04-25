@@ -8,6 +8,7 @@
  */
 #include <assert.h>             /* assert */
 #include <errno.h>              /* errno */
+#include <inttypes.h>           /* uint32_t, uint64_t */
 #include <limits.h>             /* SSIZE_MAX */
 #include <stdarg.h>             /* va_start, va_list, va_end */
 #include <stdbool.h>            /* bool */
@@ -17,6 +18,7 @@
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
 #include <time.h>               /* strptime, mktime, tzset */
 #include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO */
+
 
 #include "plugin_control.h"
 
@@ -40,7 +42,7 @@ const int64_t mistral_max_size = SSIZE_MAX;
 /*
  * mistral_err
  *
- * Simply print the passed message to the error log.  If this is not stderr attempt to append a
+ * Simply print the passed message to the error log.  If this is stderr attempt to append a
  * newline to the format before printing the message.
  *
  * Parameters:
@@ -58,7 +60,7 @@ int mistral_err(const char *format, ...)
     char *file_fmt = NULL;
     char *fmt = (char *)format;
 
-    if (mistral_plugin_info.error_log != stderr && format[strlen(format) - 1] != '\n') {
+    if (mistral_plugin_info.error_log == stderr && format[strlen(format) - 1] != '\n') {
         if (asprintf(&file_fmt, "%s\n", format) >= 0) {
             fmt = file_fmt;
         }
@@ -497,7 +499,7 @@ static bool parse_log_entry(const char *line)
 
     char **hash_split = str_split(comma_split[FIELD_TIMESTAMP], '#', &field_count);
     if (!hash_split) {
-        mistral_err("Unable to allocate memory for mistral fields: %s", hash_split);
+        mistral_err("Unable to allocate memory for mistral fields: %s", comma_split[FIELD_TIMESTAMP]);
         goto fail_split_hashes;
     }
 
@@ -1029,8 +1031,8 @@ static enum mistral_message parse_message(char *line)
         }
 
         if (block_count != data_count + 1) {
-            mistral_err("Unexpected data block number %d seen (expected %d).", block_count,
-                        data_count + 1);
+            mistral_err("Unexpected data block number %"PRIu64" seen (expected %"PRIu64").",
+                        block_count, data_count + 1);
             error_seen = true;
         }
 
@@ -1061,7 +1063,7 @@ static enum mistral_message parse_message(char *line)
         }
 
         if (data_count != end_block_count) {
-            mistral_err("Unexpected data block number %d seen (expected %d), data may be corrupt.",
+            mistral_err("Unexpected data block number %"PRIu64" seen (expected %"PRIu64"), data may be corrupt.",
                         end_block_count, data_count);
             error_seen = true;
         }

@@ -223,6 +223,7 @@ extern bool mistral_shutdown;       /* If set to true will cause the plugin  */
                                     /* of input.                             */
 
 extern void mistral_destroy_log_entry(mistral_log *log_entry);
+__attribute__((__format__(printf, 1, 2)))
 extern int mistral_err(const char *format, ...);
 
 #define UNUSED(param) ((void)(param))
