@@ -9,7 +9,7 @@ Index Mappings
 
 Prior to using the Mistral Elasticsearch plug-in the index datatype mapping
 template should be configured within Elasticsearch. The file `mappings.json`
-contains the appropriate configuration. The provided temples only ensures that
+contains the appropriate configuration. The provided template only ensures that
 date fields are correctly identified other, site specific, configuration can be
 added at the user's discretion.
 

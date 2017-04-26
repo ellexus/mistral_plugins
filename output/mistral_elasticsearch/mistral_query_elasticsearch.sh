@@ -17,7 +17,7 @@ Usage: $scriptname [OPTION...]
 
 Return a list of unique job ids and rule labels that were violated.
 
-By default $scriptname will connect to http://localhost:8086/ using database
+By default $scriptname will connect to http://localhost:9200/ using database
 "mistral" and look for violations of bandwidth rules.
 
 OPTIONS:
