@@ -54,7 +54,7 @@ static size_t write_callback(void *data, size_t size, size_t nmemb, void *saved)
         free(response->body);
         response->body = NULL;
         response->size = 0;
-        mistral_err("Could not allocate memory for response body");
+        mistral_err("Could not allocate memory for response body\n");
         return 0;
     }
 
@@ -352,7 +352,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (curl_global_init(CURL_GLOBAL_ALL)) {
-        mistral_err("Could not initialise curl");
+        mistral_err("Could not initialise curl\n");
         return;
     }
 
@@ -360,18 +360,18 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     easyhandle = curl_easy_init();
 
     if (!easyhandle) {
-        mistral_err("Could not initialise curl handle");
+        mistral_err("Could not initialise curl handle\n");
         return;
     }
 
     if (curl_easy_setopt(easyhandle, CURLOPT_ERRORBUFFER, curl_error) != CURLE_OK) {
-        mistral_err("Could not set curl error buffer");
+        mistral_err("Could not set curl error buffer\n");
         return;
     }
 
     /* Set curl to treat HTTP errors as failures */
     if (curl_easy_setopt(easyhandle, CURLOPT_FAILONERROR, 1l) != CURLE_OK) {
-        mistral_err("Could not set curl to fail on HTTP error");
+        mistral_err("Could not set curl to fail on HTTP error\n");
         return;
     }
 
@@ -392,7 +392,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     /* Set Elasticsearch connection options */
     char *url = NULL;
     if (asprintf(&url, "%s://%s:%d/_bulk", protocol, host, port) < 0) {
-        mistral_err("Could not allocate memory for connection URL");
+        mistral_err("Could not allocate memory for connection URL\n");
         return;
     }
 
@@ -404,13 +404,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     char *auth;
     if (asprintf(&auth, "%s:%s", (username)? username : "",
                                  (password)? password : "" ) < 0) {
-        mistral_err("Could not allocate memory for authentication");
+        mistral_err("Could not allocate memory for authentication\n");
         return;
     }
 
     if (strcmp(auth, ":")) {
         if (curl_easy_setopt(easyhandle, CURLOPT_USERPWD, auth) != CURLE_OK) {
-            mistral_err("Could not set up authentication");
+            mistral_err("Could not set up authentication\n");
             return;
         }
     }
@@ -602,7 +602,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->mpi_rank,
                      log_entry->measured) < 0) {
 
-            mistral_err("Could not allocate memory for log entry");
+            mistral_err("Could not allocate memory for log entry\n");
             free(data);
             free(file);
             free(command);
@@ -649,9 +649,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             char *success=strstr(full_response.body, "\"errors\":false");
             if (!success) {
                 mistral_shutdown = true;
-                mistral_err("Could not index data");
-                mistral_err("Data sent:\n%s", data);
-                mistral_err("Response received:\n%s", full_response.body);
+                mistral_err("Could not index data\n");
+                mistral_err("Data sent:\n%s\n", data);
+                mistral_err("Response received:\n%s\n", full_response.body);
             }
         }
     }
