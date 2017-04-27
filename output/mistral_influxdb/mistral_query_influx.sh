@@ -84,6 +84,8 @@ function main() {
     local username=
     local calltypes=(accept access connect create delete fschange glob open read seek write)
     local validate=
+    local ordered_calltype=
+    local tempvar=
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -93,25 +95,35 @@ function main() {
             -c | --call-type)
                 calltype=$2
                 validate=$calltype
-                for ctype in ${calltypes[@]} +; do
+                for ctype in ${calltypes[@]}; do
+                    tempvar=$validate
                     validate=${validate//${ctype}/}
+                    if [[ -n "$tempvar" && "$tempvar" != "$validate" ]]; then
+                        ordered_calltype=${ordered_calltype}+${ctype}
+                    fi
                 done
+                validate=${validate//+/}
                 if [[ -n "$validate" ]]; then
                     usage "Invalid argument \"$2\" for option $1"
                 fi
-                calltype=${calltype//+/\\+}
+                calltype=${ordered_calltype#+}
                 shift
                 ;;
             --call-type=*)
                 calltype=${1#--call-type=}
                 validate=$calltype
-                for ctype in ${calltypes[@]} +; do
+                for ctype in ${calltypes[@]}; do
+                    tempvar=$validate
                     validate=${validate//${ctype}/}
+                    if [[ -n "$tempvar" && "$tempvar" != "$validate" ]]; then
+                        ordered_calltype=${ordered_calltype}+${ctype}
+                    fi
                 done
+                validate=${validate//+/}
                 if [[ -n "$validate" ]]; then
-                    usage "Invalid argument \"$calltype\" for option $1"
+                    usage "Invalid argument \"$calltype\" for option ${1%%=*}"
                 fi
-                calltype=${calltype//+/\\+}
+                calltype=${ordered_calltype#+}
                 ;;
             -o | --command)
                 cmd=$2
@@ -368,7 +380,7 @@ function main() {
 
     # Unfortunately InfluxDB's implementation of DISTINCT seems unreliable. We
     # have to select everything and run the output through "sort -u".
-    outval=$(curl -s $auth -GET $protocol://$host:$port/query --data-urlencode \
+    outval=$(curl -s $auth --get $protocol://$host:$port/query --data-urlencode \
         "db=${database//\"/\\\"}" --data-urlencode \
         "q=SELECT \"job-id\", \"label\", \"value\" \
         FROM \"$measurement\" \
