@@ -185,13 +185,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
             if (new_mode <= 0 || new_mode > 0777)
             {
-                mistral_err("Invalid mode '%s' specified, using default", optarg);
+                mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
             if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
             {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default", optarg);
+                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
                 new_mode = 0;
             }
             break;
@@ -200,7 +200,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
-                mistral_err("Invalid port specified %s", optarg);
+                mistral_err("Invalid port specified %s\n", optarg);
                 return;
             }
             port = optarg;
@@ -226,7 +226,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
         if (!log_file) {
             char buf[256];
-            mistral_err("Could not open error file %s: %s", error_file,
+            mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
     }
@@ -240,7 +240,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         schema = strdup("mistral");
         if (!schema) {
             char buf[256];
-            mistral_err("Could not set schema instance \"mistral\": %s",
+            mistral_err("Could not set schema instance \"mistral\": %s\n",
                         strerror_r(errno, buf, sizeof buf));
         }
     }
@@ -250,7 +250,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     hints.ai_socktype = SOCK_STREAM;
 
     if ((gai_retval = getaddrinfo(host, port, &hints, &addrs)) != 0) {
-        mistral_err("Failed to get host info: %s", gai_strerror(gai_retval));
+        mistral_err("Failed to get host info: %s\n", gai_strerror(gai_retval));
         return;
     }
 
@@ -261,7 +261,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     for(struct addrinfo *curr = addrs; curr != NULL; curr = curr->ai_next) {
         char buf[256];
         if ((graphite_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol)) == -1) {
-            mistral_err("Unable to create socket: %s%s",
+            mistral_err("Unable to create socket: %s%s\n",
                         strerror_r(errno, buf, sizeof buf),
                         (curr->ai_next)? " - Trying next address" : "");
             continue;
@@ -276,7 +276,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (graphite_fd < 0) {
-        mistral_err("Unable to connect to: %s:%s", host, port);
+        mistral_err("Unable to connect to: %s:%s\n", host, port);
     }
 
     /* We no longer need the array of addresses */
@@ -405,7 +405,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->measured,
                      log_entry->epoch.tv_sec) < 0) {
 
-            mistral_err("Could not allocate memory for log entry");
+            mistral_err("Could not allocate memory for log entry\n");
             mistral_shutdown = true;
             return;
         }
@@ -416,7 +416,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         /* As send needs to send data atomically send each log message separately */
         if (send(graphite_fd, data, strlen(data), 0) == -1) {
             char buf[256];
-            mistral_err("Could not send data to Graphite %s",
+            mistral_err("Could not send data to Graphite %s\n",
                         strerror_r(errno, buf, sizeof buf));
         }
 
