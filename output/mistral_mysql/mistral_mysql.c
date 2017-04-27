@@ -69,8 +69,8 @@ bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
 
     get_table_name = mysql_stmt_init(con);
     if (!get_table_name) {
-        mistral_err("mysql_stmt_init() out of memory for get_table_name");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
+        mistral_err("mysql_stmt_init() out of memory for get_table_name\n");
+        mistral_err("%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
 
@@ -80,8 +80,8 @@ bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
     if (mysql_stmt_prepare(get_table_name, get_log_table_name_str,
                            strlen(get_log_table_name_str)))
     {
-        mistral_err("mysql_stmt_prepare(get_table_name) failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
+        mistral_err("mysql_stmt_prepare(get_table_name) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
 
@@ -98,8 +98,8 @@ bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(get_table_name, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(get_table_name) failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
+        mistral_err("mysql_stmt_bind_param(get_table_name) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
 
@@ -109,15 +109,15 @@ bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
 
     /* Execute the query */
     if (mysql_stmt_execute(get_table_name)) {
-        mistral_err("mysql_stmt_execute(get_table_name), failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
+        mistral_err("mysql_stmt_execute(get_table_name), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
 
     /* Connect the output variables to the results of the query */
     if (mysql_stmt_bind_result(get_table_name, output_bind)) {
-        mistral_err("mysql_stmt_bind_result(get_table_name), failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
+        mistral_err("mysql_stmt_bind_result(get_table_name), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_table_name));
     }
 
     /* Get all returned rows locally */
@@ -125,28 +125,28 @@ bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
     my_ulonglong received = mysql_stmt_num_rows(get_table_name);
 
     if (received != 1) {
-        mistral_err("Expected 1 returned row but received %d", received);
+        mistral_err("Expected 1 returned row but received %d\n", received);
         goto fail_get_log_table_name;
     }
 
     /* Populate the output variables with the returned data */
     if (mysql_stmt_fetch(get_table_name)) {
-        mistral_err("mysql_stmt_fetch(get_table_name), failed");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
+        mistral_err("mysql_stmt_fetch(get_table_name), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
 
     /* Close the statement */
     if (mysql_stmt_close(get_table_name)) {
-        mistral_err("Failed while closing the statement get_table_name");
-        mistral_err("%s", mysql_stmt_error(get_table_name));
+        mistral_err("Failed while closing the statement get_table_name\n");
+        mistral_err("%s\n", mysql_stmt_error(get_table_name));
         goto fail_get_log_table_name;
     }
 
     return true;
 
 fail_get_log_table_name:
-    mistral_err("get_log_table_name failed!");
+    mistral_err("get_log_table_name failed!\n");
     return false;
 }
 
@@ -179,7 +179,7 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     insert_rule = mysql_stmt_init(con);
     if (!insert_rule) {
-        mistral_err("mysql_stmt_init() out of memory for insert_rule");
+        mistral_err("mysql_stmt_init() out of memory for insert_rule\n");
         goto fail_insert_rule_parameters;
     }
 
@@ -188,8 +188,8 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
                                  "measurement, size_range, threshold) VALUES (NULL,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_parameters_str,
                            strlen(insert_rule_parameters_str))) {
-        mistral_err("mysql_stmt_prepare(insert_rule), failed");
-        mistral_err("%s", mysql_stmt_error(insert_rule));
+        mistral_err("mysql_stmt_prepare(insert_rule), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
@@ -205,8 +205,8 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(insert_rule, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(insert_rule) failed");
-        mistral_err("%s", mysql_stmt_error(insert_rule));
+        mistral_err("mysql_stmt_bind_param(insert_rule) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
@@ -229,7 +229,7 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Get the total rows affected */
     my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_rule);
     if (affected_rows != 1) {
-        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %d",
+        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %d\n",
                     affected_rows);
         goto fail_insert_rule_parameters;
     }
@@ -240,15 +240,15 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Close the statement */
     if (mysql_stmt_close(insert_rule)) {
-        mistral_err("failed while closing the statement insert_rule");
-        mistral_err("%s", mysql_stmt_error(insert_rule));
+        mistral_err("failed while closing the statement insert_rule\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
     return true;
 
 fail_insert_rule_parameters:
-    mistral_err("insert_rule_parameters failed");
+    mistral_err("insert_rule_parameters failed\n");
     return false;
 }
 
@@ -290,7 +290,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     get_rule_id = mysql_stmt_init(con);
     if (!get_rule_id) {
-        mistral_err("mysql_stmt_init() out of memory for get_rule_id");
+        mistral_err("mysql_stmt_init() out of memory for get_rule_id\n");
         goto fail_set_rule_id;
     }
 
@@ -301,8 +301,8 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str,
         strlen(get_rule_params_id_str)))
     {
-        mistral_err("mysql_stmt_prepare(get_rule_id) failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_prepare(get_rule_id) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
@@ -322,8 +322,8 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(get_rule_id, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(get_rule_id) failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_bind_param(get_rule_id) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
@@ -346,15 +346,15 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Execute the query */
     if (mysql_stmt_execute(get_rule_id)) {
-        mistral_err("mysql_stmt_execute(get_rule_id), failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_execute(get_rule_id), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
     /* Connect the output variables to the results of the query */
     if (mysql_stmt_bind_result(get_rule_id, output_bind)) {
-        mistral_err("mysql_stmt_bind_result(get_rule_id), failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_bind_result(get_rule_id), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
@@ -365,8 +365,8 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     if (received == 1) {
         /* Populate the output variables with the returned data */
         if (mysql_stmt_fetch(get_rule_id)) {
-            mistral_err("mysql_stmt_fetch(get_rule_id), failed");
-            mistral_err("%s", mysql_stmt_error(get_rule_id));
+            mistral_err("mysql_stmt_fetch(get_rule_id), failed\n");
+            mistral_err("%s\n", mysql_stmt_error(get_rule_id));
             goto fail_set_rule_id;
         }
     } else if (received == 0) {
@@ -374,21 +374,21 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
             goto fail_set_rule_id;
         }
     } else {
-        mistral_err("Expected 1 returned row but received %d", received);
+        mistral_err("Expected 1 returned row but received %d\n", received);
         goto fail_set_rule_id;
     }
 
     /* Close the statement */
     if (mysql_stmt_close(get_rule_id)) {
-        mistral_err("failed while closing the statement get_rule_id");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("failed while closing the statement get_rule_id\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
     return true;
 
 fail_set_rule_id:
-    mistral_err("Set_rule_ID failed!");
+    mistral_err("Set_rule_ID failed!\n");
     return false;
 }
 
@@ -451,7 +451,7 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
 
     insert_log = mysql_stmt_init(con);
     if (!insert_log) {
-        mistral_err("mysql_stmt_init() out of memory for insert_log");
+        mistral_err("mysql_stmt_init() out of memory for insert_log\n");
         goto fail_insert_log_to_db;
     }
 
@@ -462,7 +462,7 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
     snprintf(insert_log_str, log_str_len, LOG_INSERT, table_name);
 
     if (mysql_stmt_prepare(insert_log, insert_log_str, strlen(insert_log_str))) {
-        mistral_err("mysql_stmt_prepare(insert_log) failed with statement: %s",
+        mistral_err("mysql_stmt_prepare(insert_log) failed with statement: %s\n",
                 insert_log_str);
         mistral_err("%s\n", mysql_stmt_error(insert_log));
         goto fail_insert_log_to_db;
@@ -489,8 +489,8 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(insert_log, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(insert_log) failed");
-        mistral_err("%s", mysql_stmt_error(insert_log));
+        mistral_err("mysql_stmt_bind_param(insert_log) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_log));
         goto fail_insert_log_to_db;
     }
 
@@ -516,15 +516,15 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
     /* Get the total rows affected */
     my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_log);
     if (affected_rows != 1) {
-        mistral_err("Invalid number of rows inserted by insert_log. Expected 1, saw %d",
+        mistral_err("Invalid number of rows inserted by insert_log. Expected 1, saw %d\n",
                     affected_rows);
         goto fail_insert_log_to_db;
     }
 
     /* Close the statement */
     if (mysql_stmt_close(insert_log)) {
-        mistral_err("failed while closing the statement insert_rule");
-        mistral_err("%s", mysql_stmt_error(insert_log));
+        mistral_err("failed while closing the statement insert_rule\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_log));
         goto fail_insert_log_to_db;
     }
 
@@ -568,7 +568,7 @@ bool write_log_to_db(mistral_log *log_entry)
         strncpy(last_log_date, log_date, DATE_LENGTH);
 
         if (!get_log_table_name(log_entry, table_name)) {
-            mistral_err("get_log_table_name failed");
+            mistral_err("get_log_table_name failed\n");
             return false;
         }
     }
@@ -638,7 +638,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         log_file = fopen(error_file, "a");
         if (!log_file) {
             char buf[256];
-            mistral_err("Could not open error file %s: %s", error_file,
+            mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
     }
@@ -649,7 +649,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (config_file == NULL) {
-        mistral_err("Missing option -c");
+        mistral_err("Missing option -c\n");
         return;
     }
 
@@ -657,21 +657,21 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     con = mysql_init(NULL);
 
     if (con == NULL) {
-        mistral_err("Unable to initialise MySQL: %s", mysql_error(con));
+        mistral_err("Unable to initialise MySQL: %s\n", mysql_error(con));
         return;
     }
 
     /* Get the config and credentials from file */
     int opt_ret = mysql_options(con, MYSQL_READ_DEFAULT_FILE, config_file);
     if (opt_ret) {
-        mistral_err("Couldn't get MYSQL_READ_DEFAULT_FILE option: %s. File path %s %d",
+        mistral_err("Couldn't get MYSQL_READ_DEFAULT_FILE option: %s. File path %s %d\n",
                     mysql_error(con),  config_file, opt_ret);
         return;
     }
 
     /* Makes a connection to MySQl */
     if (mysql_real_connect(con, NULL, NULL, NULL, NULL, 0, NULL, 0) == NULL) {
-        mistral_err("Unable to connect to MySQL: %s", mysql_error(con));
+        mistral_err("Unable to connect to MySQL: %s\n", mysql_error(con));
         mysql_close(con);
         return;
     }

@@ -13,8 +13,10 @@ The \fBmistral_err()\fP function will produce output according to a
 .LP
 Output will be sent to the file stream specified for the plug-in as
 described in \fBmistral_startup\fP(3).
-If the file stream is not set to \fIstderr\fP the function will attempt
-to append a trailing newline character (\(aq\en\(aq) to the message.
+If the file stream is set to \fIstderr\fP the function will attempt
+to append a trailing newline character (\(aq\en\(aq) to the message
+if one is not present as this is required for correct processing by
+Mistral.
 No error will be reported if appending the newline character fails, the
 message will simply be written to the file stream unchanged.
 .sp

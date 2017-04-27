@@ -153,7 +153,7 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
 
     insert_rule = mysql_stmt_init(con);
     if (!insert_rule) {
-        mistral_err("mysql_stmt_init() out of memory for insert_rule");
+        mistral_err("mysql_stmt_init() out of memory for insert_rule\n");
         goto fail_insert_rule_parameters;
     }
 
@@ -164,8 +164,8 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
                                  "clusterid) VALUES (NULL,?,?,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_parameters_str,
                            strlen(insert_rule_parameters_str))) {
-        mistral_err("mysql_stmt_prepare(insert_rule), failed");
-        mistral_err("%s", mysql_stmt_error(insert_rule));
+        mistral_err("mysql_stmt_prepare(insert_rule), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
@@ -183,8 +183,8 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(insert_rule, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(insert_rule) failed");
-        mistral_err("%s", mysql_stmt_error(insert_rule));
+        mistral_err("mysql_stmt_bind_param(insert_rule) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
@@ -200,15 +200,15 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
 
     /* Execute the query */
     if (mysql_stmt_execute(insert_rule)) {
-        mistral_err("mysql_stmt_execute(insert_rule), failed");
-        mistral_err("%s", mysql_stmt_error(insert_rule));
+        mistral_err("mysql_stmt_execute(insert_rule), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
     /* Get the total rows affected */
     my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_rule);
     if (affected_rows != 1) {
-        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %d",
+        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %d\n",
                     affected_rows);
         goto fail_insert_rule_parameters;
     }
@@ -219,8 +219,8 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
 
     /* Close the statement */
     if (mysql_stmt_close(insert_rule)) {
-        mistral_err("failed while closing the statement insert_rule");
-        mistral_err("%s", mysql_stmt_error(insert_rule));
+        mistral_err("failed while closing the statement insert_rule\n");
+        mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
     }
 
@@ -228,7 +228,7 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
     return true;
 
 fail_insert_rule_parameters:
-    mistral_err("insert_rule_parameters failed");
+    mistral_err("insert_rule_parameters failed\n");
     DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
     return false;
 }
@@ -363,7 +363,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
         found = tsearch((void *)this_rule, &rule_root, rule_compare);
         if (found == NULL) {
-            mistral_err("Out of memory in tsearch");
+            mistral_err("Out of memory in tsearch\n");
             free(this_rule);
             this_rule = NULL;
             goto fail_set_rule_id;
@@ -375,7 +375,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
             return true;
         }
     } else {
-        mistral_err("Unable to allocate memory for rule to be used in tsearch");
+        mistral_err("Unable to allocate memory for rule to be used in tsearch\n");
         goto fail_set_rule_id;
     }
     /* If we have got here this is the first time we have seen this rule - see
@@ -384,7 +384,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     get_rule_id = mysql_stmt_init(con);
     if (!get_rule_id) {
-        mistral_err("mysql_stmt_init() out of memory for get_rule_id");
+        mistral_err("mysql_stmt_init() out of memory for get_rule_id\n");
         goto fail_set_rule_id;
     }
 
@@ -397,8 +397,8 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str,
         strlen(get_rule_params_id_str)))
     {
-        mistral_err("mysql_stmt_prepare(get_rule_id) failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_prepare(get_rule_id) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
@@ -420,8 +420,8 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Connect the input variables to the prepared query */
     if (mysql_stmt_bind_param(get_rule_id, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(get_rule_id) failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_bind_param(get_rule_id) failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
@@ -445,15 +445,15 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Execute the query */
     if (mysql_stmt_execute(get_rule_id)) {
-        mistral_err("mysql_stmt_execute(get_rule_id), failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_execute(get_rule_id), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
     /* Connect the output variables to the results of the query */
     if (mysql_stmt_bind_result(get_rule_id, output_bind)) {
-        mistral_err("mysql_stmt_bind_result(get_rule_id), failed");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("mysql_stmt_bind_result(get_rule_id), failed\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
@@ -464,8 +464,8 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     if (received == 1) {
         /* Populate the output variables with the returned data */
         if (mysql_stmt_fetch(get_rule_id)) {
-            mistral_err("mysql_stmt_fetch(get_rule_id), failed");
-            mistral_err("%s", mysql_stmt_error(get_rule_id));
+            mistral_err("mysql_stmt_fetch(get_rule_id), failed\n");
+            mistral_err("%s\n", mysql_stmt_error(get_rule_id));
             goto fail_set_rule_id;
         }
         /* We found the rule in the DB, store this result in the tsearch tree */
@@ -478,14 +478,14 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
         /* Store the freshly inserted ID in the tsearch tree */
         this_rule->rule_id = *ptr_rule_id;
     } else {
-        mistral_err("Expected 1 returned row but received %d", received);
+        mistral_err("Expected 1 returned row but received %d\n", received);
         goto fail_set_rule_id;
     }
 
     /* Close the statement */
     if (mysql_stmt_close(get_rule_id)) {
-        mistral_err("failed while closing the statement get_rule_id");
-        mistral_err("%s", mysql_stmt_error(get_rule_id));
+        mistral_err("failed while closing the statement get_rule_id\n");
+        mistral_err("%s\n", mysql_stmt_error(get_rule_id));
         goto fail_set_rule_id;
     }
 
@@ -493,7 +493,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     return true;
 
 fail_set_rule_id:
-    mistral_err("Set_rule_ID failed!");
+    mistral_err("Set_rule_ID failed!\n");
     DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
     return false;
 }
@@ -606,7 +606,7 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
     unsigned long temp_gid_array_idx = 0;
     if (strlen(log_entry->job_group_id) &&
         !parse_lsf_jobid(log_entry->job_group_id, &temp_gid, &temp_gid_array_idx)) {
-        mistral_err("build_values_string failed with job id: %s", log_entry->job_id);
+        mistral_err("build_values_string failed with job id: %s\n", log_entry->job_id);
         goto fail_build_values_string;
 
     }
@@ -615,7 +615,7 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
     unsigned long temp_array_idx = 0;
     if (strlen(log_entry->job_id) &&
         !parse_lsf_jobid(log_entry->job_id, &temp_id, &temp_array_idx)) {
-        mistral_err("build_values_string failed with job id: %s", log_entry->job_id);
+        mistral_err("build_values_string failed with job id: %s\n", log_entry->job_id);
         goto fail_build_values_string;
 
     }
@@ -649,7 +649,7 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
                  temp_array_idx, temp_array_idx,
                  submit_time,
                  cluster_id) < 0) {
-        mistral_err("build_values_string failed to allocate memory in asprintf");
+        mistral_err("build_values_string failed to allocate memory in asprintf\n");
         goto fail_build_values_string;
     }
 
@@ -680,8 +680,8 @@ static bool insert_log_to_db(void)
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     /* Close the statement */
     if (mysql_real_query(con, log_insert, log_insert_len)) {
-        mistral_err("Failed while inserting log entry");
-        mistral_err("%s", mysql_error(con));
+        mistral_err("Failed while inserting log entry\n");
+        mistral_err("%s\n", mysql_error(con));
         goto fail_insert_log_to_db;
     }
 
@@ -837,7 +837,7 @@ static void get_lsf_hostname(void)
     }
 
     if (hostname[0] == '\0') {
-        mistral_err("Unable to find hostname in LSF environment. Attempting to use System environment");
+        mistral_err("Unable to find hostname in LSF environment. Attempting to use System environment\n");
         char *p = NULL;
 
         p = strchr(env_hostname, '.');
@@ -911,7 +911,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             char *end = NULL;
             unsigned long tmp_level = strtoul(optarg, &end, 10);
             if (tmp_level <= 0 || !end || *end || tmp_level > DBG_LIMIT) {
-                mistral_err("Invalid debug level '%s', using '1'", optarg);
+                mistral_err("Invalid debug level '%s', using '1'\n", optarg);
                 tmp_level = 1;
             }
             /* For now just allow cumulative debug levels rather than selecting messages */
@@ -922,7 +922,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             char *end = NULL;
             unsigned long tmp_id = strtoul(optarg, &end, 10);
             if (tmp_id <= 0 || !end || *end) {
-                mistral_err("Invalid cluster id specified '%s', using '1'", optarg);
+                mistral_err("Invalid cluster id specified '%s', using '1'\n", optarg);
                 tmp_id = 1;
             }
             cluster_id = (uint64_t)tmp_id;
@@ -938,13 +938,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
             if (new_mode <= 0 || new_mode > 0777)
             {
-                mistral_err("Invalid mode '%s' specified, using default", optarg);
+                mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
             if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
             {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default", optarg);
+                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
                 new_mode = 0;
             }
             break;
@@ -973,7 +973,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
         if (!log_file) {
             char buf[256];
-            mistral_err("Could not open error file %s: %s", error_file,
+            mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
     }
@@ -992,7 +992,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         strncpy(project, job_project, STRING_SIZE - 1);
         project[STRING_SIZE - 1] = '\0';
     } else {
-        mistral_err("Unable to find job project");
+        mistral_err("Unable to find job project\n");
         /* Do not treat this as fatal */
     }
 
@@ -1020,12 +1020,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if(submit_time == 0) {
-        mistral_err("Unable to parse job submission time");
+        mistral_err("Unable to parse job submission time\n");
         /* Do not treat this as fatal */
     }
 
     if (config_file == NULL) {
-        mistral_err("Missing option -c");
+        mistral_err("Missing option -c\n");
         usage(argv[0]);
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
@@ -1035,7 +1035,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     con = mysql_init(NULL);
 
     if (con == NULL) {
-        mistral_err("Unable to initialise MySQL: %s", mysql_error(con));
+        mistral_err("Unable to initialise MySQL: %s\n", mysql_error(con));
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }
@@ -1043,7 +1043,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     /* Get the config and credentials from file */
     int opt_ret = mysql_options(con, MYSQL_READ_DEFAULT_FILE, config_file);
     if (opt_ret) {
-        mistral_err("Couldn't get MYSQL_READ_DEFAULT_FILE option: %s. File path %s %d",
+        mistral_err("Couldn't get MYSQL_READ_DEFAULT_FILE option: %s. File path %s %d\n",
                     mysql_error(con),  config_file, opt_ret);
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
@@ -1056,7 +1056,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Makes a connection to MySQl */
     if (mysql_real_connect(con, NULL, NULL, NULL, NULL, 0, NULL, 0) == NULL) {
-        mistral_err("Unable to connect to MySQL: %s", mysql_error(con));
+        mistral_err("Unable to connect to MySQL: %s\n", mysql_error(con));
         mysql_close(con);
         con = NULL;
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
@@ -1184,7 +1184,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             DEBUG_OUTPUT(DBG_MED, "Buffer full, sending data to db, %zd, %zd", log_insert_len,
                          values_len);
             if(!insert_log_to_db()) {
-                mistral_err("Insert log entry on max buffer size failed");
+                mistral_err("Insert log entry on max buffer size failed\n");
                 mistral_shutdown = true;
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
@@ -1201,7 +1201,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                          "file_name, groupid, group_jobid, group_indexid, id," \
                          "jobid, indexid, submit_time, log_id, clusterid) "\
                          "VALUES %s", values) < 0) {
-                mistral_err("Unable to allocate memory for log insert");
+                mistral_err("Unable to allocate memory for log insert\n");
                 mistral_shutdown = true;
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
@@ -1212,7 +1212,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             /* Append values on the insert statement */
             char *old_log_insert = log_insert;
             if (asprintf(&log_insert, "%s,%s", log_insert, values) < 0) {
-                mistral_err("Unable to allocate memory for log insert");
+                mistral_err("Unable to allocate memory for log insert\n");
                 mistral_shutdown = true;
                 free(old_log_insert);
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
@@ -1238,7 +1238,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     DEBUG_OUTPUT(DBG_HIGH, "SQL %s", log_insert);
     /* Send any log entries to the database that are still pending */
     if(!insert_log_to_db()) {
-        mistral_err("Insert log entry at end of block failed");
+        mistral_err("Insert log entry at end of block failed\n");
         mistral_shutdown = true;
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;

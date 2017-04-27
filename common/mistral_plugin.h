@@ -182,6 +182,7 @@ typedef struct mistral_log {
     const char *job_group_id;
     const char *job_id;
     const char *hostname;
+    const char *full_hostname;
     uint32_t cpu;
     int32_t mpi_rank;
 } mistral_log;
@@ -222,6 +223,7 @@ extern bool mistral_shutdown;       /* If set to true will cause the plugin  */
                                     /* of input.                             */
 
 extern void mistral_destroy_log_entry(mistral_log *log_entry);
+__attribute__((__format__(printf, 1, 2)))
 extern int mistral_err(const char *format, ...);
 
 #define UNUSED(param) ((void)(param))
