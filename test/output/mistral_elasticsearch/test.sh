@@ -11,7 +11,7 @@ function check_index() {
 # Set up elasticsearch defaults but allow them to be overridden
 
 es_protocol=${es_protocol:-http}
-es_host=${es_host:-sql.camb.ellexus.com}
+es_host=${es_host:-elastic.camb.ellexus.com}
 es_port=${es_port:-9200}
 es_index=${es_index:-mistral$(date +%Y%m%d%H%M%S)}
 
