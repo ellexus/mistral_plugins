@@ -125,7 +125,7 @@ bool get_log_table_name(const mistral_log *log_entry, char *selected_table)
     my_ulonglong received = mysql_stmt_num_rows(get_table_name);
 
     if (received != 1) {
-        mistral_err("Expected 1 returned row but received %d\n", received);
+        mistral_err("Expected 1 returned row but received %llu\n", received);
         goto fail_get_log_table_name;
     }
 
@@ -229,7 +229,7 @@ bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Get the total rows affected */
     my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_rule);
     if (affected_rows != 1) {
-        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %d\n",
+        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %llu\n",
                     affected_rows);
         goto fail_insert_rule_parameters;
     }
@@ -374,7 +374,7 @@ bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
             goto fail_set_rule_id;
         }
     } else {
-        mistral_err("Expected 1 returned row but received %d\n", received);
+        mistral_err("Expected 1 returned row but received %llu\n", received);
         goto fail_set_rule_id;
     }
 
@@ -516,7 +516,7 @@ bool insert_log_to_db(char *table_name, mistral_log *log_entry, my_ulonglong rul
     /* Get the total rows affected */
     my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_log);
     if (affected_rows != 1) {
-        mistral_err("Invalid number of rows inserted by insert_log. Expected 1, saw %d\n",
+        mistral_err("Invalid number of rows inserted by insert_log. Expected 1, saw %llu\n",
                     affected_rows);
         goto fail_insert_log_to_db;
     }

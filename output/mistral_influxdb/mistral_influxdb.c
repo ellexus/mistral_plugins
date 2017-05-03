@@ -23,9 +23,11 @@ enum debug_states {
 
 /* Define debug output function as a macro so we can use mistral_err */
 #define DEBUG_OUTPUT(level, format, ...)        \
-if ((2 << level) & debug_level) {               \
-    mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
-}
+do {                                            \
+    if ((1 << level) & debug_level) {           \
+        mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
+    }                                           \
+} while (0)
 
 static unsigned long debug_level = 0;
 
