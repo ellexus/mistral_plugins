@@ -1092,16 +1092,17 @@ void mistral_exit(void)
         mistral_received_data_end(0, false);
     }
 
-    if (log_file) {
-        fclose(log_file);
-    }
-
     if (con) {
         mysql_close(con);
     }
 
     if (rule_root) {
         tdestroy(rule_root, free);
+    }
+
+    if (log_file && log_file != stderr) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Closing log file");
+        fclose(log_file);
     }
 }
 

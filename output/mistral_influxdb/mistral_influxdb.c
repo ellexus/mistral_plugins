@@ -402,15 +402,16 @@ void mistral_exit(void)
         mistral_received_data_end(0, false);
     }
 
-    if (log_file) {
-        fclose(log_file);
-    }
-
     if (easyhandle) {
         curl_easy_cleanup(easyhandle);
     }
+
     curl_global_cleanup();
-    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
+
+    if (log_file && log_file != stderr) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Closing log file\n");
+        fclose(log_file);
+    }
 }
 
 /*
