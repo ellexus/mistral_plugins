@@ -187,11 +187,45 @@ Indicates monitoring of \fIcreate()\fP and other related function calls.
 Indicates monitoring of \fIdelete()\fP and other related function calls.
 .TP 7
 \fBCALL_TYPE_FSCHANGE\fP
-Indicates monitoring of \fIfschange()\fP and other related function
-calls.
+Indicates monitoring of \fIchmod()\fP, \fIrename()\fP and other related
+function calls.
 .TP 7
 \fBCALL_TYPE_GLOB\fP
 Indicates monitoring of \fIglob()\fP and other related function calls.
+.TP 7
+\fBCALL_TYPE_MPI_ACCESS\fP
+Indicates monitoring of \fIMPI_File_get_amode()\fP,
+\fIMPI_File_get_size()\fP and other related function calls.
+.TP 7
+\fBCALL_TYPE_MPI_CREATE\fP
+Indicates monitoring of \fIMPI_File_open()\fP function calls with mode
+\fBMPI_MODE_CREATE\fP.
+.TP 7
+\fBCALL_TYPE_MPI_DELETE\fP
+Indicates monitoring of \fIMPI_File_delete()\fP calls.
+.TP 7
+\fBCALL_TYPE_MPI_FSCHANGE\fP
+Indicates monitoring of \fIMPI_File_set_atomicity()\fP,
+\fIMPI_File_set_size()\fP and other related function calls.
+.TP 7
+\fBCALL_TYPE_MPI_OPEN\fP
+Indicates monitoring of \fIMPI_File_open()\fP function calls without
+mode \fBMPI_MODE_CREATE\fP.
+.TP 7
+\fBCALL_TYPE_MPI_READ\fP
+Indicates monitoring of \fIMPI_File_read()\fP and other related
+function calls.
+.TP 7
+\fBCALL_TYPE_MPI_SEEK\fP
+Indicates monitoring of \fIMPI_File_seek()\fP,
+\fIMPI_File_seek_shared()\fP function calls.
+.TP 7
+\fBCALL_TYPE_MPI_SYNC\fP
+Indicates monitoring of \fIMPI_File_sync()\fP function calls.
+.TP 7
+\fBCALL_TYPE_MPI_WRITE\fP
+Indicates monitoring of \fIMPI_File_write()\fP and other related
+function calls.
 .TP 7
 \fBCALL_TYPE_OPEN\fP
 Indicates monitoring of \fIopen()\fP and other related function calls.
@@ -344,9 +378,9 @@ contract rule.
 .RE
 .sp
 .LP
-The element \fBthreshold_str\fP will be set to point at a string containing the
-raw string representation of the threshold of operations allowed that was
-breached as defined by the violated rule.
+The element \fBthreshold_str\fP will be set to point at a string
+containing the raw string representation of the threshold of operations
+allowed that was breached as defined by the violated rule.
 .LP
 The element \fBthreshold\fP contains the threshold of operations allowed
 that was breached by the violated rule.
@@ -480,9 +514,9 @@ contract rule in seconds.
 .RE
 .sp
 .LP
-The element \fBmeasured_str\fP will be set to point at a string containing the
-raw string representation of the accumulated total of operation measurements
-observed that violated the rule.
+The element \fBmeasured_str\fP will be set to point at a string
+containing the raw string representation of the accumulated total of
+operation measurements observed that violated the rule.
 .LP
 The \fBmeasured\fP element contains the accumulated total of operation
 measurements observed that violated the rule.

@@ -69,6 +69,7 @@ int mistral_err(const char *format, ...)
     retval = vfprintf(mistral_plugin_info.error_log, fmt, ap);
     va_end(ap);
     free(file_fmt);
+    fflush(mistral_plugin_info.error_log);
     return retval;
 }
 
