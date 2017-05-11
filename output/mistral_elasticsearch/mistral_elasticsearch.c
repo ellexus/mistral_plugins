@@ -178,8 +178,9 @@ static char *elasticsearch_escape(const char *string)
     size_t len = strlen(string);
 
     char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
+    char *p, *q;
     if (escaped) {
-        for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
+        for (p = (char *)string, q = escaped; *p; p++, q++) {
             switch (*p) {
             case '"':
                 *q++ = '\\';
