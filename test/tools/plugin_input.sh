@@ -42,14 +42,17 @@ echo "# Reference date: $refdate" > "$output"
 # Set up some substitution variables
 for day in 60 45 30 8 7 2 1 0; do
     for mins in 60 15 5 4 3 2 1 0; do
+        eval "epochdate${day}time${mins}=\$(date --date=\"$refdate -$day days -$mins minutes\" +\"%s\")"
         eval "utcdate${day}time${mins}=\$(date -u --date=\"$refdate -$day days -$mins minutes\" +\"%F %T\")"
         eval "date${day}time${mins}=\$(date --date=\"$refdate -$day days -$mins minutes\" +\"%F %T\")"
+        eval "echo s/EPOCH_${day}_${mins}/\${epochdate${day}time${mins}}/g" >> "$output"
         eval "echo s/UTCDATE_${day}_${mins}/\${utcdate${day}time${mins}% *}/g" >> "$output"
         eval "echo s/UTCTIME_${day}_${mins}/\${utcdate${day}time${mins}#* }/g" >> "$output"
         eval "echo s/UTCTS_${day}_${mins}/\${utcdate${day}time${mins}}/g" >> "$output"
         eval "echo s/DATE_${day}_${mins}/\${date${day}time${mins}% *}/g" >> "$output"
         eval "echo s/TIME_${day}_${mins}/\${date${day}time${mins}#* }/g" >> "$output"
         eval "echo s/TS_${day}_${mins}/\${date${day}time${mins}}/g" >> "$output"
+        eval "echo s/TZ_${day}_${mins}/\$(date --date=\"$refdate -$day days -$mins minutes\" +\"%z\")/g" >> "$output"
     done
 done
 
@@ -57,6 +60,7 @@ fullhostname=$(uname -n)
 hostname=${fullhostname%%.*}
 echo "s/FULLHOSTNAME/$fullhostname/g" >> "$output"
 echo "s/HOSTNAME/$hostname/g" >> "$output"
+echo "s/TEST_START/$test_timestamp/g" >> "$output"
 
 # The IFS='' prevents leading and trailing whitespace from being trimed, and the
 # -n test deals with a missing trailing newline on the last line of input
