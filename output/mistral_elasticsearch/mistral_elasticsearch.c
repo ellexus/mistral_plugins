@@ -27,7 +27,7 @@ struct saved_resp {
     char *body;
 };
 
-static struct curl_slist *headers=NULL;
+static struct curl_slist *headers = NULL;
 /*
  * write_callback
  *
@@ -50,7 +50,7 @@ static size_t write_callback(void *data, size_t size, size_t nmemb, void *saved)
     struct saved_resp *response = (struct saved_resp *) saved;
 
     char *new_body = realloc(response->body, response->size + data_len + 1);
-    if(new_body == NULL) {
+    if (new_body == NULL) {
         free(response->body);
         response->body = NULL;
         response->size = 0;
@@ -70,7 +70,7 @@ static size_t write_callback(void *data, size_t size, size_t nmemb, void *saved)
  * set_curl_option
  *
  * Function used to set options on a CURL * handle and checking for success.
- * If an error occured log a message and shut down the plug-in.
+ * If an error occurred log a message and shut down the plug-in.
  *
  * The CURL handle is stored in a global variable as it is shared between all
  * libcurl calls.
@@ -87,7 +87,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
 {
 
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
-        mistral_err("Could not set curl URL option: %s\n", curl_error);
+        mistral_err("Could not set curl option: %s\n", curl_error);
         mistral_shutdown = true;
         return false;
     }
@@ -112,45 +112,45 @@ static void usage(const char *name)
      * messages understandable on a terminal add an explicit newline to each
      * line.
      */
-    mistral_err("Usage:\n");
-    mistral_err("  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s]\n", name);
-    mistral_err("\n");
-    mistral_err("  --error=file\n");
-    mistral_err("  -e file\n");
-    mistral_err("     Specify location for error log. If not specified all errors will\n");
-    mistral_err("     be output on stderr and handled by Mistral error logging.\n");
-    mistral_err("\n");
-    mistral_err("  --host=hostname\n");
-    mistral_err("  -h hostname\n");
-    mistral_err("     The hostname of the Elasticsearch server with which to establish a\n");
-    mistral_err("     connection. If not specified the plug-in will default to \"localhost\".\n");
-    mistral_err("\n");
-    mistral_err("  --index=index_name\n");
-    mistral_err("  -i index_name\n");
-    mistral_err("     Set the index to be used for storing data. Defaults to \"mistral\".\n");
-    mistral_err("\n");
-    mistral_err("  --mode=octal-mode\n");
-    mistral_err("  -m octal-mode\n");
-    mistral_err("     Permissions used to create the error log file specified by the -e\n");
-    mistral_err("     option.\n");
-    mistral_err("\n");
-    mistral_err("  --password=secret\n");
-    mistral_err("  -p secret\n");
-    mistral_err("     The password required to access the Elasticsearch server if needed.\n");
-    mistral_err("\n");
-    mistral_err("  --port=number\n");
-    mistral_err("  -P number\n");
-    mistral_err("     Specifies the port to connect to on the Elasticsearch server host.\n");
-    mistral_err("     If not specified the plug-in will default to \"9200\".\n");
-    mistral_err("\n");
-    mistral_err("  --ssl\n");
-    mistral_err("  -s\n");
-    mistral_err("     Connect to the Elasticsearch server via secure HTTP.\n");
-    mistral_err("\n");
-    mistral_err("  --username=user\n");
-    mistral_err("  -u user\n");
-    mistral_err("     The username required to access the Elasticsearch server if needed.\n");
-    mistral_err("\n");
+    mistral_err("Usage:\n"
+                "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s]\n", name);
+    mistral_err("\n"
+                "  --error=file\n"
+                "  -e file\n"
+                "     Specify location for error log. If not specified all errors will\n"
+                "     be output on stderr and handled by Mistral error logging.\n"
+                "\n"
+                "  --host=hostname\n"
+                "  -h hostname\n"
+                "     The hostname of the Elasticsearch server with which to establish a\n"
+                "     connection. If not specified the plug-in will default to \"localhost\".\n"
+                "\n"
+                "  --index=index_name\n"
+                "  -i index_name\n"
+                "     Set the index to be used for storing data. Defaults to \"mistral\".\n"
+                "\n"
+                "  --mode=octal-mode\n"
+                "  -m octal-mode\n"
+                "     Permissions used to create the error log file specified by the -e\n"
+                "     option.\n"
+                "\n"
+                "  --password=secret\n"
+                "  -p secret\n"
+                "     The password required to access the Elasticsearch server if needed.\n"
+                "\n"
+                "  --port=number\n"
+                "  -P number\n"
+                "     Specifies the port to connect to on the Elasticsearch server host.\n"
+                "     If not specified the plug-in will default to \"9200\".\n"
+                "\n"
+                "  --ssl\n"
+                "  -s\n"
+                "     Connect to the Elasticsearch server via secure HTTP.\n"
+                "\n"
+                "  --username=user\n"
+                "  -u user\n"
+                "     The username required to access the Elasticsearch server if needed.\n"
+                "\n");
     return;
 }
 
@@ -158,13 +158,13 @@ static void usage(const char *name)
  * elasticsearch_escape
  *
  * Elasticsearch uses JSON output which uses double quotes to delimit strings.
- * There are several special charaters that must be escaped using a single
+ * There are several special characters that must be escaped using a single
  * backslash character inside these strings.
  *
  * This function allocates twice as much memory as is required to copy the
  * passed string and then copies the string character by character escaping
  * the common characters that need special treatment as they are encountered.
- * Once the copy is complete the memory is reallocated to reduce wasteage.
+ * Once the copy is complete the memory is reallocated to reduce wastage.
  *
  * Parameters:
  *   string - The string whose content needs to be escaped
@@ -214,7 +214,8 @@ static char *elasticsearch_escape(const char *string)
                 break;
             }
         }
-        char *small_escaped = realloc(escaped, (strlen(escaped) + 1) * sizeof(char));
+        /* Memory was allocated with calloc so string is already null terminated */
+        char *small_escaped = realloc(escaped, q - escaped + 1);
         if (small_escaped) {
             return small_escaped;
         } else {
@@ -284,19 +285,17 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'm':{
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
-            if (tmp_mode <= 0 || !end || *end) {
+            if (!end || *end) {
                 tmp_mode = 0;
             }
             new_mode = (mode_t)tmp_mode;
 
-            if (new_mode <= 0 || new_mode > 0777)
-            {
+            if (new_mode <= 0 || new_mode > 0777) {
                 mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
-            if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
-            {
+            if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
                 mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
                 new_mode = 0;
             }
@@ -308,7 +307,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'P':{
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
-            if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
+            if (tmp_port == 0 || tmp_port > UINT16_MAX || !end || *end) {
                 mistral_err("Invalid port specified %s\n", optarg);
                 return;
             }
@@ -399,11 +398,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     if (!set_curl_option(CURLOPT_URL, url)) {
         return;
     }
+    free (url);
 
     /* Set up authentication */
     char *auth;
-    if (asprintf(&auth, "%s:%s", (username)? username : "",
-                                 (password)? password : "" ) < 0) {
+    if (asprintf(&auth, "%s:%s", username ? username : "",
+                                 password ? password : "") < 0) {
         mistral_err("Could not allocate memory for authentication\n");
         return;
     }
@@ -414,6 +414,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             return;
         }
     }
+    free (auth);
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 }
@@ -516,7 +517,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         /* Elasticsearch 5.3.0 appears to treat dates inserted into date fields
          * as seconds since epoch as long ints rather than dates even with a
          * date mapping defined. Therefore we must use a string representation
-         * for the date. Again while Eleasticsearch should cope with time zones
+         * for the date. Again while Elasticsearch should cope with time zones
          * in practice it seems that every timestamp must be in the same time
          * zone for searches to work as expected. Logstash uses zulu time format
          * (UTC) into a field named "@timestamp" therefore we will do the same
@@ -543,8 +544,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         /* Command and filename must be JSON escaped */
         char *command = elasticsearch_escape(log_entry->command);
         char *file = elasticsearch_escape(log_entry->file);
-        const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
-        const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
+        const char *job_gid = (log_entry->job_group_id[0] == 0) ? "N/A" : log_entry->job_group_id;
+        const char *job_id = (log_entry->job_id[0] == 0) ? "N/A" : log_entry->job_id;
         char *new_data = NULL;
 
         if (asprintf(&new_data,
@@ -634,19 +635,19 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
 
-        CURLcode ret=curl_easy_perform(easyhandle);
+        CURLcode ret = curl_easy_perform(easyhandle);
         if (ret != CURLE_OK) {
             /* Depending on the version of curl used during compilation
-             * curl_error may not be populated. If this is the case , look up
+             * curl_error may not be populated. If this is the case, look up
              * the less detailed error based on return code instead.
              */
             mistral_err("Could not run curl query: %s\n",
-                        (*curl_error != '\0')? curl_error : curl_easy_strerror(ret));
+                        (curl_error[0] != '\0') ? curl_error : curl_easy_strerror(ret));
             mistral_shutdown = true;
         }
 
         if (full_response.body) {
-            char *success=strstr(full_response.body, "\"errors\":false");
+            char *success = strstr(full_response.body, "\"errors\":false");
             if (!success) {
                 mistral_shutdown = true;
                 mistral_err("Could not index data\n");

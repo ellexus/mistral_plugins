@@ -12,7 +12,7 @@ scriptname=$(basename "$0")
 #  Nothing, the function exits the script
 function usage() {
     >&2 echo $1
-    >&2 cat << EOF 
+    >&2 cat << EOF
 Usage: $scriptname [OPTION...]
 
 Return a list of unique job ids and rule labels that were violated.
@@ -22,7 +22,7 @@ By default $scriptname will connect to http://localhost:9200/ using database
 
 OPTIONS:
   -?, --help        Show this help page.
-  -c, --call-type   Limit the query to the provided call type. Must be one of 
+  -c, --call-type   Limit the query to the provided call type. Must be one of
                     accept, access, connect, create, delete, fschange, glob,
                     open, read, seek or write.
   -d, --database    Name of the database to use.
@@ -50,7 +50,7 @@ OPTIONS:
   -u, --user        Username to use for connection. If -p is not specified the
                     user will be prompted for the password.
 EOF
-    exit -1
+    exit 1
 }
 
 # main
@@ -394,7 +394,7 @@ function main() {
         exit $retval
     elif [[ "$outval" = "" ]]; then
         >&2 echo Error, no data returned for query
-        exit -2
+        exit 2
     fi
 
     local timedout=$(echo $outval | sed -e 's/.*timed_out":\([^,]*\).*/\1/')
@@ -404,12 +404,12 @@ function main() {
 
     if [[ "$timedout" = "true" ]]; then
         >&2 echo Error, query timed out
-        exit -3
+        exit 3
     elif [[ "$successful" -gt 0 && "failed" -gt 0 ]]; then
         >&2 echo Warning, some shards failed - results may be incomplete
     elif [[ "$successful" -eq 0 && "failed" -gt 0 ]]; then
         >&2 echo Error, query failed on all shards
-        exit -3
+        exit 4
     fi
 
     if [[ "$hits" -eq 0 ]]; then

@@ -26,7 +26,7 @@ The script takes the following command line options:
 -i idx_name
   The basename of the index. If not specified the template will be created for
   indexes called "mistral". As long as a matching option is provided to the
-  plug-in it will create indexes named `<idx_name>-yyyy-MM-dd`. 
+  plug-in it will create indexes named `<idx_name>-yyyy-MM-dd`.
 
 --host=hostname
 -h hostname

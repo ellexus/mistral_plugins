@@ -77,7 +77,7 @@ curl -s --get -u $es_auth \
     "$es_protocol://$es_host:$es_port/${es_index}-*/_search?size=100&sort=@timestamp:asc" \
     > $results_dir/raw_results.txt
 
-# There are some unique fields wihtin the returned data we cannot exclude using
+# There are some unique fields within the returned data we cannot exclude using
 # a query option. Strip this data out using a sed script.
 sed -e 's/took.*total/total/;s/,"_id":[^,]*//g;s/{"_index/\n{"_index/g' \
     $results_dir/raw_results.txt > $results_dir/results.txt

@@ -32,7 +32,7 @@ OPTIONS:
   -u, --user        Username to use for connection. If -p is not specified the
                     user will be prompted for the password.
 EOF
-    exit -1
+    exit 1
 }
 
 # main
@@ -60,7 +60,7 @@ function main() {
     curl_cmd=$(which curl 2>/dev/null)
     if [ -z "$curl_cmd" ]; then
         >&2 echo Error, could not find curl
-        exit -1
+        exit 1
     fi
 
     while [[ $# -gt 0 ]]; do
@@ -155,7 +155,7 @@ function main() {
     elif [[ "${outval:0:9}" = '{"error":' ]]; then
         >&2 echo Error, ElasticSearch query failed:
         echo "$outval" | >&2 sed -e 's/.*reason":\([^}]*\)}.*/  \1/;s/,/\n  /g'
-        exit -2
+        exit 2
     fi
 
     echo Index mappings for \"$database\" created successfully
