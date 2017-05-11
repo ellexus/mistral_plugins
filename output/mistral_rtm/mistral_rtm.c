@@ -48,9 +48,11 @@ enum debug_states {
 
 /* Define debug output function as a macro so we can use mistral_err */
 #define DEBUG_OUTPUT(level, format, ...)        \
-if ((2 << level) & debug_level) {               \
-    mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
-}
+do {                                            \
+    if ((1 << level) & debug_level) {           \
+        mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
+    }                                           \
+} while (0)
 
 static FILE *log_file = NULL;
 static MYSQL *con = NULL;
@@ -208,7 +210,7 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
     /* Get the total rows affected */
     my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_rule);
     if (affected_rows != 1) {
-        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %d\n",
+        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %llu\n",
                     affected_rows);
         goto fail_insert_rule_parameters;
     }
@@ -478,7 +480,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
         /* Store the freshly inserted ID in the tsearch tree */
         this_rule->rule_id = *ptr_rule_id;
     } else {
-        mistral_err("Expected 1 returned row but received %d\n", received);
+        mistral_err("Expected 1 returned row but received %llu\n", received);
         goto fail_set_rule_id;
     }
 
@@ -1090,16 +1092,17 @@ void mistral_exit(void)
         mistral_received_data_end(0, false);
     }
 
-    if (log_file) {
-        fclose(log_file);
-    }
-
     if (con) {
         mysql_close(con);
     }
 
     if (rule_root) {
         tdestroy(rule_root, free);
+    }
+
+    if (log_file && log_file != stderr) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Closing log file");
+        fclose(log_file);
     }
 }
 

@@ -13,7 +13,7 @@ local#throttle#DATE_45_15TTIME_45_15,label2_1,/tmp/tmp.testpath/2_1,write,all,ba
 local#throttle#DATE_45_5TTIME_45_5,label2_1,/tmp/tmp.testpath/2_1,read,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101,1
 local#throttle#DATE_45_4TTIME_45_4,label2_1,/tmp/tmp.testpath/2_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/2_1,/tmp/tmp.testpath/2_1,25432101,25432101,1
 local#throttle#DATE_45_3TTIME_45_3,label2_2a,/tmp/tmp.testpath/2_2,write+read,all,bandwidth,200B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/2_2,/tmp/tmp.testpath/2_2,25432102,25432102,2
-local#throttle#DATE_45_2TTIME_45_2,label2_2a,/tmp/tmp.testpath/2_2,mpi_write,all,bandwidth,201B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/2_2,/tmp/tmp.testpath/2_2,25432102,25432102,2
+local#throttle#DATE_45_2TTIME_45_2,label2_2a,/tmp/tmp.testpath/2_2,write,all,bandwidth,201B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/2_2,/tmp/tmp.testpath/2_2,25432102,25432102,2
 local#throttle#DATE_45_1TTIME_45_1,label2_3a,/tmp/tmp.testpath/2_3,read,all,bandwidth,2001B/100ms,2000B/100ms,host1,26045,1,/usr/bin/cat /tmp/tmp.testpath/2_3,/tmp/tmp.testpath/2_3,25432103,25432103,3
 local#throttle#DATE_45_0TTIME_45_0,label2_3a,/tmp/tmp.testpath/2_3,write,all,bandwidth,2010B/100ms,2000B/100ms,host1,26045,1,/usr/bin/cat /tmp/tmp.testpath/2_3,/tmp/tmp.testpath/2_3,25432103,25432103,3
 :PGNDATAEND:2:
@@ -28,7 +28,7 @@ local#throttle#DATE_30_0TTIME_30_0,label3_3a,/tmp/tmp.testpath/3_3,read,all,band
 :PGNDATAEND:3:
 :PGNDATASRT:4:
 local#throttle#DATE_8_15TTIME_8_15,label4_1,/tmp/tmp.testpath/4_1,write,all,bandwidth,12B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101,1
-local#throttle#DATE_8_5TTIME_8_5,label4_1,/tmp/tmp.testpath/4_1,mpi_read,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101,1
+local#throttle#DATE_8_5TTIME_8_5,label4_1,/tmp/tmp.testpath/4_1,read,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101,1
 local#throttle#DATE_8_4TTIME_8_4,label4_1,/tmp/tmp.testpath/4_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/4_1,/tmp/tmp.testpath/4_1,45432101,45432101,1
 local#throttle#DATE_8_3TTIME_8_3,label4_2a,/tmp/tmp.testpath/4_2,read,all,bandwidth,200B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/4_2,/tmp/tmp.testpath/4_2,45432102,45432102,2
 local#throttle#DATE_8_2TTIME_8_2,label4_2a,/tmp/tmp.testpath/4_2,write,all,bandwidth,201B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/4_2,/tmp/tmp.testpath/4_2,45432102,45432102,2
@@ -36,7 +36,7 @@ local#throttle#DATE_8_1TTIME_8_1,label4_3a,/tmp/tmp.testpath/4_3,read,all,bandwi
 local#throttle#DATE_8_0TTIME_8_0,label4_3a,/tmp/tmp.testpath/4_3,write,all,bandwidth,2010B/100ms,2000B/100ms,host1,26045,1,/usr/bin/cat /tmp/tmp.testpath/4_3,/tmp/tmp.testpath/4_3,45432103,45432103,3
 :PGNDATAEND:4:
 :PGNDATASRT:5:
-local#throttle#DATE_7_60TTIME_7_60,label5_1,/tmp/tmp.testpath/5_1,mpi_write+mpi_read,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101,1
+local#throttle#DATE_7_60TTIME_7_60,label5_1,/tmp/tmp.testpath/5_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101,1
 local#throttle#DATE_7_15TTIME_7_15,label5_1,/tmp/tmp.testpath/5_1,read,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/5_1,/tmp/tmp.testpath/5_1,55432101,55432101,1
 local#throttle#DATE_7_5TTIME_7_5,label5_2a,/tmp/tmp.testpath/5_2,write,all,bandwidth,200B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/5_2,/tmp/tmp.testpath/5_2,55432102,55432102,2
 local#throttle#DATE_7_4TTIME_7_4,label5_2a,/tmp/tmp.testpath/5_2,read,all,bandwidth,201B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/5_2,/tmp/tmp.testpath/5_2,55432102,55432102,2

@@ -260,7 +260,7 @@
                         ],
                         [
                             "UTCDATE_45_2TUTCTIME_45_2Z",
-                            "write",
+                            "mpi_write",
                             "/usr/bin/cat /tmp/tmp.testpath/2_2",
                             "2",
                             "/tmp/tmp.testpath/2_2",
@@ -491,7 +491,7 @@
                         ],
                         [
                             "UTCDATE_8_5TUTCTIME_8_5Z",
-                            "read",
+                            "mpi_read",
                             "/usr/bin/cat /tmp/tmp.testpath/4_1",
                             "1",
                             "/tmp/tmp.testpath/4_1",
@@ -617,7 +617,7 @@
                         ],
                         [
                             "UTCDATE_7_60TUTCTIME_7_60Z",
-                            "write",
+                            "mpi_read+mpi_write",
                             "/usr/bin/cat /tmp/tmp.testpath/5_1",
                             "1",
                             "/tmp/tmp.testpath/5_1",

@@ -23,9 +23,11 @@ enum debug_states {
 
 /* Define debug output function as a macro so we can use mistral_err */
 #define DEBUG_OUTPUT(level, format, ...)        \
-if ((2 << level) & debug_level) {               \
-    mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
-}
+do {                                            \
+    if ((1 << level) & debug_level) {           \
+        mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
+    }                                           \
+} while (0)
 
 static unsigned long debug_level = 0;
 
@@ -400,15 +402,16 @@ void mistral_exit(void)
         mistral_received_data_end(0, false);
     }
 
-    if (log_file) {
-        fclose(log_file);
-    }
-
     if (easyhandle) {
         curl_easy_cleanup(easyhandle);
     }
+
     curl_global_cleanup();
-    DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
+
+    if (log_file && log_file != stderr) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Closing log file\n");
+        fclose(log_file);
+    }
 }
 
 /*

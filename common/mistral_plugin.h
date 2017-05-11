@@ -105,18 +105,27 @@ extern const char *const mistral_unit_suffix[];
 extern const uint32_t mistral_unit_scale[];
 extern const uint32_t mistral_unit_type[];
 
-#define CALL_TYPE(X)        \
-    X(ACCEPT,   "accept")   \
-    X(ACCESS,   "access")   \
-    X(CONNECT,  "connect")  \
-    X(CREATE,   "create")   \
-    X(DELETE,   "delete")   \
-    X(FSCHANGE, "fschange") \
-    X(GLOB,     "glob")     \
-    X(OPEN,     "open")     \
-    X(READ,     "read")     \
-    X(SEEK,     "seek")     \
-    X(WRITE,    "write")
+#define CALL_TYPE(X)                \
+    X(ACCEPT,       "accept")       \
+    X(ACCESS,       "access")       \
+    X(CONNECT,      "connect")      \
+    X(CREATE,       "create")       \
+    X(DELETE,       "delete")       \
+    X(FSCHANGE,     "fschange")     \
+    X(GLOB,         "glob")         \
+    X(MPI_ACCESS,   "mpi_access")   \
+    X(MPI_CREATE,   "mpi_create")   \
+    X(MPI_DELETE,   "mpi_delete")   \
+    X(MPI_FSCHANGE, "mpi_fschange") \
+    X(MPI_OPEN,     "mpi_open")     \
+    X(MPI_READ,     "mpi_read")     \
+    X(MPI_SEEK,     "mpi_seek")     \
+    X(MPI_SYNC,     "mpi_sync")     \
+    X(MPI_WRITE,    "mpi_write")    \
+    X(OPEN,         "open")         \
+    X(READ,         "read")         \
+    X(SEEK,         "seek")         \
+    X(WRITE,        "write")
 
 #define BITMASK(type) (1u << type)
 
