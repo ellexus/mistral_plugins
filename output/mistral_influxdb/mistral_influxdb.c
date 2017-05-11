@@ -6,7 +6,7 @@
 #include <search.h>             /* insque, remque */
 #include <stdbool.h>            /* bool */
 #include <stdio.h>              /* asprintf */
-#include <stdlib.h>             /* calloc, realloc, free */
+#include <stdlib.h>             /* calloc, realloc, free, getenv */
 #include <string.h>             /* strerror_r */
 #include <sys/stat.h>           /* open, umask */
 #include <sys/types.h>          /* open, umask */
@@ -34,6 +34,9 @@ static unsigned long debug_level = 0;
 static FILE *log_file = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
+#define LEN 256
+static char cluster_name[LEN] = "";
+static char user_name[LEN] = "";
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
@@ -377,6 +380,23 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             return;
         }
     }
+
+    char *temp_var = getenv("LSB_EXEC_CLUSTER");
+    if(temp_var) {
+        strncpy(cluster_name, temp_var, LEN - 1);
+        cluster_name[LEN - 1] = '\0';
+    } else {
+        cluster_name[0] = '\0';
+    }
+
+    temp_var = getenv("USER");
+    if(temp_var) {
+        strncpy(user_name, temp_var, LEN - 1);
+        user_name[LEN - 1] = '\0';
+    } else {
+        user_name[0] = '\0';
+    }
+
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 }
@@ -492,8 +512,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
                      ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
                      "job-id=%s,pid=%" PRId64 ",command=%s,host=%s,scope=%s,"
-                     "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 " value=%"
-                     PRIu64 " %ld",
+                     "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 ",user=%s,"
+                     "cluster=%s value=%" PRIu64 " %ld",
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
@@ -513,6 +533,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      mistral_contract_name[log_entry->contract_type],
                      log_entry->cpu,
                      log_entry->mpi_rank,
+                     user_name,
+                     cluster_name,
                      log_entry->measured,
                      log_entry->epoch.tv_sec) < 0) {
 
