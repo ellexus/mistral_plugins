@@ -40,49 +40,49 @@ static void usage(const char *name)
      * While this is designed to be run with Mistral to make the messages understandable
      * on a terminal add an explicit newline to each line.
      */
-    mistral_err("Usage:\n");
-    mistral_err("  %s [-i metric] [-h host] [-p port] [-e file] [-m octal-mode] [-4|-6]\n", name);
-    mistral_err("\n");
-    mistral_err("  -4\n");
-    mistral_err("     Use IPv4 only. This is the default behaviour.\n");
-    mistral_err("\n");
-    mistral_err("  -6\n");
-    mistral_err("     Use IPv6 only.\n");
-    mistral_err("\n");
-    mistral_err("  --error=file\n");
-    mistral_err("  -e file\n");
-    mistral_err("     Specify location for error log. If not specified all errors will\n");
-    mistral_err("     be output on stderr and handled by Mistral error logging.\n");
-    mistral_err("\n");
-    mistral_err("  --host=hostname\n");
-    mistral_err("  -h hostname\n");
-    mistral_err("     The hostname of the Graphite server with which to establish a connection.\n");
-    mistral_err("     If not specified the plug-in will default to \"localhost\".\n");
-    mistral_err("\n");
-    mistral_err("  --instance=metric\n");
-    mistral_err("  -i metric\n");
-    mistral_err("     Set the root metric node name the plug-in should create data under. This\n");
-    mistral_err("     value can contain '.' characters to allow more precise classification\n");
-    mistral_err("     of metrics.  Defaults to \"mistral\".\n");
-    mistral_err("\n");
-    mistral_err("  --mode=octal-mode\n");
-    mistral_err("  -m octal-mode\n");
-    mistral_err("     Permissions used to create the error log file specified by the -o\n");
-    mistral_err("     option.\n");
-    mistral_err("\n");
-    mistral_err("  --port=port\n");
-    mistral_err("  -p port\n");
-    mistral_err("     Specifies the port to connect to on the Graphite server host.\n");
-    mistral_err("     If not specified the plug-in will default to \"2003\".\n");
-    mistral_err("\n");
+    mistral_err("Usage:\n"
+                "  %s [-i metric] [-h host] [-p port] [-e file] [-m octal-mode] [-4|-6]\n", name);
+    mistral_err("\n"
+                "  -4\n"
+                "     Use IPv4 only. This is the default behaviour.\n"
+                "\n"
+                "  -6\n"
+                "     Use IPv6 only.\n"
+                "\n"
+                "  --error=file\n"
+                "  -e file\n"
+                "     Specify location for error log. If not specified all errors will\n"
+                "     be output on stderr and handled by Mistral error logging.\n"
+                "\n"
+                "  --host=hostname\n"
+                "  -h hostname\n"
+                "     The hostname of the Graphite server with which to establish a connection.\n"
+                "     If not specified the plug-in will default to \"localhost\".\n"
+                "\n"
+                "  --instance=metric\n"
+                "  -i metric\n"
+                "     Set the root metric node name the plug-in should create data under. This\n"
+                "     value can contain '.' characters to allow more precise classification\n"
+                "     of metrics.  Defaults to \"mistral\".\n"
+                "\n"
+                "  --mode=octal-mode\n"
+                "  -m octal-mode\n"
+                "     Permissions used to create the error log file specified by the -o\n"
+                "     option.\n"
+                "\n"
+                "  --port=port\n"
+                "  -p port\n"
+                "     Specifies the port to connect to on the Graphite server host.\n"
+                "     If not specified the plug-in will default to \"2003\".\n"
+                "\n");
     return;
 }
 
 /*
  * graphite_escape
  *
- * Graphite metrics will use interpret both '.' and '/' charcters as separators
- * so if these characters occur within the data e.g. in the path or job ID they
+ * Graphite metrics will interpret both '.' and '/' characters as separators so
+ * if these characters occur within the data e.g. in the path or job ID they
  * must be replaced. To be paranoid this function will replace '/' with ':' and
  * any other non-alphanumeric, hyphen or underscore characters with hyphens.
  *
@@ -103,7 +103,7 @@ static char *graphite_escape(const char *string)
         for (char *p = escaped; *p; p++) {
             if (*p == '/') {
                 *p = ':';
-            } else if (!isalnum(*p) && *p != '_') {
+            } else if (!isalnum((unsigned char)*p) && *p != '_') {
                 *p = '-';
             }
         }
@@ -178,19 +178,17 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'm':{
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
-            if (tmp_mode <= 0 || !end || *end) {
+            if (!end || *end) {
                 tmp_mode = 0;
             }
             new_mode = (mode_t)tmp_mode;
 
-            if (new_mode <= 0 || new_mode > 0777)
-            {
+            if (new_mode <= 0 || new_mode > 0777) {
                 mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
-            if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
-            {
+            if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
                 mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
                 new_mode = 0;
             }
@@ -199,7 +197,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'p':{
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
-            if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
+            if (tmp_port > UINT16_MAX || !end || *end) {
                 mistral_err("Invalid port specified %s\n", optarg);
                 return;
             }
@@ -237,7 +235,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (!schema) {
-        schema = strdup("mistral");
+        schema = "mistral";
         if (!schema) {
             char buf[256];
             mistral_err("Could not set schema instance \"mistral\": %s\n",
@@ -258,17 +256,17 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
      * connect to each until we succeed or run out of addresses.
      */
 
-    for(struct addrinfo *curr = addrs; curr != NULL; curr = curr->ai_next) {
+    for (struct addrinfo *curr = addrs; curr != NULL; curr = curr->ai_next) {
         char buf[256];
         if ((graphite_fd = socket(curr->ai_family, curr->ai_socktype, curr->ai_protocol)) == -1) {
             mistral_err("Unable to create socket: %s%s\n",
                         strerror_r(errno, buf, sizeof buf),
-                        (curr->ai_next)? " - Trying next address" : "");
+                        curr->ai_next ? " - Trying next address" : "");
             continue;
         }
 
         if (connect(graphite_fd, curr->ai_addr, curr->ai_addrlen) == -1) {
-            /* Do not log all failed attemps as this can be quite a common occurrance */
+            /* Do not log all failed attempts as this can be quite a common occurrence */
             close(graphite_fd);
             continue;
         }
