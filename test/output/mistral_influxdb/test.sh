@@ -47,13 +47,16 @@ if [ $? -ne 1 ]; then
     exit 3
 fi
 
-# Run a standard test
 if [ "$influx_protocol" = "https" ]; then
     secure="-s"
 fi
 
+# Set a custom value to be included in the output
+export _test_var=MISTRAL
+
+# Run a standard test
 run_test -d "$influx_db" -h "$influx_host" -P "$influx_port" $secure -u \
-    "$influx_user" -p "$influx_pass"
+    "$influx_user" -p "$influx_pass" -v _test_var
 
 # Get the results
 curl -s --get "$influx_protocol://$influx_host:$influx_port/query?pretty=true" \
