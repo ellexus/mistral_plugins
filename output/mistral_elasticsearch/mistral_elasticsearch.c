@@ -14,6 +14,8 @@
 
 #include "mistral_plugin.h"
 
+#define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
+
 static FILE *log_file = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
@@ -21,6 +23,7 @@ static char curl_error[CURL_ERROR_SIZE] = "";
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
 static const char *es_index = "mistral";
+static char *custom_variables = NULL;
 
 struct saved_resp {
     size_t size;
@@ -260,6 +263,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"port", required_argument, NULL, 'P'},
         {"ssl", no_argument, NULL, 's'},
         {"username", required_argument, NULL, 'u'},
+        {"var", required_argument, NULL, 'v'},
         {0, 0, 0, 0},
     };
 
@@ -272,7 +276,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     int opt;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:su:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:su:v:", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -321,6 +325,39 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'u':
             username = optarg;
             break;
+        case 'v':{
+            char *temp_var = getenv(optarg);
+            char *var_val = NULL;
+            char *new_var = NULL;
+
+            if (optarg[0] != '\0' && strspn(optarg, VALID_NAME_CHARS) == strlen(optarg)) {
+                if(temp_var) {
+                    var_val = elasticsearch_escape(temp_var);
+                }
+                if (var_val == NULL || var_val[0] == '\0') {
+                    var_val = strdup("N/A");
+                }
+                if (var_val == NULL) {
+                    mistral_err("Could not allocate memory for environment variable value %s\n", optarg);
+                    return;
+                }
+            } else {
+                mistral_err("Invalid environment variable name %s\n", optarg);
+            }
+            if (asprintf(&new_var, "%s%s\"%s\":\"%s\"",
+                                   (custom_variables)? custom_variables : "",
+                                   (custom_variables)? "," : "",
+                                   optarg,
+                                   var_val) < 0) {
+                mistral_err("Could not allocate memory for environment variable %s\n", optarg);
+                free(var_val);
+                return;
+            }
+            free(var_val);
+            free(custom_variables);
+            custom_variables = new_var;
+            break;
+        }
         default:
             usage(argv[0]);
             return;
@@ -397,6 +434,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (!set_curl_option(CURLOPT_URL, url)) {
+        free (url);
         return;
     }
     free (url);
@@ -412,6 +450,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     if (strcmp(auth, ":")) {
         if (curl_easy_setopt(easyhandle, CURLOPT_USERPWD, auth) != CURLE_OK) {
             mistral_err("Could not set up authentication\n");
+            free (auth);
             return;
         }
     }
@@ -439,10 +478,6 @@ void mistral_exit(void)
         mistral_received_data_end(0, false);
     }
 
-    if (log_file) {
-        fclose(log_file);
-    }
-
     if (easyhandle) {
         curl_easy_cleanup(easyhandle);
     }
@@ -452,6 +487,12 @@ void mistral_exit(void)
     }
 
     curl_global_cleanup();
+
+    free(custom_variables);
+
+    if (log_file && log_file != stderr) {
+        fclose(log_file);
+    }
 }
 
 /*
@@ -577,6 +618,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"cpu-id\":%" PRIu32 ","
                      "\"mpi-world-rank\":%" PRId32
                      "},"
+                     "%s"
+                     "%s"
+                     "%s"
                      "\"value\":%" PRIu64
                      "}\n",
                      (data) ? data : "",
@@ -602,6 +646,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      file,
                      log_entry->cpu,
                      log_entry->mpi_rank,
+                     (custom_variables)? "\"environment\":{" : "",
+                     (custom_variables)? custom_variables : "",
+                     (custom_variables)? "}," : "",
                      log_entry->measured) < 0) {
 
             mistral_err("Could not allocate memory for log entry\n");
