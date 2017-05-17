@@ -34,9 +34,8 @@ static unsigned long debug_level = 0;
 static FILE *log_file = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
-#define LEN 256
-static char cluster_name[LEN] = "";
-static char user_name[LEN] = "";
+static char *cluster_name = NULL;
+static char *user_name = NULL;
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
@@ -361,8 +360,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (!set_curl_option(CURLOPT_URL, url)) {
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
+        free(url);
         return;
     }
+    free(url);
 
     /* Set up authentication */
     char *auth;
@@ -377,24 +378,26 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         if (curl_easy_setopt(easyhandle, CURLOPT_USERPWD, auth) != CURLE_OK) {
             mistral_err("Could not set up authentication");
             DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
+            free(auth);
             return;
         }
     }
+    free(auth);
 
     char *temp_var = getenv("LSB_EXEC_CLUSTER");
     if(temp_var) {
-        strncpy(cluster_name, temp_var, LEN - 1);
-        cluster_name[LEN - 1] = '\0';
-    } else {
-        cluster_name[0] = '\0';
+        cluster_name = influxdb_escape(temp_var);
+    }
+    if (cluster_name == NULL) {
+        cluster_name = strdup("N/A");
     }
 
     temp_var = getenv("USER");
     if(temp_var) {
-        strncpy(user_name, temp_var, LEN - 1);
-        user_name[LEN - 1] = '\0';
-    } else {
-        user_name[0] = '\0';
+        user_name = influxdb_escape(temp_var);
+    }
+    if (user_name == NULL) {
+        user_name = strdup("N/A");
     }
 
     /* Returning after this point indicates success */
@@ -427,6 +430,9 @@ void mistral_exit(void)
     }
 
     curl_global_cleanup();
+
+    free(user_name);
+    free(cluster_name);
 
     if (log_file && log_file != stderr) {
         DEBUG_OUTPUT(DBG_ENTRY, "Closing log file\n");
@@ -565,6 +571,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
             return;
         }
+        DEBUG_OUTPUT(DBG_HIGH, "Sending data\n%s\n", data);
 
         CURLcode ret = curl_easy_perform(easyhandle);
         if (ret != CURLE_OK) {
