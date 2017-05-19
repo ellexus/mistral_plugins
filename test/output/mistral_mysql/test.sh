@@ -13,7 +13,7 @@ fi
 
 # Create the test database
 "$mysql_cmd" --defaults-file="$mysql_admin_parameters" \
-    < "$plugin_dir"/sql/create_multiple_tables.sql
+    < "$plugin_dir"/sql/create_mistral.sql
 
 if [ $? -ne 0 ]; then
     logerr "Error creating test database"
@@ -24,7 +24,7 @@ fi
 sql_cmd="SELECT scope, type, time_stamp, label, violation_path, call_type,"
 sql_cmd="$sql_cmd measurement, size_range, threshold, observed, host, pid, cpu,"
 sql_cmd="$sql_cmd command, file_name, group_id, id, mpi_rank FROM log_01 a,"
-sql_cmd="$sql_cmd rule_parameters b WHERE b.rule_id = a.rule_parameters"
+sql_cmd="$sql_cmd rule_details b WHERE b.rule_id = a.rule_id"
 sql_cmd="$sql_cmd ORDER BY log_id ASC" 
 
 
