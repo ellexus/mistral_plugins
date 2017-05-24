@@ -240,7 +240,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                 tmp_level = 1;
             }
             /* For now just allow cumulative debug levels rather than selecting messages */
-            debug_level = (2 << tmp_level) - 1;
+            debug_level = (1 << tmp_level) - 1;
             break;
         }
         case 'e':
@@ -393,6 +393,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
     }
+    DEBUG_OUTPUT(DBG_MED, "InfluxDB connection URL: %s\n", url);
 
     if (!set_curl_option(CURLOPT_URL, url)) {
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
