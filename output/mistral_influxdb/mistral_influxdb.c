@@ -165,10 +165,10 @@ static char *influxdb_escape(const char *string)
         }
         char *small_escaped = realloc(escaped, (strlen(escaped) + 1) * sizeof(char));
         if (small_escaped) {
-            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, partial success\n");
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
             return small_escaped;
         } else {
-            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, partial success\n");
             return escaped;
         }
     } else {
@@ -357,6 +357,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
     }
+    DEBUG_OUTPUT(DBG_MED, "InfluxDB connection URL: %s\n", url);
 
     if (!set_curl_option(CURLOPT_URL, url)) {
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
