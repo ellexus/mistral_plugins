@@ -9,7 +9,8 @@
 #include <stdlib.h>             /* calloc, realloc, free, getenv */
 #include <string.h>             /* strerror_r */
 #include <sys/stat.h>           /* open, umask */
-#include <sys/types.h>          /* open, umask */
+#include <sys/types.h>          /* getpid, open, umask */
+#include <unistd.h>             /* getpid */
 
 #include "mistral_plugin.h"
 
@@ -18,15 +19,18 @@ enum debug_states {
     DBG_MED,
     DBG_HIGH,
     DBG_ENTRY,
+    DBG_CONTROL,
     DBG_LIMIT
 };
 
 /* Define debug output function as a macro so we can use mistral_err */
-#define DEBUG_OUTPUT(level, format, ...)        \
-do {                                            \
-    if ((1 << level) & debug_level) {           \
-        mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
-    }                                           \
+#define DEBUG_OUTPUT(level, format, ...)                \
+do {                                                    \
+    if ((1 << level) & debug_level) {                   \
+        mistral_err("DEBUG[%d][%d] %s:%d " format,      \
+                    level + 1, mistral_plugin_pid,      \
+                    __func__, __LINE__, ##__VA_ARGS__); \
+    }                                                   \
 } while (0)
 
 static unsigned long debug_level = 0;
@@ -228,26 +232,35 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:su:", options, NULL)) != -1) {
         switch (opt) {
         case 'd':
+            DEBUG_OUTPUT(DBG_MED, "Database option = \"%s\"\n", optarg);
             database = optarg;
             break;
         case 'D':{
+            DEBUG_OUTPUT(DBG_MED, "Debug level = \"%s\"\n", optarg);
             char *end = NULL;
             unsigned long tmp_level = strtoul(optarg, &end, 10);
-            if (tmp_level <= 0 || !end || *end || tmp_level > DBG_LIMIT) {
+            if (tmp_level == 0 || !end || *end || tmp_level > DBG_LIMIT) {
                 mistral_err("Invalid debug level '%s', using '1'\n", optarg);
                 tmp_level = 1;
             }
+            if (tmp_level - 1 == DBG_CONTROL) {
+                mistral_output_control_debug = true;
+                tmp_level--;
+            }
             /* For now just allow cumulative debug levels rather than selecting messages */
-            debug_level = (2 << tmp_level) - 1;
+            debug_level = (1 << tmp_level) - 1;
             break;
         }
         case 'e':
+            DEBUG_OUTPUT(DBG_MED, "Log file = \"%s\"\n", optarg);
             error_file = optarg;
             break;
         case 'h':
+            DEBUG_OUTPUT(DBG_MED, "Host = \"%s\"\n", optarg);
             host = optarg;
             break;
         case 'm':{
+            DEBUG_OUTPUT(DBG_MED, "Log file mode = \"%s\"\n", optarg);
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
             if (tmp_mode <= 0 || !end || *end) {
@@ -269,9 +282,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             break;
         }
         case 'p':
+            DEBUG_OUTPUT(DBG_MED, "Password seen\n");
             password = optarg;
             break;
         case 'P':{
+            DEBUG_OUTPUT(DBG_MED, "Port = \"%s\"\n", optarg);
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
@@ -286,9 +301,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             protocol = "https";
             break;
         case 'u':
+            DEBUG_OUTPUT(DBG_MED, "Username = \"%s\"\n", optarg);
             username = optarg;
             break;
         default:
+            DEBUG_OUTPUT(DBG_MED, "Unknown option = \"%c\"\n", opt);
             usage(argv[0]);
             DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
             return;

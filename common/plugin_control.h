@@ -90,6 +90,9 @@ enum mistral_log_fields {
 };
 
 /* Create various string arrays based off of the mistral_plugin.h header */
+bool mistral_output_control_debug = false;
+pid_t mistral_plugin_pid = 0;
+
 const char *const mistral_contract_name[] = {
 #define X(name, str, header) str,
     CONTRACT(X)

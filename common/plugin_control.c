@@ -16,11 +16,22 @@
 #include <stdio.h>              /* fprintf, asprintf, vfprintf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
-#include <time.h>               /* strptime, mktime, tzset */
-#include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO */
+#include <sys/types.h>          /* getpid */
+#include <time.h>               /* gettimeofday, strptime, mktime, tzset */
+#include <unistd.h>             /* getpid, STDOUT_FILENO, STDIN_FILENO */
 
 
 #include "plugin_control.h"
+
+#define DEBUG_OUTPUT(format, ...)                       \
+do {                                                    \
+    if (mistral_output_control_debug) {                 \
+        mistral_err("DEBUG[control][%d] %s:%d " format, \
+                    mistral_plugin_pid, __func__,       \
+                    __LINE__, ##__VA_ARGS__);           \
+    }                                                   \
+} while (0)
+
 
 static unsigned ver = MISTRAL_API_VERSION;  /* Supported version */
 static uint64_t data_count = 0;             /* Number of data blocks received */
@@ -64,6 +75,12 @@ int mistral_err(const char *format, ...)
         if (asprintf(&file_fmt, "%s\n", format) >= 0) {
             fmt = file_fmt;
         }
+    } else if (mistral_plugin_info.error_log != stderr) {
+        struct timeval tv = {0,0};
+        gettimeofday(&tv, NULL);
+        if (asprintf(&file_fmt, "%ld.%06ld %s", tv.tv_sec, tv.tv_usec, format) >= 0) {
+            fmt = file_fmt;
+        }
     }
 
     retval = vfprintf(mistral_plugin_info.error_log, fmt, ap);
@@ -87,6 +104,7 @@ int mistral_err(const char *format, ...)
  */
 void init_mistral_call_type_names(void)
 {
+    DEBUG_OUTPUT("Entering function\n");
     size_t max_string = 0;
 #define X(name, str) max_string += sizeof(str) + 1;
     CALL_TYPE(X)
@@ -117,6 +135,7 @@ void init_mistral_call_type_names(void)
         }
         strncpy((char *)mistral_call_type_names[i], tmp1, sizeof(mistral_call_type_names[i]));
     }
+    DEBUG_OUTPUT("Leaving function, success\n");
 }
 
 /*
@@ -133,6 +152,7 @@ void init_mistral_call_type_names(void)
  */
 static bool send_string_to_mistral(const char *message)
 {
+    DEBUG_OUTPUT("Entering function\n");
     const char *message_start = message;
     size_t message_len = strlen(message);
 
@@ -157,6 +177,7 @@ static bool send_string_to_mistral(const char *message)
             char buf[256];
             mistral_err("Error in select() while sending data to Mistral: %s\n",
                         strerror_r(errno, buf, sizeof buf));
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return false;
         }
 
@@ -183,13 +204,16 @@ static bool send_string_to_mistral(const char *message)
                 char buf[256];
                 mistral_err("Failed write, unable to send data: (%s)\n",
                             strerror_r(errno, buf, sizeof buf));
+                DEBUG_OUTPUT("Leaving function, failure\n");
                 return false;
             }
         } else {
             mistral_err("Mistral is not ready to receive data\n");
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return false;
         }
     }
+    DEBUG_OUTPUT("Leaving function, success\n");
     return true;
 }
 
@@ -208,6 +232,7 @@ static bool send_string_to_mistral(const char *message)
  */
 static bool send_message_to_mistral(enum mistral_message message)
 {
+    DEBUG_OUTPUT("Entering function\n");
     char *message_string = NULL;
 
     switch (message) {
@@ -235,12 +260,14 @@ static bool send_message_to_mistral(enum mistral_message message)
     }
 
     free(message_string);
+    DEBUG_OUTPUT("Leaving function, success\n");
     return true;
 
 fail_send:
     free(message_string);
 fail_invalid:
 fail_asprintf:
+    DEBUG_OUTPUT("Leaving function, failure\n");
     return false;
 }
 
@@ -266,6 +293,7 @@ fail_asprintf:
  */
 static char **str_split(const char *s, int sep, size_t *field_count)
 {
+    DEBUG_OUTPUT("Entering function\n");
     size_t n = 1;               /* One more string than separators. */
     size_t len;                 /* Length of 's' */
 
@@ -282,6 +310,7 @@ static char **str_split(const char *s, int sep, size_t *field_count)
      */
     void *alloc = calloc(1, len + 1 + (n + 1) * sizeof(char *));
     if (!alloc) {
+        DEBUG_OUTPUT("Leaving function, failure\n");
         return NULL;
     }
     char **result = alloc;
@@ -300,6 +329,7 @@ static char **str_split(const char *s, int sep, size_t *field_count)
         }
     }
     result[n] = NULL;
+    DEBUG_OUTPUT("Leaving function, success\n");
     return result;
 }
 
@@ -318,12 +348,15 @@ static char **str_split(const char *s, int sep, size_t *field_count)
  */
 static ssize_t find_in_array(const char *s, const char *const *array)
 {
+    DEBUG_OUTPUT("Entering function\n");
     assert(array);
     for (size_t i = 0; array[i]; ++i) {
         if (0 == strcmp(s, array[i])) {
+            DEBUG_OUTPUT("Leaving function, success\n");
             return i;
         }
     }
+    DEBUG_OUTPUT("Leaving function, failure\n");
     return -1;
 }
 
@@ -345,6 +378,7 @@ static ssize_t find_in_array(const char *s, const char *const *array)
  */
 static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
 {
+    DEBUG_OUTPUT("Entering function\n");
     assert(s);
     assert(size);
     assert(unit);
@@ -353,12 +387,14 @@ static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
     errno = 0;
     unsigned long long value = strtoull(s, &end, 10);
     if (errno || !end || s == end) {
+        DEBUG_OUTPUT("Leaving function, failure\n");
         return false;
     }
 
     ssize_t u = find_in_array(end, mistral_unit_suffix);
     if (u == -1) {
         mistral_err("Invalid unit in value: %s\n", s);
+        DEBUG_OUTPUT("Leaving function, failure\n");
         return false;
     } else {
         *unit = u;
@@ -390,9 +426,11 @@ static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
     default:
         /* Getting here is a programming error */
         mistral_err("Unknown unit type: %d\n", mistral_unit_type[*unit]);
+        DEBUG_OUTPUT("Leaving function, failure\n");
         return false;
     }
 
+    DEBUG_OUTPUT("Leaving function, success\n");
     return true;
 }
 
@@ -415,6 +453,7 @@ static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
 static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, uint64_t *length,
                        enum mistral_unit *lengthunit)
 {
+    DEBUG_OUTPUT("Entering function\n");
     assert(s);
     assert(size);
     assert(unit);
@@ -450,6 +489,7 @@ static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, u
     }
 
     free(rate_split);
+    DEBUG_OUTPUT("Leaving function, success\n");
     return true;
 
 fail_rate_split_fields:
@@ -458,6 +498,7 @@ fail_rate_length:
 fail_rate_size:
     free(rate_split);
 fail_rate_split:
+    DEBUG_OUTPUT("Leaving function, failure\n");
     return false;
 }
 
@@ -482,6 +523,7 @@ fail_rate_split:
  */
 static bool parse_log_entry(const char *line)
 {
+    DEBUG_OUTPUT("Entering function\n");
     size_t field_count;
     mistral_log *log_entry = NULL;
 
@@ -815,6 +857,7 @@ static bool parse_log_entry(const char *line)
     free(call_type_split);
     free(hash_split);
     free(comma_split);
+    DEBUG_OUTPUT("Leaving function, success\n");
     return true;
 
 fail_log_mpi_rank:
@@ -854,6 +897,7 @@ fail_split_commas:
 
     CALL_IF_DEFINED(mistral_received_bad_log, line);
 
+    DEBUG_OUTPUT("Leaving function, failure\n");
     return false;
 }
 
@@ -870,6 +914,7 @@ fail_split_commas:
  */
 void mistral_destroy_log_entry(mistral_log *log_entry)
 {
+    DEBUG_OUTPUT("Entering function\n");
     if (log_entry) {
         free((void *)log_entry->label);
         free((void *)log_entry->path);
@@ -884,6 +929,7 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
         free((void *)log_entry->full_hostname);
         free((void *)log_entry);
     }
+    DEBUG_OUTPUT("Leaving function, success\n");
 }
 
 /*
@@ -904,6 +950,7 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
  */
 static enum mistral_message parse_message(char *line)
 {
+    DEBUG_OUTPUT("Entering function\n");
     assert(line);
 
     /* number of data blocks received */
@@ -911,9 +958,11 @@ static enum mistral_message parse_message(char *line)
     enum mistral_message message = PLUGIN_MESSAGE_DATA_LINE;
     size_t line_len = strlen(line);
 
+
     if (line_len > 0 && line[line_len - 1] == '\n') {
         line[line_len - 1] = '\0';
     }
+    DEBUG_OUTPUT("Received message \"%s\"\n", line);
 #define X(P, V)                               \
     if (strncmp(line, V, sizeof(V) - 1) == 0) \
     {                                         \
@@ -929,6 +978,7 @@ static enum mistral_message parse_message(char *line)
     if (!supported_version && message != PLUGIN_MESSAGE_SUP_VERSION &&
         message != PLUGIN_MESSAGE_SHUTDOWN) {
         mistral_err("Message seen before supported versions received [%s].\n", line);
+        DEBUG_OUTPUT("Leaving function, failure\n");
         return PLUGIN_DATA_ERR;
     } else if (in_data) {       /* We are currently processing a data block */
         switch (message) {
@@ -937,6 +987,7 @@ static enum mistral_message parse_message(char *line)
         case PLUGIN_MESSAGE_DATA_START:
             /* Invalid messages */
             mistral_err("Data block incomplete, log data might be corrupted [%s].\n", line);
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_DATA_ERR;
         default:
             break;
@@ -945,6 +996,7 @@ static enum mistral_message parse_message(char *line)
         /* Not in a data block so only control messages are valid */
         if (message == PLUGIN_MESSAGE_DATA_LINE && *line != '\0') {
             mistral_err("Invalid data: [%s]. Expected a control message.\n", line);
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_DATA_ERR;
         }
     }
@@ -953,6 +1005,7 @@ static enum mistral_message parse_message(char *line)
     if (message != PLUGIN_MESSAGE_DATA_LINE
         && strcmp(PLUGIN_MESSAGE_END, &line[line_len - sizeof(PLUGIN_MESSAGE_END)])) {
         mistral_err("Invalid data: [%s]. Expected control message.\n", line);
+        DEBUG_OUTPUT("Leaving function, failure\n");
         return PLUGIN_DATA_ERR;
     }
 
@@ -961,6 +1014,7 @@ static enum mistral_message parse_message(char *line)
     case PLUGIN_MESSAGE_USED_VERSION:
         /* We should only send, never receive this message */
         mistral_err("Invalid data: [%s]. Don't expect to receive this message.\n", line);
+        DEBUG_OUTPUT("Leaving function, failure\n");
         return PLUGIN_DATA_ERR;
     case PLUGIN_MESSAGE_INTERVAL:{
         /* Only seen in update plug-ins */
@@ -975,6 +1029,7 @@ static enum mistral_message parse_message(char *line)
 
         if (interval == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C || errno) {
             mistral_err("Invalid interval seen: [%s].\n", line);
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_DATA_ERR;
         }
 
@@ -996,20 +1051,24 @@ static enum mistral_message parse_message(char *line)
             /* The assert should identify if we've modified the message literal */
             assert(strncmp(mistral_log_message[PLUGIN_MESSAGE_SUP_VERSION], ":PGNSUPVRSN:", 12));
             mistral_err("Invalid supported versions format received: [%s].\n", line);
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_DATA_ERR;
         }
 
         if (min_ver == 0 || cur_ver == 0 || min_ver > cur_ver) {
             mistral_err("Invalid supported version numbers received: [%s].\n", line);
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_DATA_ERR;
         }
 
         if (ver < min_ver || ver > cur_ver) {
             mistral_err("API version used [%u] is not supported [%s].\n", ver, line);
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_FATAL_ERR;
         } else {
             supported_version = true;
             if (!send_message_to_mistral(PLUGIN_MESSAGE_USED_VERSION)) {
+                DEBUG_OUTPUT("Leaving function, failure\n");
                 return PLUGIN_FATAL_ERR;
             }
         }
@@ -1042,6 +1101,7 @@ static enum mistral_message parse_message(char *line)
         in_data = true;
         data_count = block_count;
         if (error_seen) {
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_DATA_ERR;
         }
         break;
@@ -1073,6 +1133,7 @@ static enum mistral_message parse_message(char *line)
         CALL_IF_DEFINED(mistral_received_data_end, end_block_count, error_seen);
 
         if (error_seen) {
+            DEBUG_OUTPUT("Leaving function, failure\n");
             return PLUGIN_DATA_ERR;
         }
         break;
@@ -1092,6 +1153,7 @@ static enum mistral_message parse_message(char *line)
 
     } /* End of message types */
 
+    DEBUG_OUTPUT("Leaving function, success\n");
     return message;
 }
 
@@ -1110,6 +1172,7 @@ static enum mistral_message parse_message(char *line)
  */
 static bool read_data_from_mistral(void)
 {
+    DEBUG_OUTPUT("Entering function\n");
     int result;
     /* waiting time set to 10 seconds, this is used to wait for the first message to be seen */
     struct timeval timeout = {
@@ -1164,6 +1227,7 @@ read_shutdown:
     free(line);
 
 read_fail_select:
+    DEBUG_OUTPUT("Leaving function, success\n");
     return retval;
 }
 
@@ -1183,6 +1247,8 @@ read_fail_select:
  */
 int main(int argc, char **argv)
 {
+    mistral_plugin_pid = getpid();
+    DEBUG_OUTPUT("Entering function\n");
     mistral_plugin_info.type = MAX_PLUGIN;
     mistral_plugin_info.error_log = stderr;
     init_mistral_call_type_names();
@@ -1199,6 +1265,7 @@ int main(int argc, char **argv)
         send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
     }
 
+    DEBUG_OUTPUT("Leaving function, success\n");
     CALL_IF_DEFINED(mistral_exit);
     return EXIT_SUCCESS;
 }

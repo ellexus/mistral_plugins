@@ -11,6 +11,9 @@
 #include <sys/types.h>
 #include <time.h>
 
+extern bool mistral_output_control_debug;
+extern pid_t mistral_plugin_pid;
+
 /* Define the valid plug-in types */
 #define PLUGIN(X) \
     X(OUTPUT)     \
