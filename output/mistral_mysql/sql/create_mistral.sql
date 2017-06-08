@@ -1,7 +1,5 @@
 --
--- create_multiple_tables.sql
---
--- Eric Martin at Ellexus - 08/03/2016
+-- create_mistral.sql
 --
 -- This text file should be imported using the command 
 --      "mysql -u root -p < create_multiple_tables.sql"
@@ -11,6 +9,7 @@
 -- In summary this will :
 --  ~ Create a new database called 'mistral_log'
 --  ~ Create 32 tables within 'mistral_log' called 'log_01 .. log_32'
+--  ~ Create 32 tables within 'mistral_log' called 'env_01 .. env_32'
 --  ~ Create a user called 'mistral' and give it :
 --      All permissions on mistral_log.*
 --     TODO : Change to grant specific permissions [ ALTER, CREATE, DROP,
@@ -68,6 +67,16 @@ CREATE PROCEDURE create_log_tables()
 
     START TRANSACTION;
     WHILE log_counter < (log_max + 1) DO
+        SET @dynamic_env = CONCAT('CREATE TABLE env_', LPAD(log_counter, 2, '0'), ' (
+                                       plugin_run_id VARCHAR(36) NOT NULL,
+                                       env_name VARCHAR(256) NOT NULL,
+                                       env_value VARCHAR(256),
+                                       env_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
+                                   ) ENGINE=InnoDB;');
+        PREPARE cl from @dynamic_env;
+        EXECUTE cl;
+        DEALLOCATE PREPARE cl;
+
         SET @dynamic_log = CONCAT('CREATE TABLE log_', LPAD(log_counter, 2, '0'), ' (
                                        scope VARCHAR(6) NOT NULL,
                                        type VARCHAR(8) NOT NULL,
@@ -82,6 +91,7 @@ CREATE PROCEDURE create_log_tables()
                                        group_id VARCHAR(256),
                                        id VARCHAR(256),
                                        mpi_rank INT,
+                                       plugin_run_id VARCHAR(36) NOT NULL,
                                        log_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
                                    ) ENGINE=InnoDB;');
         PREPARE cl from @dynamic_log;
@@ -110,7 +120,8 @@ CREATE PROCEDURE populate_date_table_map()
 
     START TRANSACTION;
     WHILE @counter < (table_max + 1) DO
-        INSERT INTO date_table_map (table_date, table_num) VALUES(STR_TO_DATE(@enter_date, '%Y-%m-%e'), @counter);
+        INSERT INTO date_table_map (table_date, table_num) VALUES
+            (STR_TO_DATE(@enter_date, '%Y-%m-%e'), @counter);
         SET @counter = @counter + 1;
         SET @enter_date = @enter_date + INTERVAL 1 DAY;
     END WHILE;
@@ -129,13 +140,23 @@ DELIMITER $$
 CREATE PROCEDURE check_exist()
     BEGIN
     -- If date is not in control table, set it to be updated
-    IF (SELECT NOT EXISTS(SELECT 1 FROM date_table_map WHERE table_date = @to_check)) THEN
+    IF (SELECT NOT EXISTS (SELECT 1
+                           FROM date_table_map
+                           WHERE table_date = @to_check)) THEN
         SET @date_to_update = @to_check;
         -- Get name of oldest table
-        SET @oldest_table_num = (SELECT LPAD(table_num, 2, '0') FROM date_table_map ORDER BY table_date LIMIT 0,1 FOR UPDATE);
+        SET @oldest_table_num = (SELECT LPAD(table_num, 2, '0')
+                                 FROM date_table_map
+                                 ORDER BY table_date
+                                 LIMIT 0,1
+                                 FOR UPDATE);
         SET @to_truncate_log = CONCAT('TRUNCATE log_', @oldest_table_num,';');
         CALL exec_qry(@to_truncate_log);
-        UPDATE date_table_map SET table_date = @date_to_update WHERE table_num = @oldest_table_num;
+        SET @to_truncate_env = CONCAT('TRUNCATE env_', @oldest_table_num,';');
+        CALL exec_qry(@to_truncate_env);
+        UPDATE date_table_map
+            SET table_date = @date_to_update
+            WHERE table_num = @oldest_table_num;
         CALL update_eod_tables();
     END IF;
 
@@ -147,8 +168,11 @@ DELIMITER ;
 DELIMITER $$
 CREATE PROCEDURE update_eod_tables()
     BEGIN
-    -- Checks that there are 1 indexes
-    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'log_', @oldest_table_num,'\' AND table_schema = \'mistral_log\'');
+    -- Check that at least one index exists on the log_nn table
+    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num ',
+                              'FROM information_schema.statistics ',
+                              'WHERE table_name= \'log_', @oldest_table_num,
+                              '\' AND table_schema = \'mistral_log\'');
     CALL exec_qry(@index_count);
 
     IF @index_num > 1 THEN
@@ -159,6 +183,17 @@ CREATE PROCEDURE update_eod_tables()
         SET @drop = CONCAT('DROP INDEX TimeStampIndex ON log_', @oldest_table_num, ';');
         CALL exec_qry(@drop);
         SET @drop = CONCAT('DROP INDEX IDsIndex ON log_', @oldest_table_num, ';');
+        CALL exec_qry(@drop);
+    END IF;
+    -- Check that at least one index exists on the env_nn table
+    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num ',
+                              'FROM information_schema.statistics ',
+                              'WHERE table_name= \'env_', @oldest_table_num,
+                              '\' AND table_schema = \'mistral_log\'');
+    CALL exec_qry(@index_count);
+
+    IF @index_num > 1 THEN
+        SET @drop = CONCAT('DROP INDEX RunIndex ON env_', @oldest_table_num, ';');
         CALL exec_qry(@drop);
     END IF;
     COMMIT;
@@ -179,22 +214,45 @@ CREATE PROCEDURE update_index()
     WHILE counter < @old_table_count DO
         SET @counter = counter;
         -- Retrieves the name of the old table corresponding to the counter
-        SET @to_run = CONCAT('SET @older_table_num = (SELECT LPAD(table_num, 2, \'0\') FROM date_table_map ORDER BY table_date LIMIT ', @counter,',1);');
+        SET @to_run = CONCAT('SET @older_table_num = (SELECT LPAD(table_num, 2, \'0\') ',
+                                                      'FROM date_table_map ',
+                                                      'ORDER BY table_date ',
+                                                      'LIMIT ', @counter,',1);');
         CALL exec_qry(@to_run);
 
-        -- Checks that there are 1 indexes
-        SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num FROM information_schema.statistics WHERE table_name= \'log_', @older_table_num,'\' AND table_schema = \'mistral_log\'');
+        -- Check that at least one index exists on the log_nn table
+        SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num ',
+                                  'FROM information_schema.statistics ',
+                                  'WHERE table_name= \'log_', @older_table_num,
+                                  '\' AND table_schema = \'mistral_log\'');
         CALL exec_qry(@index_count);
 
         IF @index_num = 1 THEN
             -- Adds Indexes back into older tables
-            SET @index_scope = CONCAT('ALTER TABLE log_', @older_table_num,' ADD INDEX ScopeIndex (Scope);');
+            SET @index_scope = CONCAT('ALTER TABLE log_', @older_table_num,
+                                      ' ADD INDEX ScopeIndex (Scope);');
             CALL exec_qry(@index_scope);
-            SET @index_type = CONCAT('ALTER TABLE log_', @older_table_num,' ADD INDEX TypeIndex (Type);');
+            SET @index_type = CONCAT('ALTER TABLE log_', @older_table_num,
+                                     ' ADD INDEX TypeIndex (Type);');
             CALL exec_qry(@index_type);
-            SET @index_Time_Stamp = CONCAT('ALTER TABLE log_', @older_table_num,' ADD INDEX TimeStampIndex(Time_Stamp);');
+            SET @index_Time_Stamp = CONCAT('ALTER TABLE log_', @older_table_num,
+                                           ' ADD INDEX TimeStampIndex(Time_Stamp);');
             CALL exec_qry(@index_Time_Stamp);
-            SET @index_ids = CONCAT('ALTER TABLE log_', @older_table_num,' ADD INDEX IDsIndex(Group_ID, ID);');
+            SET @index_ids = CONCAT('ALTER TABLE log_', @older_table_num,
+                                    ' ADD INDEX IDsIndex(Group_ID, ID);');
+            CALL exec_qry(@index_ids);
+        END IF;
+        -- Check that at least one index exists on the env_nn table
+        SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num '
+                                  'FROM information_schema.statistics '
+                                  'WHERE table_name= \'env_', @older_table_num,
+                                  '\' AND table_schema = \'mistral_log\'');
+        CALL exec_qry(@index_count);
+
+        IF @index_num = 1 THEN
+            -- Adds Indexes back into older tables
+            SET @index_ids = CONCAT('ALTER TABLE env_', @older_table_num,
+                                    ' ADD INDEX RunIndex(plugin_run_id, env_name);');
             CALL exec_qry(@index_ids);
         END IF;
         SET counter = counter + 1;
@@ -224,8 +282,7 @@ BEGIN
 
     SET @date_today = CURRENT_DATE();
     SET @date_tomorrow = @date_today + INTERVAL 1 DAY;
-    SET @get_oldest_date = 'SET @oldest_date = (SELECT table_date FROM date_table_map ORDER BY table_date LIMIT 0,1);';
-    CALL exec_qry(@get_oldest_date);
+    SET @oldest_date = (SELECT MIN(table_date) FROM date_table_map);
 
     IF @oldest_date < @date_today THEN
         -- Enters loop if today's table does not exist

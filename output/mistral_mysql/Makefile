@@ -11,7 +11,8 @@ HOST_ARCH := $(patsubst i%86,i386,$(shell uname -m))
 $(eval $(call check_arch,$(HOST_ARCH)))
 
 LDLIBS := \
-	$(shell mysql_config --libs)
+	$(shell mysql_config --libs) \
+	-luuid
 
 INCLUDE_FLAGS := \
 	$(shell mysql_config --include)

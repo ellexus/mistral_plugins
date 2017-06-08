@@ -16,7 +16,7 @@
 
 #define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
 
-static FILE *log_file = NULL;
+static FILE **log_file_ptr = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
 
@@ -116,7 +116,7 @@ static void usage(const char *name)
      * line.
      */
     mistral_err("Usage:\n"
-                "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s]\n", name);
+                "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n", name);
     mistral_err("\n"
                 "  --error=file\n"
                 "  -e file\n"
@@ -153,6 +153,11 @@ static void usage(const char *name)
                 "  --username=user\n"
                 "  -u user\n"
                 "     The username required to access the Elasticsearch server if needed.\n"
+                "\n"
+                "  --var=var-name\n"
+                "  -v var-name\n"
+                "     The name of an environment variable, the value of which should be\n"
+                "     stored by the plug-in. This option can be specified multiple times.\n"
                 "\n");
     return;
 }
@@ -178,6 +183,9 @@ static void usage(const char *name)
  */
 static char *elasticsearch_escape(const char *string)
 {
+    if (!string) {
+        return NULL;
+    }
     size_t len = strlen(string);
 
     char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
@@ -326,14 +334,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             username = optarg;
             break;
         case 'v':{
-            char *temp_var = getenv(optarg);
             char *var_val = NULL;
             char *new_var = NULL;
 
             if (optarg[0] != '\0' && strspn(optarg, VALID_NAME_CHARS) == strlen(optarg)) {
-                if(temp_var) {
-                    var_val = elasticsearch_escape(temp_var);
-                }
+                var_val = elasticsearch_escape(getenv(optarg));
                 if (var_val == NULL || var_val[0] == '\0') {
                     var_val = strdup("N/A");
                 }
@@ -364,28 +369,26 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
+    log_file_ptr = &(plugin->error_log);
+
     if (error_file != NULL) {
         if (new_mode > 0) {
             mode_t old_mask = umask(00);
             int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
             if (fd >= 0) {
-                log_file = fdopen(fd, "a");
+                plugin->error_log = fdopen(fd, "a");
             }
             umask(old_mask);
         } else {
-            log_file = fopen(error_file, "a");
+            plugin->error_log = fopen(error_file, "a");
         }
 
-        if (!log_file) {
+        if (!plugin->error_log) {
+            plugin->error_log = stderr;
             char buf[256];
             mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
-    }
-
-    /* If we've opened an error log file use it in preference to stderr */
-    if (log_file) {
-        plugin->error_log = log_file;
     }
 
     if (curl_global_init(CURL_GLOBAL_ALL)) {
@@ -490,8 +493,9 @@ void mistral_exit(void)
 
     free(custom_variables);
 
-    if (log_file && log_file != stderr) {
-        fclose(log_file);
+    if (log_file_ptr && *log_file_ptr != stderr) {
+        fclose(*log_file_ptr);
+        *log_file_ptr = stderr;
     }
 }
 

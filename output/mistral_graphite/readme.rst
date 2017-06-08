@@ -1,10 +1,10 @@
-Mistral Influxdb plugin
-=======================
+Mistral Graphite plug-in
+========================
 
-This plugin receives violation data from Mistral and enters it into a Graphite
+This plug-in receives violation data from Mistral and enters it into a Graphite
 database.
 
-The plugin accepts the following command line options:
+The plug-in accepts the following command line options:
 
 -4
   Use IPv4 only. This is the default behaviour.
@@ -38,7 +38,7 @@ The plugin accepts the following command line options:
   Specifies the port to connect to on the Graphite server host.
   If not specified the plug-in will default to "2003".
 
-The options would normally be included in a plugin configuration file, such as
+The options would normally be included in a plug-in configuration file, such as
 
 ::
    PLUGIN,OUTPUT
@@ -55,5 +55,5 @@ The options would normally be included in a plugin configuration file, such as
    END
 
 
-To enable the output plugin you should set the ``MISTRAL_PLUGIN_CONFIG``
-environment variable to point at the plugin configuration file.
+To enable the output plug-in you should set the ``MISTRAL_PLUGIN_CONFIG``
+environment variable to point at the plug-in configuration file.

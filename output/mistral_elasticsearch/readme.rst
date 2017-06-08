@@ -1,7 +1,7 @@
 Mistral Elasticsearch plug-in
 =============================
 
-This plugin receives violation data from Mistral and enters it into an
+This plug-in receives violation data from Mistral and enters it into an
 Elasticsearch Index.
 
 Index Mappings
@@ -55,7 +55,7 @@ The script takes the following command line options:
 Plug-in Configuration
 ---------------------
 
-The plugin accepts the following command line options:
+The plug-in accepts the following command line options:
 
 --index=idx_name
 -i idx_name
@@ -93,7 +93,12 @@ The plugin accepts the following command line options:
 -u user
   The username to be used when accessing the database.
 
-The options would normally be included in a plugin configuration file, such as
+--var=var-name
+-v var-name
+  The name of an environment variable, the value of which should be stored by
+  the plug-in. This option can be specified multiple times.
+
+The options would normally be included in a plug-in configuration file, such as
 
 ::
    PLUGIN,OUTPUT
@@ -107,10 +112,12 @@ The options would normally be included in a plugin configuration file, such as
    PLUGIN_OPTION,--port=9200
    PLUGIN_OPTION,--username=myname
    PLUGIN_OPTION,--password=secret
+   PLUGIN_OPTION,--var=USER
+   PLUGIN_OPTION,--var=SHELL
    PLUGIN_OPTION,--error=/path/to/mistral_elasticsearch.log
 
    END
 
 
-To enable the output plugin you should set the ``MISTRAL_PLUGIN_CONFIG``
-environment variable to point at the plugin configuration file.
+To enable the output plug-in you should set the ``MISTRAL_PLUGIN_CONFIG``
+environment variable to point at the plug-in configuration file.

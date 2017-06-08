@@ -255,7 +255,8 @@ static int rule_compare(const void *p, const void *q)
     const rule_param *rule1 = p;
     const rule_param *rule2 = q;
     int retval = 0;
-    int64_t tmpval = 0;
+    int64_t tmpint64 = 0;
+    double tmpdouble = 0.0;
 
     retval = strcmp(rule1->label, rule2->label);
     if (retval) {
@@ -269,10 +270,11 @@ static int rule_compare(const void *p, const void *q)
         return retval;
     }
 
-    tmpval = (int64_t)rule1->call_types - (int64_t)rule2->call_types;
-    if (tmpval < 0) {
+    /* Explicitly promote call_types from unsigned 32 bit to signed 64 bit */
+    tmpint64 = (int64_t)rule1->call_types - (int64_t)rule2->call_types;
+    if (tmpint64 < 0) {
         retval = -1;
-    } else if (tmpval > 0) {
+    } else if (tmpint64 > 0) {
         retval = 1;
     }
     if (retval) {
@@ -298,10 +300,11 @@ static int rule_compare(const void *p, const void *q)
         return retval;
     }
 
-    tmpval = (double)rule1->cluster_id - (double)rule2->cluster_id;
-    if (tmpval < 0) {
+    /* Explicitly promote call_types from unsigned 64 bit to signed double */
+    tmpdouble = (double)rule1->cluster_id - (double)rule2->cluster_id;
+    if (tmpdouble < 0) {
         retval = -1;
-    } else if (tmpval > 0) {
+    } else if (tmpdouble > 0) {
         retval = 1;
     }
 

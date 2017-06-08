@@ -1,59 +1,72 @@
-Mistral Influxdb plugin
-=======================
+Mistral Influxdb plug-in
+========================
 
-This plugin receives violation data from Mistral and enters it into an Influxdb
+This plug-in receives violation data from Mistral and enters it into an Influxdb
 database.
 
-The plugin accepts the following command line options:
+The plug-in accepts the following command line options:
 
--d, --database
-  The name of the database. If not specified the database will be called
-  "mistral".
+--database=db-name
+-d db-name
+   Set the InfluxDB database to be used for storing data.
+   Defaults to "mistral".
 
--e, --error
-  The name of the file to which any error messages will be written.
+--error=file
+-e file
+   Specify location for error log. If not specified all errors will be output on
+   stderr and handled by Mistral error logging.
 
--h, --host
-  The name of the machine on which the database is hosted. If not specified the
-  plugin will use "localhost"
+--host=hostname
+-h hostname
+   The hostname of the InfluxDB server with which to establish a connection.
+   If not specified the plug-in will default to "localhost".
 
--p, --password
-  The password to be used when accessing the database.
+--mode=octal-mode
+-m octal-mode
+   Permissions used to create the error log file specified by the -e option.
 
--P, --port
-  The port to be used when accessing the database. If not specified the plugin
-  will use port 8086.
+--password=secret
+-p secret
+   The password required to access the InfluxDB server if needed.
 
--s, --https
-  Use HTTPS protocol instead of HTTP when accessing the database.
+--port=number
+-P number
+   Specifies the port to connect to on the InfluxDB server host.
+   If not specified the plug-in will default to "8086".
 
--u, --username
-  The username to be used when accessing the database.
+--ssl
+-s
+   Connect to the InfluxDB server via secure HTTP.
 
-The options would normally be included in a plugin configuration file, such as
+--username=user
+-u user
+   The username required to access the InfluxDB server if needed.
+
+--var=var-name
+-v var-name
+   The name of an environment variable, the value of which should be stored by
+   the plug-in. This option can be specified multiple times.
+
+The options would normally be included in a plug-in configuration file, such as
 
 ::
    PLUGIN,OUTPUT
 
-   PLUGIN_PATH,/path/to/mistral_influxdb.x86_64
+   PLUGIN_PATH,/path/to/mistral_influxdb
 
    INTERVAL,5
 
-   PLUGIN_OPTION,--database
-   PLUGIN_OPTION,mistral
-   PLUGIN_OPTION,--host
-   PLUGIN_OPTION,10.33.0.186
-   PLUGIN_OPTION,--port
-   PLUGIN_OPTION,8086
-   PLUGIN_OPTION,--username
-   PLUGIN_OPTION,myname
-   PLUGIN_OPTION,--password
-   PLUGIN_OPTION,secret
-   PLUGIN_OPTION,--error
-   PLUGIN_OPTION,/path/to/mistral_influxdb.log
+   PLUGIN_OPTION,--database=mistral
+   PLUGIN_OPTION,--host=10.33.0.186
+   PLUGIN_OPTION,--port=8086
+   PLUGIN_OPTION,--username=myname
+   PLUGIN_OPTION,--password=secret
+   PLUGIN_OPTION,--var=USER
+   PLUGIN_OPTION,--var=SHELL
+   PLUGIN_OPTION,--error=/path/to/mistral_influxdb.log
 
    END
 
 
-To enable the output plugin you should set the ``MISTRAL_PLUGIN_CONFIG``
-environment variable to point at the plugin configuration file.
+To enable the output plug-in you should set the ``MISTRAL_PLUGIN_CONFIG``
+environment variable to point at the plug-in configuration file.
