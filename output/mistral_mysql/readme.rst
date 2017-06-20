@@ -6,25 +6,17 @@ database named ``mistral_log``.
 
 The plug-in accepts the following command line options:
 
---defaults-file=config-file
--c config-file
-
+--defaults-file=config-file | -c config-file
   The name of a MySQL formated ``options file`` containing the database
   connection details. See ``Password Hiding`` below for more details.
 
---error=filename
--e filename
-
+--error=filename | -e filename
   The name of the file to which any error messages will be written.
 
---mode=octal-mode
--m octal-mode
-
+--mode=octal-mode | -m octal-mode
   Permissions used to create the error log file specified by the -e option.
 
---var=var-name
--v var-name
-
+--var=var-name | -v var-name
   The name of an environment variable, the value of which should be stored by
   the plug-in. This option can be specified multiple times.
 
@@ -98,7 +90,7 @@ Set-Up Instructions
 -------------------
 From a terminal on the host machine designated to house the database, run ::
 
-    "mysql -u root -p < create_mistral.sql"
+    mysql -u root -p < create_mistral.sql
 
 And enter the password to the root user account. This will create the database
 schema and the related mistral user. Any user with sufficient privileges to
@@ -106,7 +98,7 @@ create both databases and users can be used in place of the root account.
 
 Set up a ``CRON`` job to run ::
 
-    "mysql --defaults-file=<path-to-password-file> -u mistral mistral_log < end_of_day.sql"
+    mysql --defaults-file=<path-to-password-file> -u mistral mistral_log < end_of_day.sql
 
 once a day. <path-to-password-file> should point to the configuration file as
 explained in ``Password Hiding``.

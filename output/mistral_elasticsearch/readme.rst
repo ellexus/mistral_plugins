@@ -18,44 +18,30 @@ can be run to create the template from the command line.
 
 The script takes the following command line options:
 
---help
--?
-
+--help | -?
   Display usage instructions
 
---index=idx_name
--i idx_name
-
+--index=idx_name | -i idx_name
   The basename of the index. If not specified the template will be created for
   indexes called "mistral". As long as a matching option is provided to the
   plug-in it will create indexes named ``<idx_name>-yyyy-MM-dd``.
 
---host=hostname
--h hostname
-
+--host=hostname | -h hostname
   The name of the machine on which Elasticsearch is hosted. If not specified the
   script will use "localhost".
 
---password=filename
--p filename
-
+--password=filename | -p filename
   The name of a file containing the password to be used when creating the index.
   The password must be on a single line.
 
---port=n
--n n
-
+--port=n | -P n
   The port to be used when connecting to Elasticsearch. If not specified the
   script will use port 9200.
 
---ssl
--s
-
+--ssl | -s
   Use HTTPS protocol instead of HTTP to connect to Elasticsearch.
 
---username=user
--u user
-
+--username=user | -u user
   The username to be used when connecting to Elasticsearch.
 
 
@@ -64,53 +50,35 @@ Plug-in Configuration
 
 The plug-in accepts the following command line options:
 
---index=idx_name
--i idx_name
-
+--index=idx_name | -i idx_name
   The basename of the index. If not specified the index will be called
   "mistral". This must match the value used when creating the index template.
   The plug-in will create indexes named ``<idx_name>-yyyy-MM-dd``.
 
---error=filename
--e filename
-
+--error=filename | -e filename
   The name of the file to which any error messages will be written.
 
---host=hostname
--h hostname
-
+--host=hostname | -h hostname
   The name of the machine on which Elasticsearch is hosted. If not specified the
   plug-in will use "localhost".
 
---mode=octal-mode
--m octal-mode
-
+--mode=octal-mode | -m octal-mode
   Permissions used to create the error log file specified by the -e option.
 
---password=secret
--p secret
-
+--password=secret | -p secret
   The password to be used when accessing the index.
 
---port=number
--P number
-
+--port=number | -P number
   The port to be used when accessing the index. If not specified the plug-in
   will use port 9200.
 
---ssl
--s
-
+--ssl | -s
   Use HTTPS protocol instead of HTTP when accessing the index.
 
---username=user
--u user
-
+--username=user | -u user
   The username to be used when accessing the database.
 
---var=var-name
--v var-name
-
+--var=var-name | -v var-name
   The name of an environment variable, the value of which should be stored by
   the plug-in. This option can be specified multiple times.
 
