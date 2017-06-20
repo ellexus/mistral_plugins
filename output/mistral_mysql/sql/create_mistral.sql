@@ -184,6 +184,8 @@ CREATE PROCEDURE update_eod_tables()
         CALL exec_qry(@drop);
         SET @drop = CONCAT('DROP INDEX IDsIndex ON log_', @oldest_table_num, ';');
         CALL exec_qry(@drop);
+        SET @drop = CONCAT('DROP INDEX RunIDIndex ON log_', @oldest_table_num, ';');
+        CALL exec_qry(@drop);
     END IF;
     -- Check that at least one index exists on the env_nn table
     SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num ',
@@ -241,6 +243,9 @@ CREATE PROCEDURE update_index()
             SET @index_ids = CONCAT('ALTER TABLE log_', @older_table_num,
                                     ' ADD INDEX IDsIndex(Group_ID, ID);');
             CALL exec_qry(@index_ids);
+            SET @index_runid = CONCAT('ALTER TABLE log_', @older_table_num,
+                                    ' ADD INDEX RunIDIndex(plugin_run_id);');
+            CALL exec_qry(@index_runid);
         END IF;
         -- Check that at least one index exists on the env_nn table
         SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num '
