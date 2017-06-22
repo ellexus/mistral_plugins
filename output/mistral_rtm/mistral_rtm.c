@@ -1169,7 +1169,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         DEBUG_OUTPUT(DBG_MED, "Processing log entry, %p", log_entry);
         /* Get (or create) the appropriate rule id for this log entry */
         if (! set_rule_id(log_entry, &rule_id)) {
-            mistral_shutdown = true;
+            mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
             return;
         }
@@ -1188,7 +1188,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                          values_len);
             if(!insert_log_to_db()) {
                 mistral_err("Insert log entry on max buffer size failed\n");
-                mistral_shutdown = true;
+                mistral_shutdown();
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
             }
@@ -1205,7 +1205,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                          "jobid, indexid, submit_time, log_id, clusterid) "\
                          "VALUES %s", values) < 0) {
                 mistral_err("Unable to allocate memory for log insert\n");
-                mistral_shutdown = true;
+                mistral_shutdown();
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
             }
@@ -1216,7 +1216,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             char *old_log_insert = log_insert;
             if (asprintf(&log_insert, "%s,%s", log_insert, values) < 0) {
                 mistral_err("Unable to allocate memory for log insert\n");
-                mistral_shutdown = true;
+                mistral_shutdown();
                 free(old_log_insert);
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
                 return;
@@ -1242,7 +1242,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     /* Send any log entries to the database that are still pending */
     if(!insert_log_to_db()) {
         mistral_err("Insert log entry at end of block failed\n");
-        mistral_shutdown = true;
+        mistral_shutdown();
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return;
     }

@@ -768,7 +768,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
     while (log_entry) {
         if (!write_log_to_db(log_entry)) {
-            mistral_shutdown = true;
+            mistral_shutdown();
             return;
         }
 

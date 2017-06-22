@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <sys/types.h>
 #include <time.h>
+#include <semaphore.h>
 
 /* Define the valid plug-in types */
 #define PLUGIN(X) \
@@ -153,6 +154,7 @@ extern const char mistral_call_type_names[CALL_TYPE_MASK_MAX][
 ];
 
 typedef struct mistral_plugin {
+    sem_t lock;
     uint64_t interval;
     enum mistral_plugin_type type;
     FILE *error_log;
@@ -227,13 +229,12 @@ typedef struct mistral_rule {
 extern const int64_t mistral_max_size;    /* Holds max value of ssize_t as   */
                                           /* defined in plugin_control.o     */
 
-extern bool mistral_shutdown;       /* If set to true will cause the plugin  */
-                                    /* to exit before reading the next line  */
-                                    /* of input.                             */
-
 extern void mistral_destroy_log_entry(mistral_log *log_entry);
 __attribute__((__format__(printf, 1, 2)))
 extern int mistral_err(const char *format, ...);
+extern void mistral_shutdown(void); /* Function that, if called, will cause  */
+                                    /* the plug-in to exit before reading    */
+                                    /* the next line of input.               */
 
 #define UNUSED(param) ((void)(param))
 
