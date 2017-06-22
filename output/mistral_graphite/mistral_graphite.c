@@ -16,7 +16,7 @@
 
 #include "mistral_plugin.h"
 
-static FILE *log_file = NULL;
+static FILE **log_file_ptr = NULL;
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
@@ -210,28 +210,25 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
+    log_file_ptr = &(plugin->error_log);
+
     if (error_file != NULL) {
         if (new_mode > 0) {
             mode_t old_mask = umask(00);
             int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
             if (fd >= 0) {
-                log_file = fdopen(fd, "a");
+                plugin->error_log = fdopen(fd, "a");
             }
             umask(old_mask);
         } else {
-            log_file = fopen(error_file, "a");
+            plugin->error_log = fopen(error_file, "a");
         }
 
-        if (!log_file) {
+        if (!plugin->error_log) {
             char buf[256];
             mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
-    }
-
-    /* If we've opened an error log file use it in preference to stderr */
-    if (log_file) {
-        plugin->error_log = log_file;
     }
 
     if (!schema) {
@@ -303,12 +300,13 @@ void mistral_exit(void)
         mistral_received_data_end(0, false);
     }
 
-    if (log_file) {
-        fclose(log_file);
-    }
-
     if (graphite_fd >= 0) {
         close(graphite_fd);
+    }
+
+    if (log_file_ptr && *log_file_ptr != stderr) {
+        fclose(*log_file_ptr);
+        *log_file_ptr = stderr;
     }
 }
 

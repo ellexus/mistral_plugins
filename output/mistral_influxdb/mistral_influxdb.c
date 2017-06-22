@@ -6,7 +6,7 @@
 #include <search.h>             /* insque, remque */
 #include <stdbool.h>            /* bool */
 #include <stdio.h>              /* asprintf */
-#include <stdlib.h>             /* calloc, realloc, free */
+#include <stdlib.h>             /* calloc, realloc, free, getenv */
 #include <string.h>             /* strerror_r */
 #include <sys/stat.h>           /* open, umask */
 #include <sys/types.h>          /* open, umask */
@@ -29,14 +29,17 @@ do {                                            \
     }                                           \
 } while (0)
 
+#define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
+
 static unsigned long debug_level = 0;
 
-static FILE *log_file = NULL;
+static FILE **log_file_ptr = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
+static char *custom_variables = NULL;
 
 /*
  * set_curl_option
@@ -87,45 +90,50 @@ static void usage(const char *name)
      * to stderr.
      */
     mistral_err("Usage:\n");
-    mistral_err("  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s]\n", name);
-    mistral_err("\n");
-    mistral_err("  --error=file\n");
-    mistral_err("  -e file\n");
-    mistral_err("     Specify location for error log. If not specified all errors will\n");
-    mistral_err("     be output on stderr and handled by Mistral error logging.\n");
-    mistral_err("\n");
-    mistral_err("  --host=hostname\n");
-    mistral_err("  -h hostname\n");
-    mistral_err("     The hostname of the InfluxDB server with which to establish a connection.\n");
-    mistral_err("     If not specified the plug-in will default to \"localhost\".\n");
-    mistral_err("\n");
-    mistral_err("  --database=database_name\n");
-    mistral_err("  -d database_name\n");
-    mistral_err("     Set the InfluxDB database to be used for storing data.\n");
-    mistral_err("     Defaults to \"mistral\".\n");
-    mistral_err("\n");
-    mistral_err("  --mode=octal-mode\n");
-    mistral_err("  -m octal-mode\n");
-    mistral_err("     Permissions used to create the error log file specified by the -e\n");
-    mistral_err("     option.\n");
-    mistral_err("\n");
-    mistral_err("  --password=secret\n");
-    mistral_err("  -p secret\n");
-    mistral_err("     The password required to access the InfluxDB server if needed.\n");
-    mistral_err("\n");
-    mistral_err("  --port=number\n");
-    mistral_err("  -P number\n");
-    mistral_err("     Specifies the port to connect to on the InfluxDB server host.\n");
-    mistral_err("     If not specified the plug-in will default to \"8086\".\n");
-    mistral_err("\n");
-    mistral_err("  --ssl\n");
-    mistral_err("  -s\n");
-    mistral_err("     Connect to the InfluxDB server via secure HTTP.\n");
-    mistral_err("\n");
-    mistral_err("  --username=user\n");
-    mistral_err("  -u user\n");
-    mistral_err("     The username required to access the InfluxDB server if needed.\n");
-    mistral_err("\n");
+    mistral_err("  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n", name);
+    mistral_err("\n"
+                "  --database=db-name\n"
+                "  -d db-name\n"
+                "     Set the InfluxDB database to be used for storing data.\n"
+                "     Defaults to \"mistral\".\n"
+                "\n"
+                "  --error=file\n"
+                "  -e file\n"
+                "     Specify location for error log. If not specified all errors will\n"
+                "     be output on stderr and handled by Mistral error logging.\n"
+                "\n"
+                "  --host=hostname\n"
+                "  -h hostname\n"
+                "     The hostname of the InfluxDB server with which to establish a connection.\n"
+                "     If not specified the plug-in will default to \"localhost\".\n"
+                "\n"
+                "  --mode=octal-mode\n"
+                "  -m octal-mode\n"
+                "     Permissions used to create the error log file specified by the -e\n"
+                "     option.\n"
+                "\n"
+                "  --password=secret\n"
+                "  -p secret\n"
+                "     The password required to access the InfluxDB server if needed.\n"
+                "\n"
+                "  --port=number\n"
+                "  -P number\n"
+                "     Specifies the port to connect to on the InfluxDB server host.\n"
+                "     If not specified the plug-in will default to \"8086\".\n"
+                "\n"
+                "  --ssl\n"
+                "  -s\n"
+                "     Connect to the InfluxDB server via secure HTTP.\n"
+                "\n"
+                "  --username=user\n"
+                "  -u user\n"
+                "     The username required to access the InfluxDB server if needed.\n"
+                "\n"
+                "  --var=var-name\n"
+                "  -v var-name\n"
+                "     The name of an environment variable, the value of which should be\n"
+                "     stored by the plug-in. This option can be specified multiple times.\n"
+                "\n");
     return;
 }
 
@@ -151,6 +159,10 @@ static void usage(const char *name)
 static char *influxdb_escape(const char *string)
 {
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %s\n", string);
+    if (!string) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, nothing to do\n");
+        return NULL;
+    }
     size_t len = strlen(string);
 
     char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
@@ -163,10 +175,10 @@ static char *influxdb_escape(const char *string)
         }
         char *small_escaped = realloc(escaped, (strlen(escaped) + 1) * sizeof(char));
         if (small_escaped) {
-            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, partial success\n");
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
             return small_escaped;
         } else {
-            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, partial success\n");
             return escaped;
         }
     } else {
@@ -210,6 +222,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"port", required_argument, NULL, 'P'},
         {"https", no_argument, NULL, 's'},
         {"username", required_argument, NULL, 'u'},
+        {"var", required_argument, NULL, 'v'},
         {0, 0, 0, 0},
     };
 
@@ -223,7 +236,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     int opt;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:su:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:su:v:", options, NULL)) != -1) {
         switch (opt) {
         case 'd':
             database = optarg;
@@ -231,12 +244,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'D':{
             char *end = NULL;
             unsigned long tmp_level = strtoul(optarg, &end, 10);
-            if (tmp_level <= 0 || !end || *end || tmp_level > DBG_LIMIT) {
+            if (tmp_level == 0 || !end || *end || tmp_level > DBG_LIMIT) {
                 mistral_err("Invalid debug level '%s', using '1'\n", optarg);
                 tmp_level = 1;
             }
             /* For now just allow cumulative debug levels rather than selecting messages */
-            debug_level = (2 << tmp_level) - 1;
+            debug_level = (1 << tmp_level) - 1;
             break;
         }
         case 'e':
@@ -248,7 +261,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'm':{
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
-            if (tmp_mode <= 0 || !end || *end) {
+            if (!end || *end) {
                 tmp_mode = 0;
             }
             new_mode = (mode_t)tmp_mode;
@@ -286,6 +299,38 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'u':
             username = optarg;
             break;
+        case 'v':{
+            char *var_val = NULL;
+            char *new_var = NULL;
+
+            if (optarg[0] != '\0' && strspn(optarg, VALID_NAME_CHARS) == strlen(optarg)) {
+                var_val = influxdb_escape(getenv(optarg));
+
+                if (var_val == NULL || var_val[0] == '\0') {
+                    var_val = strdup("N/A");
+                }
+                if (var_val == NULL) {
+                    mistral_err("Could not allocate memory for environment variable value %s\n", optarg);
+                    DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
+                    return;
+                }
+            } else {
+                mistral_err("Invalid environment variable name %s\n", optarg);
+            }
+            if (asprintf(&new_var, "%s,%s=%s",
+                                   (custom_variables)? custom_variables : "",
+                                   optarg,
+                                   var_val) < 0) {
+                mistral_err("Could not allocate memory for environment variable %s\n", optarg);
+                DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
+                free(var_val);
+                return;
+            }
+            free(var_val);
+            free(custom_variables);
+            custom_variables = new_var;
+            break;
+        }
         default:
             usage(argv[0]);
             DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
@@ -293,28 +338,26 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
+    log_file_ptr = &(plugin->error_log);
+
     if (error_file != NULL) {
         if (new_mode > 0) {
             mode_t old_mask = umask(00);
             int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
             if (fd >= 0) {
-                log_file = fdopen(fd, "a");
+                plugin->error_log = fdopen(fd, "a");
             }
             umask(old_mask);
         } else {
-            log_file = fopen(error_file, "a");
+            plugin->error_log = fopen(error_file, "a");
         }
 
-        if (!log_file) {
+        if (!plugin->error_log) {
+            plugin->error_log = stderr;
             char buf[256];
             mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
         }
-    }
-
-    /* If we've opened an error log file use it in preference to stderr */
-    if (log_file) {
-        plugin->error_log = log_file;
     }
 
     if (curl_global_init(CURL_GLOBAL_ALL)) {
@@ -327,20 +370,20 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     easyhandle = curl_easy_init();
 
     if (!easyhandle) {
-        mistral_err("Could not initialise curl handle");
+        mistral_err("Could not initialise curl handle\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
     }
 
     if (curl_easy_setopt(easyhandle, CURLOPT_ERRORBUFFER, curl_error) != CURLE_OK) {
-        mistral_err("Could not set curl error buffer");
+        mistral_err("Could not set curl error buffer\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
     }
 
     /* Set curl to treat HTTP errors as failures */
     if (curl_easy_setopt(easyhandle, CURLOPT_FAILONERROR, 1l) != CURLE_OK) {
-        mistral_err("Could not set curl to fail on HTTP error");
+        mistral_err("Could not set curl to fail on HTTP error\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
     }
@@ -351,32 +394,38 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     char *url = NULL;
     if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=s", protocol, host,
                  port, database) < 0) {
-        mistral_err("Could not allocate memory for connection URL");
+        mistral_err("Could not allocate memory for connection URL\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
     }
+    DEBUG_OUTPUT(DBG_MED, "InfluxDB connection URL: %s\n", url);
 
     if (!set_curl_option(CURLOPT_URL, url)) {
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
+        free(url);
         return;
     }
+    free(url);
 
     /* Set up authentication */
     char *auth;
     if (asprintf(&auth, "%s:%s", (username)? username : "",
                                  (password)? password : "" ) < 0) {
-        mistral_err("Could not allocate memory for authentication");
+        mistral_err("Could not allocate memory for authentication\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
     }
 
     if (strcmp(auth, ":")) {
         if (curl_easy_setopt(easyhandle, CURLOPT_USERPWD, auth) != CURLE_OK) {
-            mistral_err("Could not set up authentication");
+            mistral_err("Could not set up authentication\n");
             DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
+            free(auth);
             return;
         }
     }
+    free(auth);
+
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 }
@@ -408,9 +457,12 @@ void mistral_exit(void)
 
     curl_global_cleanup();
 
-    if (log_file && log_file != stderr) {
+    free(custom_variables);
+
+    if (log_file_ptr && *log_file_ptr != stderr) {
         DEBUG_OUTPUT(DBG_ENTRY, "Closing log file\n");
-        fclose(log_file);
+        fclose(*log_file_ptr);
+        *log_file_ptr = stderr;
     }
 }
 
@@ -492,7 +544,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
                      ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
                      "job-id=%s,pid=%" PRId64 ",command=%s,host=%s,scope=%s,"
-                     "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 " value=%"
+                     "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 "%s value=%"
                      PRIu64 " %ld",
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
@@ -513,10 +565,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      mistral_contract_name[log_entry->contract_type],
                      log_entry->cpu,
                      log_entry->mpi_rank,
+                     (custom_variables)? custom_variables : "",
                      log_entry->measured,
                      log_entry->epoch.tv_sec) < 0) {
 
-            mistral_err("Could not allocate memory for log entry");
+            mistral_err("Could not allocate memory for log entry\n");
             free(data);
             free(file);
             free(command);

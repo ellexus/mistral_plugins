@@ -41,7 +41,7 @@ Set-Up Instructions
 -------------------
 From a terminal on the host machine designated to house the database, run ::
 
-    "mysql -u root -p < create_mistral.sql"
+    mysql -u root -p < create_mistral.sql
 
 And enter the password to the root user account. This will create the database schema and the
 related mistral user. Any user with sufficient privileges to create both databases and users can be

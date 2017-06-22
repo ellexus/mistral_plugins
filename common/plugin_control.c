@@ -10,19 +10,17 @@
 #include <errno.h>              /* errno */
 #include <inttypes.h>           /* uint32_t, uint64_t */
 #include <limits.h>             /* SSIZE_MAX */
+#include <pthread.h>            /* pthread_t, pthread_create, etc */
+#include <search.h>             /* insque, remque */
+#include <semaphore.h>          /* sem_init, sem_wait, sem_post, sem_destroy */
+#include <signal.h>             /* sigaction, sigemptyset, etc */
 #include <stdarg.h>             /* va_start, va_list, va_end */
 #include <stdbool.h>            /* bool */
 #include <stdint.h>             /* uint64_t, UINT64_MAX */
 #include <stdio.h>              /* fprintf, asprintf, vfprintf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
-#include <time.h>               /* strptime, mktime, tzset */
 #include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO, setsid */
-
-#include <search.h>             /* insque, remque */
-#include <semaphore.h>          /* sem_init, sem_wait, sem_post, sem_destroy */
-#include <signal.h>             /* sigaction, sigemptyset, etc */
-#include <pthread.h>            /* pthread_t, pthread_create, etc */
 
 #include "plugin_control.h"
 
@@ -83,6 +81,13 @@ int mistral_err(const char *format, ...)
     if (mistral_plugin_info.error_log == stderr && format[strlen(format) - 1] != '\n') {
         if (asprintf(&file_fmt, "%s\n", format) >= 0) {
             fmt = file_fmt;
+        }
+    } else if (mistral_plugin_info.error_log != stderr) {
+        struct timeval tv = {0,0};
+        if(gettimeofday(&tv, NULL) == 0) {
+            if (asprintf(&file_fmt, "%ld.%06ld %s", tv.tv_sec, tv.tv_usec, format) >= 0) {
+                fmt = file_fmt;
+            }
         }
     }
 
