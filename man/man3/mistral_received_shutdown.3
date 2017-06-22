@@ -1,4 +1,4 @@
-.TH MISTRAL_RECEIVED_SHUTDOWN 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH MISTRAL_RECEIVED_SHUTDOWN 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_received_shutdown \- Function called on receipt of a shutdown
 message
@@ -8,6 +8,9 @@ message
 .sp
 .BI "void mistral_received_shutdown(void);"
 .fi
+.sp
+Link with \fI\-pthread\fP.
+.sp
 .SH DESCRIPTION
 If this function is defined when linking with \fBplugin_control.o\fP
 it will be called whenever a shutdown message is received from Mistral.

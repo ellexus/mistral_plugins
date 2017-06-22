@@ -1,8 +1,11 @@
-.TH """mistral_plugin.h""" 3 2016-06-17 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH """mistral_plugin.h""" 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_plugin.h \- Plug-in development framework
 .SH SYNOPSIS
 .B #include """mistral_plugin.h"""
+.sp
+Link with \fI\-pthread\fP.
+.sp
 .SH DESCRIPTION
 The \fI"mistral_plugin.h"\fP header shall declare the structure
 \fBmistral_plugin\fP, which shall include at least the following
@@ -11,11 +14,18 @@ members:
 .RS
 .nf
 
+\fBsem_t                      \fPlock;
 \fBuint64_t                   \fPinterval;
 \fBenum mistral_plugin_type   \fPtype;
 \fBFILE                      *\fPerror_log;
 .fi
 .RE
+.LP
+The \fBlock\fP value used to control access to this structure by
+multiple threads.
+A call to \fBsem_wait\fP(3) must be made providing this structure
+member as the sole parameter before attempting to access any other
+structure members.
 .LP
 The \fBinterval\fP value will contain the period in seconds Mistral will
 wait between calls to an update plug-in. This value will be zero in
@@ -570,17 +580,6 @@ it last performed qualifying I/O.
 The \fBmpi_rank\fP element will be set to the MPI rank number of the
 process that contributed the most to the violation of the rule.
 .LP
-The following shall be declared as a variable:
-.sp
-.RS
-.nf
-\fBextern bool \fPmistral_shutdown;
-.fi
-.RE
-.LP
-If \fBmistral_shutdown\fP set to \fItrue\fP the plug-in will exit
-cleanly before reading any more input.
-.LP
 The following shall be declared as functions.
 Function prototypes shall be provided.
 .sp
@@ -592,6 +591,8 @@ extern void mistral_destroy_log_entry(mistral_log *log_entry);
 extern int mistral_err(const char *format, ...);
 
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[]);
+
+void mistral_shutdown(void);
 
 void mistral_received_interval(mistral_plugin *plugin) __attribute__((weak));
 
@@ -612,20 +613,23 @@ void mistral_exit(void) __attribute__((weak));
 .sp
 .LP
 Inclusion of the \fI"mistral_plugin.h\fP header may make visible all
-symbols from the \fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<stdio.h>\fP,
-\fI<sys/types.h>\fP and \fI<time.h>\fP, headers.
+symbols from the \fI<semaphore.h>\fP, \fI<stdbool.h>\fP,
+\fI<stdint.h>\fP, \fI<stdio.h>\fP, \fI<sys/types.h>\fP and
+\fI<time.h>\fP, headers.
 .LP
 \fIThe following sections are informative.\fP
 .SH NOTES
 Any files that include this header must be compiled with \fBgcc\fP or
 another compiler that is compatible with the
 \fB__attribute__((packed))\fP and \fB__attribute__((weak))\fP notation.
+The application must also be linked with \fI-pthread\fB.
 .SH SEE ALSO
 .LP
 \fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<stdio.h>\fP,
 \fI<sys/types.h>\fP, \fI<time.h>\fP, \fIinsque\fP(3), \fIremque\fP(3),
 \fImistral_destroy_log_entry\fP(3), \fImistral_err\fP(3),
-\fImistral_startup\fP(3), \fImistral_received_interval\fP(3),
+\fImistral_startup\fP(3), \fImistral_shutdown\fP(3),
+\fImistral_received_interval\fP(3),
 \fImistral_received_data_start\fP(3),
 \fImistral_received_data_end\fP(3), \fImistral_received_shutdown\fP(3),
 \fImistral_received_log\fP(3), \fImistral_received_bad_log\fP(3),

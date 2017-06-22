@@ -1,4 +1,4 @@
-.TH MISTRAL_STARTUP 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH MISTRAL_STARTUP 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_startup \- Function called to initialize a plug-in
 .SH SYNOPSIS
@@ -7,6 +7,9 @@ mistral_startup \- Function called to initialize a plug-in
 .sp
 .BI "void mistral_startup(mistral_plugin *" plugin ", int " argc ", char *" argv[] ");"
 .fi
+.sp
+Link with \fI\-pthread\fP.
+.sp
 .SH DESCRIPTION
 This function must be defined when linking with \fBplugin_control.o\fP.
 .LP
@@ -25,13 +28,28 @@ contain the following members:
 .RS
 .nf
 
+\fBsem_t     \fPlock;
 \fBuint64_t  \fPinterval;
 \fBuint8_t   \fPtype;
 \fBFILE     *\fPerror_log;
 .fi
 .RE
 .LP
+As the contents of this structure are shared between threads in
+\fBplugin_control.o\fP the semaphore \fBlock\fP is provided to control
+concurrent access to the members of this structure.
+The value of \fBlock\fP must not be changed directly but rather it must
+be set via calls to \fBsem_wait\fP(3), \fBsem_post\fP(3) and other
+related functions.
+At the time of calling \fBmistral_startup\fP the plug-in is guaranteed
+to be single threaded and therefore the value of \fBlock\fP can safely
+be ignored.
+.LP
 The passed pointer \fIplugin\fP can be saved and referenced at any time.
+However any access to the structure members after returning from
+\fBmistral_startup\fP must be protected by a call to \fBsem_wait\fP(3)
+or a similar function that can take the \fBlock\fP structure member as
+a parameter.
 .LP
 The \fIinterval\fP value will contain the period in seconds Mistral will
 wait between calls to an update plug-in.
@@ -51,9 +69,9 @@ Indicates this plug-in is operating as an update plug-in.
 .sp
 .LP
 If the value of \fItype\fP is not set to one of these values on
-returning from \fBmistral_startup\fP, or the global variable \fBbool\fP
-\fImistral_shutdown\fP is set to true then \fBplugin_control.o\fP will
-perform a clean plug-in shutdown.
+returning from \fBmistral_startup\fP, or a call was made to
+\fBmistral_shutdown\fP(3) then \fBplugin_control.o\fP will perform a
+clean plug-in shutdown.
 .LP
 After returning from \fBmistral_startup\fP the \fItype\fP is for
 information only and should not be updated.
@@ -67,5 +85,6 @@ disrupt communication with Mistral and prevent correct functioning of
 the plug-in.
 .sp
 .SH "SEE ALSO"
-\fI"mistral_plugin.h"\fP, \fBmistral_err\fP(3), \fBmistral_exit\fP(3)
+\fI"mistral_plugin.h"\fP, \fBmistral_err\fP(3), \fBmistral_exit\fP(3),
+\fBmistral_shutdown\fP(3)
 
