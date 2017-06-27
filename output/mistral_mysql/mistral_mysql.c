@@ -361,7 +361,7 @@ static int env_table_compare(const void *p, const void *q)
  * insert_env_records
  *
  * This function checks to see if any additional environment varaibles that were
- * specified at the command line have beed stored for this job in the
+ * specified at the command line have been stored for this job in the
  * appropriate 'env_nn' table for the log record date.
  *
  * We do not expect a large number of these environment variables to be
@@ -610,16 +610,16 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* First let's check if we have seen the rule before */
     this_rule = calloc(1, sizeof(rule_param));
     if (this_rule) {
-        strncpy(this_rule->label, log_entry->label, STRING_SIZE - 1);
-        this_rule->label[STRING_SIZE - 1] = '\0';
-        strncpy(this_rule->path, log_entry->path, STRING_SIZE - 1);
-        this_rule->path[STRING_SIZE - 1] = '\0';
+        strncpy(this_rule->label, log_entry->label, STRING_SIZE);
+        this_rule->label[STRING_SIZE] = '\0';
+        strncpy(this_rule->path, log_entry->path, STRING_SIZE);
+        this_rule->path[STRING_SIZE] = '\0';
         this_rule->call_types = log_entry->call_type_mask;
         this_rule->measurement = log_entry->measurement;
-        strncpy(this_rule->size_range, log_entry->size_range, RATE_SIZE - 1);
-        this_rule->size_range[RATE_SIZE - 1] = '\0';
-        strncpy(this_rule->threshold, log_entry->threshold_str, RATE_SIZE - 1);
-        this_rule->threshold[RATE_SIZE - 1] = '\0';
+        strncpy(this_rule->size_range, log_entry->size_range, RATE_SIZE);
+        this_rule->size_range[RATE_SIZE] = '\0';
+        strncpy(this_rule->threshold, log_entry->threshold_str, RATE_SIZE);
+        this_rule->threshold[RATE_SIZE] = '\0';
 
         found = tsearch((void *)this_rule, &rule_root, rule_compare);
         if (found == NULL) {
@@ -851,7 +851,8 @@ static bool insert_log_to_db(void)
     if (mysql_real_query(con, log_insert, log_insert_len)) {
         mistral_err("Failed while inserting log entry\n");
         mistral_err("%s\n", mysql_error(con));
-        goto fail_insert_log_to_db;
+        mistral_err("Insert_log_to_db failed!\n");
+        return false;
     }
 
     free(log_insert);
@@ -859,10 +860,6 @@ static bool insert_log_to_db(void)
     log_insert_len = 0;
 
     return true;
-
-fail_insert_log_to_db:
-    mistral_err("Insert_log_to_db failed!\n");
-    return false;
 }
 
 /*
