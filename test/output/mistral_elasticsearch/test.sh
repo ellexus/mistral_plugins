@@ -62,13 +62,16 @@ elif [[ $ret -eq 22 ]]; then
 fi
 
 
-# Run a standard test
 if [ "$es_protocol" = "https" ]; then
     secure="-s"
 fi
 
+# Set a custom value to be included in the output
+export _test_var=MISTRAL
+
+# Run a standard test
 run_test -i "$es_index" -h "$es_host" -P "$es_port" $secure -u \
-    "$es_user" -p "$es_pass"
+    "$es_user" -p "$es_pass" -v _test_var
 
 # Get the results - it can take a little while for the data to sync so sleep for
 # 2 seconds to ensure we get all results returned.

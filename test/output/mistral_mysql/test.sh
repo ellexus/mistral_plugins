@@ -13,7 +13,7 @@ fi
 
 # Create the test database
 "$mysql_cmd" --defaults-file="$mysql_admin_parameters" \
-    < "$plugin_dir"/sql/create_multiple_tables.sql
+    < "$plugin_dir"/sql/create_mistral.sql
 
 if [ $? -ne 0 ]; then
     logerr "Error creating test database"
@@ -23,12 +23,15 @@ fi
 # Set up the SQL command to fetch the results
 sql_cmd="SELECT scope, type, time_stamp, label, violation_path, call_type,"
 sql_cmd="$sql_cmd measurement, size_range, threshold, observed, host, pid, cpu,"
-sql_cmd="$sql_cmd command, file_name, group_id, id, mpi_rank FROM log_01 a,"
-sql_cmd="$sql_cmd rule_parameters b WHERE b.rule_id = a.rule_parameters"
-sql_cmd="$sql_cmd ORDER BY log_id ASC" 
+sql_cmd="$sql_cmd command, file_name, group_id, id, mpi_rank, env_name,"
+sql_cmd="$sql_cmd env_value FROM log_01 a, rule_details b, env_01 c WHERE "
+sql_cmd="$sql_cmd b.rule_id = a.rule_id AND a.plugin_run_id = c.plugin_run_id"
+sql_cmd="$sql_cmd ORDER BY log_id ASC, env_name ASC"
 
+# Set a custom value to be included in the output
+export _test_var=MISTRAL
 
-run_test --defaults-file="$mysql_parameters"
+run_test --defaults-file="$mysql_parameters" --var=_test_var
 
 # Get the results
 "$mysql_cmd" --defaults-file="$mysql_parameters" -ss -e "$sql_cmd" \

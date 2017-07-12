@@ -255,7 +255,8 @@ static int rule_compare(const void *p, const void *q)
     const rule_param *rule1 = p;
     const rule_param *rule2 = q;
     int retval = 0;
-    int64_t tmpval = 0;
+    int64_t tmpint64 = 0;
+    double tmpdouble = 0.0;
 
     retval = strcmp(rule1->label, rule2->label);
     if (retval) {
@@ -269,10 +270,11 @@ static int rule_compare(const void *p, const void *q)
         return retval;
     }
 
-    tmpval = rule1->call_types - rule2->call_types;
-    if (tmpval < 0) {
+    /* Explicitly promote call_types from unsigned 32 bit to signed 64 bit */
+    tmpint64 = (int64_t)rule1->call_types - (int64_t)rule2->call_types;
+    if (tmpint64 < 0) {
         retval = -1;
-    } else if (tmpval > 0) {
+    } else if (tmpint64 > 0) {
         retval = 1;
     }
     if (retval) {
@@ -298,10 +300,11 @@ static int rule_compare(const void *p, const void *q)
         return retval;
     }
 
-    tmpval = rule1->cluster_id - rule2->cluster_id;
-    if (tmpval < 0) {
+    /* Explicitly promote call_types from unsigned 64 bit to signed double */
+    tmpdouble = (double)rule1->cluster_id - (double)rule2->cluster_id;
+    if (tmpdouble < 0) {
         retval = -1;
-    } else if (tmpval > 0) {
+    } else if (tmpdouble > 0) {
         retval = 1;
     }
 
@@ -643,10 +646,10 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
                  log_entry->pid,
                  escaped_command,
                  escaped_filename,
-                 log_entry->job_group_id,
+                 escaped_groupid,
                  temp_gid, temp_gid,
                  temp_gid_array_idx, temp_gid_array_idx,
-                 log_entry->job_id,
+                 escaped_id,
                  temp_id, temp_id,
                  temp_array_idx, temp_array_idx,
                  submit_time,
@@ -680,7 +683,7 @@ fail_build_values_string:
 static bool insert_log_to_db(void)
 {
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
-    /* Close the statement */
+    /* Execute the statement */
     if (mysql_real_query(con, log_insert, log_insert_len)) {
         mistral_err("Failed while inserting log entry\n");
         mistral_err("%s\n", mysql_error(con));

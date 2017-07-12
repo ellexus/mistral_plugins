@@ -16,9 +16,9 @@
 #include <stdio.h>              /* fprintf, asprintf, vfprintf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
-#include <time.h>               /* strptime, mktime, tzset */
-#include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO */
-
+#include <sys/types.h>          /* getpid */
+#include <time.h>               /* gettimeofday, strptime, mktime, tzset */
+#include <unistd.h>             /* getpid, STDOUT_FILENO, STDIN_FILENO */
 
 #include "plugin_control.h"
 
@@ -31,7 +31,7 @@ static uint64_t interval = 0;               /* Interval between plug-in calls in
 static mistral_plugin mistral_plugin_info;  /* Used to store plug-in type and calling interval */
 
 /* Global variables available to plug-in developers */
-bool mistral_shutdown = false;               /* If set to true plug-in will exit at next line */
+bool mistral_shutdown = false;              /* If set to true plug-in will exit at next line */
 
 /* Define this value here in case the machine used to compile the plug-in functionality module uses
  * different values. This will allow a plug-in author to identify when the upper bound of a size
@@ -63,6 +63,13 @@ int mistral_err(const char *format, ...)
     if (mistral_plugin_info.error_log == stderr && format[strlen(format) - 1] != '\n') {
         if (asprintf(&file_fmt, "%s\n", format) >= 0) {
             fmt = file_fmt;
+        }
+    } else if (mistral_plugin_info.error_log != stderr) {
+        struct timeval tv = {0,0};
+        if(gettimeofday(&tv, NULL) == 0) {
+            if (asprintf(&file_fmt, "%ld.%06ld %s", tv.tv_sec, tv.tv_usec, format) >= 0) {
+                fmt = file_fmt;
+            }
         }
     }
 
