@@ -17,7 +17,7 @@
 #include <stdarg.h>             /* va_start, va_list, va_end */
 #include <stdbool.h>            /* bool */
 #include <stdint.h>             /* uint64_t, UINT64_MAX */
-#include <stdio.h>              /* fprintf, asprintf, vfprintf */
+#include <stdio.h>              /* fprintf, asprintf, vfprintf, setvbuf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
 #include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO, setsid */
@@ -1227,6 +1227,9 @@ static bool read_data_from_mistral(void)
 
     bool retval = true;
 
+    /* If we knew the update interval we could alter this section to check stdin before every call
+     * to getline however currently only update plug-ins are sent this information.
+     */
     do {
         result = select(1 + STDIN_FILENO, &read_set, NULL, NULL, &timeout);
     } while (result == -1 && errno == EINTR);   /* retry if interrupted */
@@ -1381,6 +1384,15 @@ int main(int argc, char **argv)
     sem_init(&message_list, 0, 1);
     mistral_plugin_info.type = MAX_PLUGIN;
     mistral_plugin_info.error_log = stderr;
+
+    /* Set stdin to be unbuffered - needed if we want to timeout on every read of stdin. */
+    if (setvbuf(stdin, NULL, _IONBF, 0) != 0) {
+        char buf[256];
+        mistral_err("Error making stdin non-buffered: (%s)\n", strerror_r(errno, buf, sizeof buf));
+        send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+        return EXIT_FAILURE;
+    }
+
     init_mistral_call_type_names();
 
     /* used to set the type of plug-in we should run as */
