@@ -146,11 +146,15 @@ const uint32_t mistral_call_type_mask[] = {
     BITMASK(CALL_TYPE_MAX)
 };
 
-const char mistral_call_type_names[CALL_TYPE_MASK_MAX][
+char mistral_call_type_names[CALL_TYPE_MASK_MAX][
 #define X(name, str) + sizeof(str) + 1
     CALL_TYPE(X)
 #undef X
-];
+] = {
+#define X(name, str) "",
+    CALL_TYPE(X)
+#undef X
+};
 
 /* Similarly create some constant integer arrays */
 const uint32_t mistral_unit_scale[] = {
