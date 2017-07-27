@@ -142,11 +142,10 @@ enum __attribute__((packed)) mistral_bitmask {
 #undef X
     CALL_TYPE_MASK_MAX = BITMASK(CALL_TYPE_MAX)
 };
-#define CALL_TYPE_MASK_MAX BITMASK(CALL_TYPE_MAX)
 
 extern const char *const mistral_call_type_name[];
 extern const uint32_t mistral_call_type_mask[];
-extern const char mistral_call_type_names[CALL_TYPE_MASK_MAX][
+extern char mistral_call_type_names[CALL_TYPE_MASK_MAX][
 #define X(name, str) + sizeof(str) + 1
     CALL_TYPE(X)
 #undef X
@@ -234,6 +233,7 @@ extern bool mistral_shutdown;       /* If set to true will cause the plugin  */
 extern void mistral_destroy_log_entry(mistral_log *log_entry);
 __attribute__((__format__(printf, 1, 2)))
 extern int mistral_err(const char *format, ...);
+extern void mistral_set_call_type_name(uint32_t mask);
 
 #define UNUSED(param) ((void)(param))
 
