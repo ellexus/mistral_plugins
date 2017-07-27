@@ -117,18 +117,19 @@ void mistral_shutdown(void)
 }
 
 /*
- * init_mistral_call_type_names
+ * mistral_set_call_type_name
  *
- * This function initalises an array with all the possible combinations of call types. It is done
- * this way to avoid memory management of the string within the plug-in
+ * This function initalises an array that potentially contains all the possible combinations of call
+ * types. It is done this way to avoid memory management of the string within the plug-in but only
+ * sparsely populated as (at the time of writing) there are 2^10 combinations.
  *
  * Parameters:
- *   void
+ *   i - Call type mask to translate
  *
  * Returns:
  *   void
  */
-void init_mistral_call_type_names(void)
+void mistral_set_call_type_name(uint32_t i)
 {
     size_t max_string = 0;
 #define X(name, str) max_string += sizeof(str) + 1;
@@ -136,10 +137,9 @@ void init_mistral_call_type_names(void)
 #undef X
     char tmp1[max_string];
 
-    /* Loop through all the possible bitmask combinations */
-    for (size_t i = 0; i < CALL_TYPE_MASK_MAX; i++) {
+    if (i < CALL_TYPE_MASK_MAX && !(mistral_call_type_names[i][0])) {
         tmp1[0] = '\0';
-        /* For each entry in the list loop through the list of call types */
+        /* We've not seen this call type before, loop through the list of call types */
         for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
             if (tmp1[0] == '\0' && (i & BITMASK(j)) == BITMASK(j)) {
                 /* This is the first call type we have seen that is represented in this bitmask */
@@ -160,6 +160,7 @@ void init_mistral_call_type_names(void)
         }
         strncpy((char *)mistral_call_type_names[i], tmp1, sizeof(mistral_call_type_names[i]));
     }
+    return;
 }
 
 /*
@@ -641,6 +642,9 @@ static bool parse_log_entry(const char *line)
             log_entry->call_types[type] = true;
         }
     }
+
+    /* Initialise the standardised version of the call type string */
+    mistral_set_call_type_name(log_entry->call_type_mask);
 
     /* Record the rule size range, default/missing values are 0 for min, SSIZE_MAX for max */
     char **size_range_split = str_split(comma_split[FIELD_SIZE_RANGE], '-', &field_count);
@@ -1392,8 +1396,6 @@ int main(int argc, char **argv)
         send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
         return EXIT_FAILURE;
     }
-
-    init_mistral_call_type_names();
 
     /* used to set the type of plug-in we should run as */
     mistral_startup(&mistral_plugin_info, argc, argv);

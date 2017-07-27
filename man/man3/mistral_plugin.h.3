@@ -298,7 +298,7 @@ also be defined:
 .sp
 .RS
 .nf
-\fBextern const char \fPmistral_call_type_names[CALL_TYPE_MASK_MAX][];
+\fBextern char \fPmistral_call_type_names[CALL_TYPE_MASK_MAX][];
 .fi
 .RE
 .sp
@@ -307,10 +307,15 @@ This array can be addressed with the value of \fBcall_type_mask\fP and
 will contain the string representing the entire set of call types the
 violated rule was concerned with, in the format used by a Mistral output
 plug-in log entry.
+For efficiency the array will only be populated with translations of
+individual call type mask value as they are seen in log messages.
+If additional values in this array are required to be populated, a call
+can be made to \fImistral_set_call_type_name\fP() passing the call type
+mask that should be translated.
 .LP
-The element \fBsize_range\fP will be set to point at a string containing the
-raw string representation of the operation size range being monitored by the
-rule that was breached.
+The element \fBsize_range\fP will be set to point at a string containing
+the raw string representation of the operation size range being
+monitored by the rule that was breached.
 .LP
 The element \fBsize_min\fP contains the lower bound of the operation
 size range in bytes that the violated rule was interested in.
@@ -590,6 +595,8 @@ extern void mistral_destroy_log_entry(mistral_log *log_entry);
 
 extern int mistral_err(const char *format, ...);
 
+extern void mistral_set_call_type_name(uint32_t mask);
+
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[]);
 
 void mistral_shutdown(void);
@@ -628,8 +635,8 @@ The application must also be linked with \fI-pthread\fB.
 \fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<stdio.h>\fP,
 \fI<sys/types.h>\fP, \fI<time.h>\fP, \fIinsque\fP(3), \fIremque\fP(3),
 \fImistral_destroy_log_entry\fP(3), \fImistral_err\fP(3),
-\fImistral_startup\fP(3), \fImistral_shutdown\fP(3),
-\fImistral_received_interval\fP(3),
+\fImistral_set_call_type_name\fP(3), \fImistral_startup\fP(3),
+\fImistral_shutdown\fP(3), \fImistral_received_interval\fP(3),
 \fImistral_received_data_start\fP(3),
 \fImistral_received_data_end\fP(3), \fImistral_received_shutdown\fP(3),
 \fImistral_received_log\fP(3), \fImistral_received_bad_log\fP(3),
