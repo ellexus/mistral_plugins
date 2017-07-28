@@ -170,6 +170,7 @@ typedef struct mistral_log {
     const char *path;
     uint32_t call_type_mask;
     bool call_types[CALL_TYPE_MAX];
+    const char *call_type_names;
     const char *size_range;
     int64_t size_min;
     enum mistral_unit size_min_unit;
@@ -234,7 +235,7 @@ extern int mistral_err(const char *format, ...);
 extern void mistral_shutdown(void); /* Function that, if called, will cause  */
                                     /* the plug-in to exit before reading    */
                                     /* the next line of input.               */
-extern void mistral_set_call_type_name(uint32_t mask);
+extern const char *mistral_get_call_type_name(uint32_t mask);
 
 #define UNUSED(param) ((void)(param))
 

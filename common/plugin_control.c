@@ -33,6 +33,11 @@ typedef struct message_details {            /* Structure used to store received 
     char *data;                             /* Unprocessed contents of a data block message */
 } message_details;
 
+typedef struct mask_names_map {             /* Structure used to map a call type mask to a string */
+    uint32_t call_type_mask;                /* Call type mask */
+    char *call_types;                       /* A normalised string representation of the mask */
+} mask_names_map;
+
 /* Globals only used by the communication thread */
 static unsigned ver = MISTRAL_API_VERSION;  /* Supported version */
 static uint64_t data_count = 0;             /* Number of data blocks received */
@@ -44,9 +49,11 @@ static uint64_t interval = 0;               /* Interval between plug-in calls in
 /* Globals used by both the communication and functional threads */
 static mistral_plugin mistral_plugin_info;  /* Used to store plug-in type, interval and error log */
 static bool shutdown = false;               /* If set to true plug-in will exit at next line */
+static bool complete = false;               /* If set to true no more messages will be read */
 static sem_t message_list;                  /* Control access to the messages linked list */
-static message_details *messages_head = NULL;
-static message_details *messages_tail = NULL;
+static message_details *messages_head = NULL;   /* First element of the messages linked list */
+static message_details *messages_tail = NULL;   /* Last element of the messages linked list */
+static void *mask_root = NULL;              /* Root node of tsearch call type mask map */
 
 /* Global variables available to plug-in developers */
 
@@ -117,50 +124,137 @@ void mistral_shutdown(void)
 }
 
 /*
- * mistral_set_call_type_name
+ * mask_compare
  *
- * This function initalises an array that potentially contains all the possible combinations of call
- * types. It is done this way to avoid memory management of the string within the plug-in but only
- * sparsely populated as (at the time of writing) there are 2^10 combinations.
+ * Comparison function for use with tsearch to compare two call type masks.
+ *
+ * Parameters:
+ *   p  - pointer to the first mask map stored in a mask_names_map structure
+ *   q  - pointer to the second mask map stored in a mask_names_map structure
+ *
+ * Returns:
+ *   < 0 if first rule is "less than" the second mask
+ *   0   if first rule is "equal to" the second mask
+ *   > 0 if first rule is "greater than" the second mask
+ */
+static int mask_compare(const void *p, const void *q)
+{
+    const mask_names_map *mask1 = p;
+    const mask_names_map *mask2 = q;
+    int retval = 0;
+    int64_t tmpval = 0;
+
+    tmpval = (int64_t)mask1->call_type_mask - (int64_t)mask2->call_type_mask;
+    if (tmpval < 0) {
+        retval = -1;
+    } else if (tmpval > 0) {
+        retval = 1;
+    }
+    return retval;
+}
+
+/*
+ * mask_destroy
+ *
+ * Clean up function for use with tdestroy to free all memory associated with a mask map.
+ *
+ * Parameters:
+ *   p  - pointer to the mask_names_map structure to clean up
+ *
+ * Returns:
+ *   void
+ */
+static void mask_destroy(void *p)
+{
+    mask_names_map *mask = p;
+    free(mask->call_types);
+    free(mask);
+    return;
+}
+
+/*
+ * mistral_get_call_type_name
+ *
+ * This function populates a binary tree with normalised string representations of a given call type
+ * mask. The tree is only populated with call type mask values that have been observed in log
+ * messages by default but this function is exposed so a plug-in author can generate more if needed.
+ *
+ * We do not generate all possible combinations as (at the time of writing) there are 2^10 different
+ * valid combinations.
  *
  * Parameters:
  *   i - Call type mask to translate
  *
  * Returns:
- *   void
+ *   A pointer to the constructed call types string or
+ *   NULL on error
  */
-void mistral_set_call_type_name(uint32_t i)
+const char *mistral_get_call_type_name(uint32_t mask)
 {
     size_t max_string = 0;
 #define X(name, str) max_string += sizeof(str) + 1;
     CALL_TYPE(X)
 #undef X
     char tmp1[max_string];
+    void *found;
+    mask_names_map *this_mask_map;
+    if (mask >= CALL_TYPE_MASK_MAX ) {
+        return NULL;
+    }
 
-    if (i < CALL_TYPE_MASK_MAX && !(mistral_call_type_names[i][0])) {
-        tmp1[0] = '\0';
-        /* We've not seen this call type before, loop through the list of call types */
-        for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
-            if (tmp1[0] == '\0' && (i & BITMASK(j)) == BITMASK(j)) {
-                /* This is the first call type we have seen that is represented in this bitmask */
-                if (snprintf(tmp1, max_string, "%s", mistral_call_type_name[j]) < 0) {
-                    mistral_err("Could not initialise call type name array\n");
-                    mistral_shutdown();
-                }
-            } else if ((i & BITMASK(j)) == BITMASK(j)) {
-                /* This call type is in the bit mask but we need to append it to the current list */
-                char tmp2[max_string];
-                tmp2[0] = '\0';
-                strncpy(tmp2, tmp1, max_string);
-                if (snprintf(tmp1, max_string, "%s+%s", tmp2, mistral_call_type_name[j]) < 0) {
-                    mistral_err("Could not initialise call type name array\n");
-                    mistral_shutdown();
-                }
+    this_mask_map = calloc(1, sizeof(mask_names_map));
+
+    if (this_mask_map) {
+        this_mask_map->call_type_mask = mask;
+        found = tsearch((void *)this_mask_map, &mask_root, mask_compare);
+
+        if (found == NULL) {
+            mistral_err("Out of memory in tsearch - call type mask check\n");
+            free(this_mask_map);
+            this_mask_map = NULL;
+            mistral_shutdown();
+            return NULL;
+        } else if (*(mask_names_map **)found != this_mask_map) {
+            /* Already saved the normalised string representation of this call type mask */
+            free(this_mask_map);
+            return (*(mask_names_map **)found)->call_types;
+        }
+    } else {
+        mistral_err("Could not allocate memory for call type mask name map\n");
+        mistral_shutdown();
+        return NULL;
+    }
+
+    /* If we have got here this is the first time we have seen this call type mask, construct the
+     * normalised call type name string by looping through the list of call types.
+     */
+
+    tmp1[0] = '\0';
+    for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
+        if (tmp1[0] == '\0' && (mask & BITMASK(j)) == BITMASK(j)) {
+            /* This is the first call type we have seen that is represented in this bitmask */
+            if (snprintf(tmp1, max_string, "%s", mistral_call_type_name[j]) < 0) {
+                mistral_err("Could not initialise call type name array\n");
+                mistral_shutdown();
+            }
+        } else if ((mask & BITMASK(j)) == BITMASK(j)) {
+            /* This call type is in the bit mask but we need to append it to the current list */
+            char tmp2[max_string];
+            tmp2[0] = '\0';
+            strncpy(tmp2, tmp1, max_string);
+            if (snprintf(tmp1, max_string, "%s+%s", tmp2, mistral_call_type_name[j]) < 0) {
+                mistral_err("Could not initialise call type name array\n");
+                mistral_shutdown();
             }
         }
-        strncpy((char *)mistral_call_type_names[i], tmp1, sizeof(mistral_call_type_names[i]));
     }
-    return;
+    if (((*(mask_names_map **)found)->call_types = strdup(tmp1)) == NULL) {
+        mistral_err("Could not allocate memory for call type mask name map\n");
+        mistral_shutdown();
+        return NULL;
+    }
+
+    return (const char *)(*(mask_names_map **)found)->call_types;
 }
 
 /*
@@ -644,7 +738,11 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Initialise the standardised version of the call type string */
-    mistral_set_call_type_name(log_entry->call_type_mask);
+    log_entry->call_type_names = mistral_get_call_type_name(log_entry->call_type_mask);
+    if (!log_entry->call_type_names) {
+        mistral_err("Unable to normalise call type names: %s\n", comma_split[FIELD_CALL_TYPE]);
+        goto fail_log_call_type_names;
+    }
 
     /* Record the rule size range, default/missing values are 0 for min, SSIZE_MAX for max */
     char **size_range_split = str_split(comma_split[FIELD_SIZE_RANGE], '-', &field_count);
@@ -881,6 +979,7 @@ fail_log_measurement:
 fail_log_size_range:
     free(size_range_split);
 fail_log_size_range_split:
+fail_log_call_type_names:
 fail_log_call_type:
 fail_log_call_types:
     free(call_type_split);
@@ -1168,7 +1267,8 @@ static enum mistral_message parse_message(char *line)
          */
         if (setsid() < 0) {
             /* This is non-fatal, it just means Mistral will wait for the plug-in to finish
-             * processing data before exiting. Log an error for information.
+             * processing data before exiting. Log an error for information. This will always appear
+             * if the plug-in is run directly.
              */
             mistral_err("Unable to detach plug-in process on shutdown\n");
         }
@@ -1247,8 +1347,9 @@ static bool read_data_from_mistral(void)
 
     if (FD_ISSET(STDIN_FILENO, &read_set)) {
         /* Data is available now. */
+        ssize_t gl_res = 0;
         while (!__atomic_load_n(&shutdown, __ATOMIC_RELAXED) &&
-               getline(&line, &line_length, stdin) > 0) {
+               (gl_res = getline(&line, &line_length, stdin)) > 0) {
             enum mistral_message message = parse_message(line);
 
             if (message == PLUGIN_MESSAGE_SHUTDOWN) {
@@ -1265,6 +1366,14 @@ static bool read_data_from_mistral(void)
                 goto read_error;
             }
         }
+        /* If we've got here one of the while conditions failed, if we are shutting down an error
+         * should already have been output but we need to handle a getline call error.
+         */
+        if (gl_res < 0) {
+            char buf[256];
+            mistral_err("Error while reading from mistral: %s.\n",
+                        strerror_r(errno, buf, sizeof buf));
+        }
     }
 
 read_error:
@@ -1272,6 +1381,10 @@ read_shutdown:
     free(line);
 
 read_fail_select:
+    /* In error cases we will not have seen a shutdown message so set a flag to tell the functional
+     * thread that no more messages are going to be seen.
+     */
+    __atomic_store_n(&complete, true, __ATOMIC_RELAXED);
     return retval;
 }
 
@@ -1314,7 +1427,13 @@ static void *functional_thread(void *arg)
         if (message){
             messages_head = message->next;
             remque(message);
+        } else if (__atomic_load_n(&complete, __ATOMIC_RELAXED)) {
+            /* If we have no more messages to process get the current state of the complete flag,
+             * as if an error occurred in the communication thread this will be set to true.
+             */
+            ret = EXIT_FAILURE;
         }
+
         sem_post(&message_list);
         if (message) {
             /* Process the message */
@@ -1421,6 +1540,9 @@ int main(int argc, char **argv)
         read_data_from_mistral();
     }
 
+    /* For safety's sake ensure that the shutdown flag is set */
+//    mistral_shutdown();
+
     /* Wait for the functional thread to finish processing the message list */
     pthread_join(thread_id, NULL);
 
@@ -1444,9 +1566,10 @@ int main(int argc, char **argv)
     }
     messages_tail = NULL;
     sem_post(&message_list);
-
     sem_destroy(&message_list);
     sem_destroy(&mistral_plugin_info.lock);
+    tdestroy(mask_root, mask_destroy);
+    mask_root = NULL;
     CALL_IF_DEFINED(mistral_exit);
     return EXIT_SUCCESS;
 }

@@ -636,7 +636,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      mistral_contract_name[log_entry->contract_type],
                      log_entry->label,
                      mistral_measurement_name[log_entry->measurement],
-                     mistral_call_type_names[log_entry->call_type_mask],
+                     log_entry->call_type_names,
                      log_entry->path,
                      log_entry->threshold,
                      log_entry->timeframe,

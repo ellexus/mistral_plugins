@@ -177,7 +177,7 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
     /* Set the variables to use for input parameters in the INSERT query */
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
     BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
-    BIND_STRING(input_bind, 2, mistral_call_type_names[log_entry->call_type_mask], 0, str_length_call);
+    BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
     BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
@@ -195,7 +195,7 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
      */
     str_length_label = strlen(log_entry->label);
     str_length_vio = strlen(log_entry->path);
-    str_length_call = strlen(mistral_call_type_names[log_entry->call_type_mask]);
+    str_length_call = strlen(log_entry->call_type_names);
     str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
     str_length_size_range = strlen(log_entry->size_range);
     str_length_threshold = strlen(log_entry->threshold_str);
@@ -414,7 +414,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Set the variables to use for input parameters in the SELECT query */
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
     BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
-    BIND_STRING(input_bind, 2, mistral_call_type_names[log_entry->call_type_mask], 0, str_length_call);
+    BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
     BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
@@ -433,7 +433,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Set the length of the values of the variables used in the query */
     str_length_label = strlen(log_entry->label);
     str_length_vio = strlen(log_entry->path);
-    str_length_call = strlen(mistral_call_type_names[log_entry->call_type_mask]);
+    str_length_call = strlen(log_entry->call_type_names);
     str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
     str_length_size_range = strlen(log_entry->size_range);
     str_length_threshold = strlen(log_entry->threshold_str);

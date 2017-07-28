@@ -63,6 +63,7 @@ The \fI"mistral_plugin.h"\fP header shall also declare the structure
 \fBconst char               *\fPpath;
 \fBuint32_t                  \fPcall_type_mask;
 \fBbool                      \fPcall_types[];
+\fBconst char               *\fPcall_type_names;
 \fBconst char               *\fPsize_range;
 \fBuint64_t                  \fPsize_min;
 \fBenum mistral_unit         \fPsize_min_unit;
@@ -292,26 +293,14 @@ mask value from an arbitrary call type i.e.
 .sp
 .LP
 .LP
-The following constant character array containing
-\fICALL_TYPE_MASK_MAX\fP entries and a trailing \fINULL\fP pointer will
-also be defined:
-.sp
-.RS
-.nf
-\fBextern char \fPmistral_call_type_names[CALL_TYPE_MASK_MAX][];
-.fi
-.RE
-.sp
+The \fBcall_type_names\fP string will be set to a constant string
+representing the entire set of call types the violated rule was
+concerned with, in the format used by a Mistral output plug-in log
+entry.
 .LP
-This array can be addressed with the value of \fBcall_type_mask\fP and
-will contain the string representing the entire set of call types the
-violated rule was concerned with, in the format used by a Mistral output
-plug-in log entry.
-For efficiency the array will only be populated with translations of
-individual call type mask value as they are seen in log messages.
-If additional values in this array are required to be populated, a call
-can be made to \fImistral_set_call_type_name\fP() passing the call type
-mask that should be translated.
+If the standardised representation of an arbitrary call type mask value
+is required a call can be made to \fImistral_get_call_type_name\fP()
+passing the call type mask that should be translated.
 .LP
 The element \fBsize_range\fP will be set to point at a string containing
 the raw string representation of the operation size range being
@@ -595,7 +584,7 @@ extern void mistral_destroy_log_entry(mistral_log *log_entry);
 
 extern int mistral_err(const char *format, ...);
 
-extern void mistral_set_call_type_name(uint32_t mask);
+extern void mistral_get_call_type_name(uint32_t mask);
 
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[]);
 
@@ -635,7 +624,7 @@ The application must also be linked with \fI-pthread\fB.
 \fI<stdbool.h>\fP, \fI<stdint.h>\fP, \fI<stdio.h>\fP,
 \fI<sys/types.h>\fP, \fI<time.h>\fP, \fIinsque\fP(3), \fIremque\fP(3),
 \fImistral_destroy_log_entry\fP(3), \fImistral_err\fP(3),
-\fImistral_set_call_type_name\fP(3), \fImistral_startup\fP(3),
+\fImistral_get_call_type_name\fP(3), \fImistral_startup\fP(3),
 \fImistral_shutdown\fP(3), \fImistral_received_interval\fP(3),
 \fImistral_received_data_start\fP(3),
 \fImistral_received_data_end\fP(3), \fImistral_received_shutdown\fP(3),

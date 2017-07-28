@@ -549,7 +549,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
-                     mistral_call_type_names[log_entry->call_type_mask],
+                     log_entry->call_type_names,
                      log_entry->path,
                      log_entry->threshold,
                      log_entry->timeframe,
