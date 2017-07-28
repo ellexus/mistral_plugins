@@ -1540,9 +1540,6 @@ int main(int argc, char **argv)
         read_data_from_mistral();
     }
 
-    /* For safety's sake ensure that the shutdown flag is set */
-//    mistral_shutdown();
-
     /* Wait for the functional thread to finish processing the message list */
     pthread_join(thread_id, NULL);
 
