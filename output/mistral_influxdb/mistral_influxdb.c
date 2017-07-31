@@ -388,11 +388,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
-    /* Set InfluxDB connection options and set precision to seconds as this is
-     * what we see in logs
+    /* Set InfluxDB connection options and set precision to microseconds as this
+     * is what we see in logs
      */
     char *url = NULL;
-    if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=s", protocol, host,
+    if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=u", protocol, host,
                  port, database) < 0) {
         mistral_err("Could not allocate memory for connection URL\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
@@ -545,7 +545,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
                      "job-id=%s,pid=%" PRId64 ",command=%s,host=%s,scope=%s,"
                      "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 "%s value=%"
-                     PRIu64 " %ld",
+                     PRIu64 " %ld%06zu",
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
@@ -567,8 +567,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->mpi_rank,
                      (custom_variables)? custom_variables : "",
                      log_entry->measured,
-                     log_entry->epoch.tv_sec) < 0) {
-
+                     log_entry->epoch.tv_sec,
+                     log_entry->microseconds) < 0) {
             mistral_err("Could not allocate memory for log entry\n");
             free(data);
             free(file);

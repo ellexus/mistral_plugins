@@ -1,16 +1,16 @@
 --
 -- create_mistral.sql
 --
--- This text file should be imported using the command 
+-- This text file should be imported using the command
 --      "mysql -u root -p < create_mistral.sql"
--- 
+--
 -- This will set up the MySQL schema needed for the mistral_rtm plug-in. Any
 -- user that has the necessary permissions to create databases and users can be
 -- used instead of root.
 --
 -- In summary this will :
 --  ~ Create a new database called 'mistral_log'
---  ~ Create two tables to store rule details and related mistral events 
+--  ~ Create two tables to store rule details and related mistral events
 --  ~ Create a user called 'mistral' and give it :
 --      All permissions on mistral_log.*
 --

@@ -383,6 +383,13 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             job_id = strdup("None");
         }
 
+        /* Graphite doesn't support sub-second precision, as explained in:
+         * http://graphite.readthedocs.io/en/latest/terminology.html#term-series
+         *
+         * timestamp
+         * A point in time in which values can be associated. Time in Graphite is represented
+         * as epoch time with a maximum resolution of 1-second.
+         */
         if (asprintf(&data,
                      "%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%"PRIu32".%"PRId32" %"PRIu64 " %ld\n",
                      schema,
