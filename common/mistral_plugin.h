@@ -164,7 +164,7 @@ typedef struct mistral_log {
     enum mistral_scope scope;
     struct tm time;
     struct timespec epoch;
-    size_t microseconds;
+    uint32_t microseconds;
     const char *label;
     const char *path;
     uint32_t call_type_mask;

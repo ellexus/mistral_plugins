@@ -597,7 +597,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         if (asprintf(&new_data,
                      "%s"
                      "{\"index\":{\"_index\":\"%s-%s\",\"_type\":\"%s\"}}\n"
-                     "{\"@timestamp\": \"%s.%03zuZ\","
+                     "{\"@timestamp\": \"%s.%03" PRIu32 "Z\","
                      "\"rule\":{"
                      "\"scope\":\"%s\","
                      "\"type\":\"%s\","
@@ -632,7 +632,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      strdate,
                      mistral_contract_name[log_entry->contract_type],
                      strts,
-                     (size_t)((log_entry->microseconds / 1000.0f) + 0.5f),
+                     (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
                      mistral_scope_name[log_entry->scope],
                      mistral_contract_name[log_entry->contract_type],
                      log_entry->label,

@@ -801,7 +801,7 @@ static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_i
     /* Converts the timestamp to a formatted string */
     strftime(timestamp, sizeof(timestamp), "%F %H-%M-%S", &log_entry->time);
 
-    #define LOG_VALUES "('%s', '%s', '%s.%06zu', '%s', %llu, '%s', %" PRIu64 \
+    #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', %llu, '%s', %" PRIu64 \
                        ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32 \
                        ",'%s', NULL)"
 

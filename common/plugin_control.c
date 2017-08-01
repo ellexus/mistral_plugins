@@ -547,7 +547,7 @@ static bool parse_log_entry(const char *line)
     log_entry->microseconds = 0;
 
     if (p && *p == '.') {
-        if (sscanf(++p, "%6zu", &log_entry->microseconds) == EOF) {
+        if (sscanf(++p, "%6" SCNu32, &log_entry->microseconds) == EOF) {
             log_entry->microseconds = 0;
         }
     } else if (p == NULL || *p != '\0') {
