@@ -544,8 +544,13 @@ static bool parse_log_entry(const char *line)
 
     /* Record the log event time */
     char *p = strptime(hash_split[2], "%FT%T", &log_entry->time);
+    log_entry->microseconds = 0;
 
-    if (p == NULL || *p != '\0') {
+    if (p && *p == '.') {
+        if (sscanf(++p, "%6" SCNu32, &log_entry->microseconds) == EOF) {
+            log_entry->microseconds = 0;
+        }
+    } else if (p == NULL || *p != '\0') {
         mistral_err("Unable to parse date and time in log message: %s\n", hash_split[2]);
         goto fail_log_strptime;
     }

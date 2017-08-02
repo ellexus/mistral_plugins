@@ -4,7 +4,7 @@
 
 function check_index() {
     local index_name=$1
-    curl -s --head --fail "$es_protocol://$es_host:$es_port/$index_name" \
+    curl -s --head --fail "$es_protocol://$es_host:$es_port/$index_name/" \
         -u $es_auth >/dev/null 2>&1
     return $?
 }
@@ -26,10 +26,10 @@ if [ -z "$curl_cmd" ]; then
 fi
 
 # Check no indexes already exist
-check_index "${es_index}-*"
+check_index "${es_index}"
 ret=$?
 if [[ $ret -eq 0 ]]; then
-    logerr "At least one index already exists - '$es_index-*'"
+    logerr "At least one index already exists - '$es_index'"
     exit 2
 elif [[ $ret -ge 1 && $ret -ne 22 ]]; then
     logerr "Unable to check if index '$es_index' exists - curl error: $ret"
@@ -102,11 +102,11 @@ if [ -z "$KEEP_TEST_OUTPUT" ];then
     curl -s --fail -XDELETE -u $es_auth \
         "$es_protocol://$es_host:$es_port/_template/$es_index" >/dev/null 2>&1
 
-    check_index "${es_index}-*"
+    check_index "${es_index}"
     ret=$?
 
     if [[ $ret -ge 1 && $ret -ne 22 ]]; then
-        errmsg="Unable to check if test indexes '${es_index}-*' were removed: $ret"
+        errmsg="Unable to check if test indexes '${es_index}' were removed: $ret"
         if [[ -e $summary_file ]]; then
             logerr $errmsg
         else
@@ -115,7 +115,7 @@ if [ -z "$KEEP_TEST_OUTPUT" ];then
         fi
         exit 5
     elif [[ $ret -eq 0 ]]; then
-        errmsg="Unable to remove test indexes - '${es_index}-*'"
+        errmsg="Unable to remove test indexes - '${es_index}'"
         if [[ -e $summary_file ]]; then
             logerr $errmsg
         else
