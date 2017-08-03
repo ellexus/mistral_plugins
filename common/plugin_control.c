@@ -825,6 +825,15 @@ static bool parse_log_entry(const char *line)
         goto fail_log_mpi_rank;
     }
 
+    end = NULL;
+    errno = 0;
+    log_entry->sequence = (int64_t)strtoll(comma_split[FIELD_SEQUENCE], &end, 10);
+
+    if (!end || *end != '\0' || end == comma_split[FIELD_SEQUENCE] || errno) {
+        mistral_err("Invalid sequence seen: [%s].\n", comma_split[FIELD_PID]);
+        goto fail_log_sequence;
+    }
+
     CALL_IF_DEFINED(mistral_received_log, log_entry);
 
     free(size_range_split);
@@ -833,6 +842,7 @@ static bool parse_log_entry(const char *line)
     free(comma_split);
     return true;
 
+fail_log_sequence:
 fail_log_mpi_rank:
 fail_log_job:
 fail_log_group:

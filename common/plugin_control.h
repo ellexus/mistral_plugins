@@ -80,7 +80,8 @@ const char *const mistral_log_message[PLUGIN_MESSAGE_LIMIT] = {
     X(FILENAME) \
     X(JOB_GROUP_ID) \
     X(JOB_ID) \
-    X(MPI_RANK)
+    X(MPI_RANK) \
+    X(SEQUENCE)
 
 enum mistral_log_fields {
 #define X(P) FIELD_ ## P,
