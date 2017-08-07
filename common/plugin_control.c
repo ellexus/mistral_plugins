@@ -46,7 +46,7 @@ static bool shutdown_message = false;       /* True, if mistral sent a shutdown 
 static bool supported_version = false;      /* True, if supported versions were received */
 static uint64_t interval = 0;               /* Interval between plug-in calls in seconds */
 
-/* Globals used by both the communication and functional threads */
+/* Globals used by both the communication and processing threads */
 static mistral_plugin mistral_plugin_info;  /* Used to store plug-in type, interval and error log */
 static bool shutdown = false;               /* If set to true plug-in will exit at next line */
 static bool complete = false;               /* If set to true no more messages will be read */
@@ -83,13 +83,34 @@ int mistral_err(const char *format, ...)
     va_start(ap, format);
     char *file_fmt = NULL;
     char *fmt = (char *)format;
+    FILE *log_stream = stderr;
 
-    sem_wait(&mistral_plugin_info.lock);
-    if (mistral_plugin_info.error_log == stderr && format[strlen(format) - 1] != '\n') {
+    if (sem_wait(&mistral_plugin_info.lock) == 0) {
+        log_stream = mistral_plugin_info.error_log;
+
+        if (sem_post(&mistral_plugin_info.lock) != 0) {
+            /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+            char buf[256];
+            fprintf(log_stream, "Error releasing semaphore, exiting: %s\n",
+                    strerror_r(errno, buf, sizeof buf));
+            /* Try to send a shutdown message outside of the robust message sending routines which
+             * may try to call this function.
+             */
+            fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        /* We didn't manage to claim the semaphore - proceed using stderr but log another error */
+        char buf[256];
+        fprintf(log_stream, "Error claiming semaphore, logging to stderr: %s\n",
+                strerror_r(errno, buf, sizeof buf));
+    }
+
+    if (log_stream == stderr && format[strlen(format) - 1] != '\n') {
         if (asprintf(&file_fmt, "%s\n", format) >= 0) {
             fmt = file_fmt;
         }
-    } else if (mistral_plugin_info.error_log != stderr) {
+    } else if (log_stream != stderr) {
         struct timeval tv = {0,0};
         if(gettimeofday(&tv, NULL) == 0) {
             if (asprintf(&file_fmt, "%ld.%06ld %s", tv.tv_sec, tv.tv_usec, format) >= 0) {
@@ -98,11 +119,10 @@ int mistral_err(const char *format, ...)
         }
     }
 
-    retval = vfprintf(mistral_plugin_info.error_log, fmt, ap);
+    retval = vfprintf(log_stream, fmt, ap);
     va_end(ap);
     free(file_fmt);
-    fflush(mistral_plugin_info.error_log);
-    sem_post(&mistral_plugin_info.lock);
+    fflush(log_stream);
     return retval;
 }
 
@@ -179,11 +199,11 @@ static void mask_destroy(void *p)
  * mask. The tree is only populated with call type mask values that have been observed in log
  * messages by default but this function is exposed so a plug-in author can generate more if needed.
  *
- * We do not generate all possible combinations as (at the time of writing) there are 2^10 different
+ * We do not generate all possible combinations as (at the time of writing) there are 2^20 different
  * valid combinations.
  *
  * Parameters:
- *   i - Call type mask to translate
+ *   mask - Call type mask to translate
  *
  * Returns:
  *   A pointer to the constructed call types string or
@@ -191,17 +211,17 @@ static void mask_destroy(void *p)
  */
 const char *mistral_get_call_type_name(uint32_t mask)
 {
+    if (mask >= CALL_TYPE_MASK_MAX ) {
+        return NULL;
+    }
+
     size_t max_string = 0;
-#define X(name, str) max_string += sizeof(str) + 1;
+#define X(name, str) max_string += sizeof(str);
     CALL_TYPE(X)
 #undef X
     char tmp1[max_string];
     void *found;
     mask_names_map *this_mask_map;
-    if (mask >= CALL_TYPE_MASK_MAX ) {
-        return NULL;
-    }
-
     this_mask_map = calloc(1, sizeof(mask_names_map));
 
     if (this_mask_map) {
@@ -862,7 +882,7 @@ static bool parse_log_entry(const char *line)
         goto fail_log_pid;
     }
 
-    /* Record the CPU ID - this is inlikely to be large but use a uint32_t to future proof */
+    /* Record the CPU ID - this is unlikely to be large but use a uint32_t to future proof */
     end = NULL;
     errno = 0;
     log_entry->cpu = (uint32_t)strtoul(comma_split[FIELD_CPU], &end, 10);
@@ -1061,7 +1081,7 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
  *
  * Parse the message type, and then validate control messages. Messages that require immediate
  * response are acted on. All valid messages are then added to a linked list for further processing
- * by the functional thread.
+ * by the processing thread.
  *
  * Parameters:
  *   line           - Standard null terminated string containing the line to be checked
@@ -1159,9 +1179,28 @@ static enum mistral_message parse_message(char *line)
             return PLUGIN_DATA_ERR;
         }
 
-        sem_wait(&mistral_plugin_info.lock);
-        mistral_plugin_info.interval = interval;
-        sem_post(&mistral_plugin_info.lock);
+        if (sem_wait(&mistral_plugin_info.lock) == 0) {
+            mistral_plugin_info.interval = interval;
+            if(sem_post(&mistral_plugin_info.lock) != 0) {
+                /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+                char buf[256];
+                fprintf(stderr, "Error releasing semaphore after saving interval, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+                /* Try to send a shutdown message outside of the robust message sending routines
+                 * which may try to call mistral_err that relies on this semaphore.
+                 */
+                fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            char buf[256];
+            /* The mistral_err function will also try to claim this semaphore but will fall back to
+             * using stderr on error.
+             */
+            mistral_err("Error claiming semaphore saving interval, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+            mistral_shutdown();
+        }
         break;
     }
     case PLUGIN_MESSAGE_SUP_VERSION:{
@@ -1249,8 +1288,8 @@ static enum mistral_message parse_message(char *line)
         }
 
         if (data_count != end_block_count) {
-            mistral_err("Unexpected data block number %"PRIu64" seen (expected %"PRIu64"), data may be corrupt.\n",
-                        end_block_count, data_count);
+            mistral_err("Unexpected data block number %"PRIu64" seen (expected %"PRIu64
+                        "), data may be corrupt.\n", end_block_count, data_count);
             error_seen = true;
         }
         in_data = false;
@@ -1289,17 +1328,34 @@ static enum mistral_message parse_message(char *line)
     } /* End of message types */
 
     /* Add the message to the linked list */
-    sem_wait(&message_list);
-    if (!messages_head) {
-        /* Initialise linked list */
-        messages_head = this_message;
-        messages_tail = this_message;
-        insque(this_message, NULL);
+    if (sem_wait(&message_list) == 0 ) {
+        if (!messages_head) {
+            /* Initialise linked list */
+            messages_head = this_message;
+            messages_tail = this_message;
+            insque(this_message, NULL);
+        } else {
+            insque(this_message, messages_tail);
+            messages_tail = this_message;
+        }
+
+        if (sem_post(&message_list) != 0) {
+            /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+            char buf[256];
+            /* Although mistral_err uses a semaphore it is not this semaphore, so let's try to do
+             * things properly.
+             */
+            mistral_err("Error releasing semaphore after saving message, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+            send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+            exit(EXIT_FAILURE);
+        }
     } else {
-        insque(this_message, messages_tail);
-        messages_tail = this_message;
+        char buf[256];
+        mistral_err("Error claiming semaphore saving message, exiting: %s\n",
+                strerror_r(errno, buf, sizeof buf));
+        mistral_shutdown();
     }
-    sem_post(&message_list);
 
     return message;
 }
@@ -1386,7 +1442,7 @@ read_shutdown:
     free(line);
 
 read_fail_select:
-    /* In error cases we will not have seen a shutdown message so set a flag to tell the functional
+    /* In error cases we will not have seen a shutdown message so set a flag to tell the processing
      * thread that no more messages are going to be seen.
      */
     __atomic_store_n(&complete, true, __ATOMIC_RELAXED);
@@ -1394,7 +1450,7 @@ read_fail_select:
 }
 
 /*
- * functional_thread
+ * processing_thread
  *
  * This function is used to initialise the data processing thread. This thread checks for the
  * existence of messages in a linked list populated by by the main communication thread. This is
@@ -1409,7 +1465,7 @@ read_fail_select:
  *   EXIT_SUCCESS on success
  *   EXIT_FAILURE otherwise
  */
-static void *functional_thread(void *arg)
+static void *processing_thread(void *arg)
 {
     int ret = EXIT_SUCCESS;
     int res = 0;
@@ -1424,22 +1480,41 @@ static void *functional_thread(void *arg)
         ret = EXIT_FAILURE;
     }
 
+    message_details *message;
     while (ret == EXIT_SUCCESS && !shutdown_seen){
         /* Main data processing loop */
-        sem_wait(&message_list);
-        message_details *message = messages_head;
+        message = NULL;
+        if(sem_wait(&message_list) == 0) {
+            message = messages_head;
 
-        if (message){
-            messages_head = message->next;
-            remque(message);
-        } else if (__atomic_load_n(&complete, __ATOMIC_RELAXED)) {
-            /* If we have no more messages to process get the current state of the complete flag,
-             * as if an error occurred in the communication thread this will be set to true.
-             */
-            ret = EXIT_FAILURE;
+            if (message){
+                messages_head = message->next;
+                remque(message);
+            } else if (__atomic_load_n(&complete, __ATOMIC_RELAXED)) {
+                /* If we have no more messages to process get the current state of the complete flag,
+                 * as if an error occurred in the communication thread this will be set to true.
+                 */
+                ret = EXIT_FAILURE;
+            }
+
+            if (sem_post(&message_list) != 0) {
+                /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+                char buf[256];
+                /* Although mistral_err uses a semaphore it is not this semaphore, so let's try to
+                 * do things properly.
+                 */
+                mistral_err("Error releasing semaphore after getting message, exiting: %s\n",
+                            strerror_r(errno, buf, sizeof buf));
+                send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            char buf[256];
+            mistral_err("Error claiming semaphore getting message, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+            mistral_shutdown();
         }
 
-        sem_post(&message_list);
         if (message) {
             /* Process the message */
             switch (message->message) {
@@ -1493,7 +1568,7 @@ static void *functional_thread(void *arg)
  * Mistral and store messages received in a linked list. The data processing thread will pop
  * messages off the top of this linked list and process the message contents if necessary.
  *
- * Once a shutdown message is seen the communication thread will wait for the functional thread to
+ * Once a shutdown message is seen the communication thread will wait for the processing thread to
  * finish processing any outstanding messages.
  *
  * Parameters:
@@ -1508,8 +1583,26 @@ int main(int argc, char **argv)
 {
     int res = 0;
     pthread_t thread_id = 0;
-    sem_init(&mistral_plugin_info.lock, 0, 1);
-    sem_init(&message_list, 0, 1);
+    if (sem_init(&mistral_plugin_info.lock, 0, 1) < 0) {
+        char buf[256];
+        /* We can't use mistral_err as it relies on this semaphore, exit immediately */
+        fprintf(stderr, "Error initialising plug-in semaphore: (%s)\n",
+                strerror_r(errno, buf, sizeof buf));
+        /* Try to send a shutdown message outside of the robust message sending routines which all
+         * may call mistral_err
+         */
+        fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
+        return EXIT_FAILURE;
+    }
+    if (sem_init(&message_list, 0, 1)) {
+        /* The messaging semaphore is initialised so we can be more conservative here */
+        char buf[256];
+        mistral_err("Error initialising message semaphore: (%s)\n",
+                    strerror_r(errno, buf, sizeof buf));
+        send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+        return EXIT_FAILURE;
+    }
+
     mistral_plugin_info.type = MAX_PLUGIN;
     mistral_plugin_info.error_log = stderr;
 
@@ -1527,7 +1620,7 @@ int main(int argc, char **argv)
     if (mistral_plugin_info.type != MAX_PLUGIN) {
         /*
          * Block all signals in the main thread which will handle communication with Mistral.
-         * They will be re-enabled in the functional thread which will process the data received.
+         * They will be re-enabled in the processing thread which will process the data received.
          */
         sigset_t set;
         sigfillset(&set);
@@ -1539,17 +1632,17 @@ int main(int argc, char **argv)
             return EXIT_FAILURE;
         }
 
-        /* Create the functional thread */
-        res = pthread_create(&thread_id, NULL, functional_thread, &set);
+        /* Create the processing thread */
+        res = pthread_create(&thread_id, NULL, processing_thread, &set);
 
         read_data_from_mistral();
     }
 
-    /* Wait for the functional thread to finish processing the message list */
+    /* Wait for the processing thread to finish processing the message list */
     pthread_join(thread_id, NULL);
 
     /*
-     * Even though the functional thread returns a success state we don't actually need to examine
+     * Even though the processing thread returns a success state we don't actually need to examine
      * it as we just need to know whether or not to inform Mistral that we are shutting down.
      */
     if (!shutdown_message) {
@@ -1557,8 +1650,10 @@ int main(int argc, char **argv)
         send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
     }
 
-    /* In the event of an error we may have some left over messages to clean up */
-    sem_wait(&message_list);
+    /* In the event of an error we may have some left over messages to clean up, at this point we
+     * should be single threaded again due to the pthread_join above so there is no need to claim
+     * the message_list semaphore.
+     */
     message_details *message = messages_head;
     while (message) {
         messages_head = message->next;
@@ -1567,7 +1662,6 @@ int main(int argc, char **argv)
         message = messages_head;
     }
     messages_tail = NULL;
-    sem_post(&message_list);
     sem_destroy(&message_list);
     sem_destroy(&mistral_plugin_info.lock);
     tdestroy(mask_root, mask_destroy);
