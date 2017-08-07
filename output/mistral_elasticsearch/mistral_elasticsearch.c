@@ -570,7 +570,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          * as this should maximise compatibility.
          */
         size_t date_len = sizeof("YYYY-MM-DD"); /* strftime format = %F */
-        size_t ts_len = sizeof("YYYY-MM-DDTHH:MI:SS.000Z"); /* = %FT%T.000Z */
+        size_t ts_len = sizeof("YYYY-MM-DDTHH:MI:SS"); /* = %FT%T */
         char strdate[date_len];
         char strts[ts_len];
         struct tm utc_time;
@@ -585,7 +585,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         }
 
         strftime(strdate, date_len, "%F", &utc_time);
-        strftime(strts, ts_len, "%FT%T.000Z", &utc_time);
+        strftime(strts, ts_len, "%FT%T", &utc_time);
 
         /* Command and filename must be JSON escaped */
         char *command = elasticsearch_escape(log_entry->command);
@@ -597,7 +597,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         if (asprintf(&new_data,
                      "%s"
                      "{\"index\":{\"_index\":\"%s-%s\",\"_type\":\"%s\"}}\n"
-                     "{\"@timestamp\": \"%s\","
+                     "{\"@timestamp\": \"%s.%03" PRIu32 "Z\","
                      "\"rule\":{"
                      "\"scope\":\"%s\","
                      "\"type\":\"%s\","
@@ -632,6 +632,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      strdate,
                      mistral_contract_name[log_entry->contract_type],
                      strts,
+                     (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
                      mistral_scope_name[log_entry->scope],
                      mistral_contract_name[log_entry->contract_type],
                      log_entry->label,

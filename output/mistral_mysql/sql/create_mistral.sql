@@ -1,7 +1,7 @@
 --
 -- create_mistral.sql
 --
--- This text file should be imported using the command 
+-- This text file should be imported using the command
 --      "mysql -u root -p < create_multiple_tables.sql"
 -- This will set up the MySQL databases and tables needed for the mistral_mysql
 -- plugin.
@@ -80,7 +80,7 @@ CREATE PROCEDURE create_log_tables()
         SET @dynamic_log = CONCAT('CREATE TABLE log_', LPAD(log_counter, 2, '0'), ' (
                                        scope VARCHAR(6) NOT NULL,
                                        type VARCHAR(8) NOT NULL,
-                                       time_stamp DATETIME NOT NULL,
+                                       time_stamp DATETIME(6) NOT NULL,
                                        rule_id INT NOT NULL,
                                        observed VARCHAR(64) NOT NULL,
                                        host VARCHAR(256),
