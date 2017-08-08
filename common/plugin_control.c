@@ -112,7 +112,7 @@ int mistral_err(const char *format, ...)
         }
     } else if (log_stream != stderr) {
         struct timeval tv = {0,0};
-        if(gettimeofday(&tv, NULL) == 0) {
+        if (gettimeofday(&tv, NULL) == 0) {
             if (asprintf(&file_fmt, "%ld.%06ld %s", tv.tv_sec, tv.tv_usec, format) >= 0) {
                 fmt = file_fmt;
             }
@@ -161,16 +161,9 @@ static int mask_compare(const void *p, const void *q)
 {
     const mask_names_map *mask1 = p;
     const mask_names_map *mask2 = q;
-    int retval = 0;
-    int64_t tmpval = 0;
 
-    tmpval = (int64_t)mask1->call_type_mask - (int64_t)mask2->call_type_mask;
-    if (tmpval < 0) {
-        retval = -1;
-    } else if (tmpval > 0) {
-        retval = 1;
-    }
-    return retval;
+    return (mask1->call_type_mask > mask2->call_type_mask) - \
+           (mask1->call_type_mask < mask2->call_type_mask);
 }
 
 /*
@@ -220,7 +213,7 @@ const char *mistral_get_call_type_name(uint32_t mask)
     CALL_TYPE(X)
 #undef X
     char tmp1[max_string];
-    void *found;
+    mask_names_map **found;
     mask_names_map *this_mask_map;
     this_mask_map = calloc(1, sizeof(mask_names_map));
 
@@ -234,10 +227,10 @@ const char *mistral_get_call_type_name(uint32_t mask)
             this_mask_map = NULL;
             mistral_shutdown();
             return NULL;
-        } else if (*(mask_names_map **)found != this_mask_map) {
+        } else if (*found != this_mask_map) {
             /* Already saved the normalised string representation of this call type mask */
             free(this_mask_map);
-            return (*(mask_names_map **)found)->call_types;
+            return (*found)->call_types;
         }
     } else {
         mistral_err("Could not allocate memory for call type mask name map\n");
@@ -268,13 +261,13 @@ const char *mistral_get_call_type_name(uint32_t mask)
             }
         }
     }
-    if (((*(mask_names_map **)found)->call_types = strdup(tmp1)) == NULL) {
+    if (((*found)->call_types = strdup(tmp1)) == NULL) {
         mistral_err("Could not allocate memory for call type mask name map\n");
         mistral_shutdown();
         return NULL;
     }
 
-    return (const char *)(*(mask_names_map **)found)->call_types;
+    return (const char *)(*found)->call_types;
 }
 
 /*
@@ -861,7 +854,7 @@ static bool parse_log_entry(const char *line)
 
     }
 
-    /* Now we've stored the full hostname save a version trunctated at the first '.' */
+    /* Now we've stored the full hostname save a version truncated at the first '.' */
     char *dot;
     if ((dot = strchr(comma_split[FIELD_HOSTNAME], '.'))) {
         *dot = '\0';
@@ -1042,8 +1035,8 @@ fail_split_commas:
 static void destroy_message_details(message_details *message)
 {
     if (message) {
-        free((void *)message->data);
-        free((void *)message);
+        free(message->data);
+        free(message);
     }
 }
 
@@ -1148,12 +1141,11 @@ static enum mistral_message parse_message(char *line)
 
     /* The message is one we want to process so create a message_details entry */
     message_details *this_message = calloc(1, sizeof(message_details));
-    this_message->message = message;
-
     if (this_message == NULL) {
         mistral_err("Unable to allocate memory for message details: %s\n", line);
         return PLUGIN_FATAL_ERR;
     }
+    this_message->message = message;
 
     switch (message) {
 
@@ -1181,7 +1173,7 @@ static enum mistral_message parse_message(char *line)
 
         if (sem_wait(&mistral_plugin_info.lock) == 0) {
             mistral_plugin_info.interval = interval;
-            if(sem_post(&mistral_plugin_info.lock) != 0) {
+            if (sem_post(&mistral_plugin_info.lock) != 0) {
                 /* We didn't free the semaphore - this is going to go very wrong exit immediately */
                 char buf[256];
                 fprintf(stderr, "Error releasing semaphore after saving interval, exiting: %s\n",
@@ -1481,13 +1473,13 @@ static void *processing_thread(void *arg)
     }
 
     message_details *message;
-    while (ret == EXIT_SUCCESS && !shutdown_seen){
+    while (ret == EXIT_SUCCESS && !shutdown_seen) {
         /* Main data processing loop */
         message = NULL;
-        if(sem_wait(&message_list) == 0) {
+        if (sem_wait(&message_list) == 0) {
             message = messages_head;
 
-            if (message){
+            if (message) {
                 messages_head = message->next;
                 remque(message);
             } else if (__atomic_load_n(&complete, __ATOMIC_RELAXED)) {
@@ -1536,7 +1528,7 @@ static void *processing_thread(void *arg)
                 break;
             case PLUGIN_MESSAGE_DATA_LINE:
                 /* This is output plug-in specific */
-                if (!parse_log_entry((const char *)message->data)) {
+                if (!parse_log_entry(message->data)) {
                     mistral_err("Invalid log message received: %s.\n", message->data);
                 }
                 break;
@@ -1634,12 +1626,21 @@ int main(int argc, char **argv)
 
         /* Create the processing thread */
         res = pthread_create(&thread_id, NULL, processing_thread, &set);
-
-        read_data_from_mistral();
+        if (res == 0) {
+            read_data_from_mistral();
+        } else {
+            char buf[256];
+            mistral_err("Unable to start processing thread: (%s)\n",
+                        strerror_r(res, buf, sizeof buf));
+            send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+            return EXIT_FAILURE;
+        }
     }
 
     /* Wait for the processing thread to finish processing the message list */
-    pthread_join(thread_id, NULL);
+    if (res == 0) {
+        pthread_join(thread_id, NULL);
+    }
 
     /*
      * Even though the processing thread returns a success state we don't actually need to examine
