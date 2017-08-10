@@ -84,21 +84,11 @@ int mistral_err(const char *format, ...)
     char *file_fmt = NULL;
     char *fmt = (char *)format;
     FILE *log_stream = stderr;
+    bool sem_claimed = false;
 
     if (sem_wait(&mistral_plugin_info.lock) == 0) {
         log_stream = mistral_plugin_info.error_log;
-
-        if (sem_post(&mistral_plugin_info.lock) != 0) {
-            /* We didn't free the semaphore - this is going to go very wrong exit immediately */
-            char buf[256];
-            fprintf(log_stream, "Error releasing semaphore, exiting: %s\n",
-                    strerror_r(errno, buf, sizeof buf));
-            /* Try to send a shutdown message outside of the robust message sending routines which
-             * may try to call this function.
-             */
-            fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
-            exit(EXIT_FAILURE);
-        }
+        sem_claimed = true;
     } else {
         /* We didn't manage to claim the semaphore - proceed using stderr but log another error */
         char buf[256];
@@ -123,6 +113,19 @@ int mistral_err(const char *format, ...)
     va_end(ap);
     free(file_fmt);
     fflush(log_stream);
+
+    if (sem_claimed && sem_post(&mistral_plugin_info.lock) != 0) {
+        /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+        char buf[256];
+        fprintf(log_stream, "Error releasing semaphore, exiting: %s\n",
+                strerror_r(errno, buf, sizeof buf));
+        /* Try to send a shutdown message outside of the robust message sending routines which
+         * may try to call this function.
+         */
+        fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
+        exit(EXIT_FAILURE);
+    }
+
     return retval;
 }
 
