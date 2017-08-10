@@ -64,7 +64,7 @@ $(DIRECTORIES):
 # ------------------------------------------------------------------------------
 # GCC -- If possible then use the same compiler as used to compile Mistral
 
-GCC ?= /usr/local/install/gcc-4.8.2/bin/gcc
+GCC ?= /usr/local/install/gcc-5.3.0/bin/gcc
 CC = $(GCC)
 
 # ------------------------------------------------------------------------------
@@ -86,6 +86,7 @@ CFLAGS += \
 	-I $(PLUGIN_FRAMEWORK_DIR) \
 	$(INCLUDE_FLAGS)
 
+LDFLAGS += -pthread
 
 ifneq (,$(DEBUG))
 CFLAGS += -gdwarf-2

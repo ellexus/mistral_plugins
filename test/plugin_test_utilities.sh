@@ -42,7 +42,6 @@ function run_test() {
     # Currently no parameters are expected by the function itself but if needed
     # later these must come first and be "shift"ed away so all the remaining
     # parameters can be passed unchanged to the plug-in
-
     $plugin_path $@ < <("$test_tools/plugin_input.sh" "$script_dir/input.dat" \
                         $results_dir/input.dat.sed) \
         >"$results_dir/plugin.out" 2>"$results_dir/plugin.err"

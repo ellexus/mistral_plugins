@@ -1,4 +1,4 @@
-.TH MISTRAL_RECEIVED_DATA_START 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH MISTRAL_RECEIVED_DATA_START 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_received_data_start, mistral_received_data_end \- Functions
 called on receipt of start and end of data block messages
@@ -9,6 +9,9 @@ called on receipt of start and end of data block messages
 .BI "void mistral_received_data_start(uint64_t " block_num ", bool " block_error ");"
 .BI "void mistral_received_data_end(uint64_t " block_num ", bool " block_error ");"
 .fi
+.sp
+Link with \fI\-pthread\fP.
+.sp
 .SH DESCRIPTION
 If either of these functions are defined when linking with
 \fBplugin_control.o\fP the appropriate function will be called when a
@@ -37,10 +40,10 @@ functions with \fIblock_error\fP set to \fItrue\fP but will attempt to
 continue handling messages.
 This is done as the most likely failure case is dropped messages.
 .LP
-If the value of the global variable \fBbool\fP \fImistral_shutdown\fP is
-set to true by either function then \fBplugin_control.o\fP will perform
-a clean plug-in shutdown on its return.
+If a call to \fBmistral_shutdown\fP(3) is made by this function then
+\fBplugin_control.o\fP will perform a clean plug-in shutdown on its
+return.
 .LP
 .SH "SEE ALSO"
-\fI"mistral_plugin.h"\fP
+\fI"mistral_plugin.h"\fP, \fBmistral_shutdown\fP(3)
 

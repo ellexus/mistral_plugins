@@ -64,7 +64,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
 
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
         mistral_err("Could not set curl URL option: %s\n", curl_error);
-        mistral_shutdown = true;
+        mistral_shutdown();
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
         return false;
     }
@@ -549,7 +549,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
-                     mistral_call_type_names[log_entry->call_type_mask],
+                     log_entry->call_type_names,
                      log_entry->path,
                      log_entry->threshold,
                      log_entry->timeframe,
@@ -573,7 +573,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             free(data);
             free(file);
             free(command);
-            mistral_shutdown = true;
+            mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
             return;
         }
@@ -592,7 +592,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
     if (data) {
         if (!set_curl_option(CURLOPT_POSTFIELDS, data)) {
-            mistral_shutdown = true;
+            mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
             return;
         }
@@ -605,7 +605,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
              */
             mistral_err("Could not run curl query: %s\n",
                         (*curl_error != '\0')? curl_error : curl_easy_strerror(ret));
-            mistral_shutdown = true;
+            mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
         }
     }
