@@ -540,32 +540,32 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *new_data = NULL;
 
         if (asprintf(&new_data,
-                     "%s%s%s,label=%s,calltype=%s,path=%s,threshold=%"
-                     PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
-                     ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
-                     "job-id=%s,pid=%" PRId64 ",command=%s,host=%s,scope=%s,"
-                     "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 "%s value=%"
+                     "%s%s%s,calltype=%s,job-group=%s,job-id=%s,label=%s,host=%s%s"
+                     " command=\"%s\",cpu=%" PRIu32 ",file=\"%s\",logtype=\"%s\""
+                     ",mpirank=%" PRId32 ",path=\"%s\",pid=%" PRId64 ",scope=\"%s\""
+                     ",size-min=%" PRIu64 ",size-max=%" PRIu64 ",threshold=%" PRIu64
+                     ",timeframe=%" PRIu64 ",value=%"
                      PRIu64 " %ld%06" PRIu32,
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
-                     log_entry->label,
                      log_entry->call_type_names,
-                     log_entry->path,
-                     log_entry->threshold,
-                     log_entry->timeframe,
-                     log_entry->size_min,
-                     log_entry->size_max,
-                     file,
                      job_gid,
                      job_id,
-                     log_entry->pid,
-                     command,
+                     log_entry->label,
                      log_entry->hostname,
-                     mistral_scope_name[log_entry->scope],
-                     mistral_contract_name[log_entry->contract_type],
-                     log_entry->cpu,
-                     log_entry->mpi_rank,
                      (custom_variables)? custom_variables : "",
+                     command,
+                     log_entry->cpu,
+                     file,
+                     mistral_contract_name[log_entry->contract_type],
+                     log_entry->mpi_rank,
+                     log_entry->path,
+                     log_entry->pid,
+                     mistral_scope_name[log_entry->scope],
+                     log_entry->size_min,
+                     log_entry->size_max,
+                     log_entry->threshold,
+                     log_entry->timeframe,
                      log_entry->measured,
                      log_entry->epoch.tv_sec,
                      log_entry->microseconds) < 0) {
