@@ -588,7 +588,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
         /* Please note: You have to append 'i' after each integer field (not tags), otherwise
          * InfluxDB interprets the value as a float. For example, if you omit 'i' with size-max
-         * value 9223372036854775807, InfluxDB stores it as 9.223372036854776e+1 and returns
+         * value 9223372036854775807, InfluxDB stores it as 9.223372036854776e+18 and returns
          * 9223372036854776000.
          */
         if (asprintf(&new_data,
