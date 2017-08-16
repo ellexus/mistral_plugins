@@ -137,8 +137,7 @@ static void usage(const char *name)
     return;
 }
 
-/*
- * influxdb_escape
+/* influxdb_escape
  *
  * InfluxDB query strings treat commas, spaces and equals signs as delimiters,
  * if these characters occur within the data to be sent they must be escaped
@@ -169,6 +168,54 @@ static char *influxdb_escape(const char *string)
     if (escaped) {
         for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
             if (*p == ' ' || *p == ',' || *p == '=') {
+                *q++ = '\\';
+            }
+            *q = *p;
+        }
+        char *small_escaped = realloc(escaped, (strlen(escaped) + 1) * sizeof(char));
+        if (small_escaped) {
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
+            return small_escaped;
+        } else {
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, partial success\n");
+            return escaped;
+        }
+    } else {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
+        return NULL;
+    }
+}
+
+/* influxdb_escape_field
+ *
+ * InfluxDB field strings are double quoted. We need to quote any double quotes
+ * that are part of the string value.
+ *
+ * This function allocates twice as much memory as is required to copy the
+ * passed string and then copies the string character by character escaping
+ * double quotes as they are encountered. Once the copy is complete the memory
+ * is reallocated to reduce wasteage.
+ *
+ * Parameters:
+ *   string - The field string whose content needs to be escaped
+ *
+ * Returns:
+ *   A pointer to newly allocated memory containing the escaped string or
+ *   NULL on error
+ */
+static char *influxdb_escape_field(const char *string)
+{
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %s\n", string);
+    if (!string) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, nothing to do\n");
+        return NULL;
+    }
+    size_t len = strlen(string);
+
+    char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
+    if (escaped) {
+        for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
+            if (*p == '"') {
                 *q++ = '\\';
             }
             *q = *p;
@@ -533,18 +580,23 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         /* spaces, commas and equals signs in strings must be escaped in the
          * command and filenames
          */
-        char *command = influxdb_escape(log_entry->command);
-        char *file = influxdb_escape(log_entry->file);
+        char *command = influxdb_escape_field(log_entry->command);
+        char *file = influxdb_escape_field(log_entry->file);
         const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
         const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
         char *new_data = NULL;
 
+        /* Please note: You have to append 'i' after each integer field (not tags), otherwise
+         * InfluxDB interprets the value as a float. For example, if you omit 'i' with size-max
+         * value 9223372036854775807, InfluxDB stores it as 9.223372036854776e+1 and returns
+         * 9223372036854776000.
+         */
         if (asprintf(&new_data,
                      "%s%s%s,calltype=%s,job-group=%s,job-id=%s,label=%s,host=%s%s"
-                     " command=\"%s\",cpu=%" PRIu32 ",file=\"%s\",logtype=\"%s\""
-                     ",mpirank=%" PRId32 ",path=\"%s\",pid=%" PRId64 ",scope=\"%s\""
-                     ",size-min=%" PRIu64 ",size-max=%" PRIu64 ",threshold=%" PRIu64
-                     ",timeframe=%" PRIu64 ",value=%"
+                     " command=\"%s\",cpu=%" PRIu32 "i,file=\"%s\",logtype=\"%s\""
+                     ",mpirank=%" PRId32 "i,path=\"%s\",pid=%" PRId64 "i,scope=\"%s\""
+                     ",size-min=%" PRIu64 "i,size-max=%" PRIu64 "i,threshold=%" PRIu64
+                     "i,timeframe=%" PRIu64 "i,value=%"
                      PRIu64 " %ld%06" PRIu32,
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
