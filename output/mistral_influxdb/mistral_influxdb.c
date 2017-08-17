@@ -577,19 +577,24 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     mistral_log *log_entry = log_list_head;
 
     while (log_entry) {
-        /* spaces, commas and equals signs in strings must be escaped in the
-         * command and filenames
-         */
+        /* Double quotes must must be escaped in the field strings. */
         char *command = influxdb_escape_field(log_entry->command);
         char *file = influxdb_escape_field(log_entry->file);
         const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
         const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
         char *new_data = NULL;
 
-        /* Please note: You have to append 'i' after each integer field (not tags), otherwise
-         * InfluxDB interprets the value as a float. For example, if you omit 'i' with size-max
-         * value 9223372036854775807, InfluxDB stores it as 9.223372036854776e+18 and returns
-         * 9223372036854776000.
+        /* InfluxDB tags are always strings. They are indexed and stored in memory. Our current
+         * tags are measurement type, call type, job group ID, job ID, label and hostname. None
+         * of these tags should contain commas, spaces or equals signs, so we don't need to worry
+         * about escaping these characters.
+         *
+         * InfluxDB fields are not indexed and hence should not be used as query filters. They
+         * use different data types, like strings and integers. Strings are double-quoted, so we
+         * have to escape double quotes within command and file path. Integers requires 'i' suffix,
+         * otherwise InfluxDB interprets the value as a float. For example, if you omit 'i' with
+         * size-max value 9223372036854775807, InfluxDB stores it as 9.223372036854776e+18 and
+         * returns 9223372036854776000.
          */
         if (asprintf(&new_data,
                      "%s%s%s,calltype=%s,job-group=%s,job-id=%s,label=%s,host=%s%s"
