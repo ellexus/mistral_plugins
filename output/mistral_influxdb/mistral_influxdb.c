@@ -591,7 +591,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          *
          * InfluxDB fields are not indexed and hence should not be used as query filters. They
          * use different data types, like strings and integers. Strings are double-quoted, so we
-         * have to escape double quotes within command and file path. Integers requires 'i' suffix,
+         * have to escape double quotes in command and file path. Integers require 'i' suffix,
          * otherwise InfluxDB interprets the value as a float. For example, if you omit 'i' with
          * size-max value 9223372036854775807, InfluxDB stores it as 9.223372036854776e+18 and
          * returns 9223372036854776000.
