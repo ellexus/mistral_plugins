@@ -165,14 +165,16 @@ static char *influxdb_escape(const char *string)
     size_t len = strlen(string);
 
     char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
+    char *p, *q;
     if (escaped) {
-        for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
+        for (p = (char *)string, q = escaped; *p; p++, q++) {
             if (*p == ' ' || *p == ',' || *p == '=') {
                 *q++ = '\\';
             }
             *q = *p;
         }
-        char *small_escaped = realloc(escaped, (strlen(escaped) + 1) * sizeof(char));
+        /* Memory was allocated with calloc so string is already null terminated */
+        char *small_escaped = realloc(escaped, q - escaped + 1);
         if (small_escaped) {
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
             return small_escaped;
