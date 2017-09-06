@@ -64,12 +64,12 @@ local#throttle#DATE_1_1TTIME_1_1.070000,label7_3a,/tmp/tmp.testpath/7_3,write,al
 local#throttle#DATE_1_0TTIME_1_0.700000,label7_3a,/tmp/tmp.testpath/7_3,write,all,bandwidth,2010B/100ms,2000B/100ms,host1,26045,1,/usr/bin/cat /tmp/tmp.testpath/7_3,/tmp/tmp.testpath/7_3,75432103,75432103,3
 :PGNDATAEND:7:
 :PGNDATASRT:8:
-local#throttle#DATE_0_15TTIME_0_15.000000,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,12B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101,1
-local#throttle#DATE_0_5TTIME_0_5.000008,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101,1
-local#throttle#DATE_0_4TTIME_0_4.000080,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/8_1,/tmp/tmp.testpath/8_1,85432101,85432101,1
-local#throttle#DATE_0_3TTIME_0_3.000800,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,200B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/8_2,/tmp/tmp.testpath/8_2,85432102,85432102,2
-local#throttle#DATE_0_2TTIME_0_2.008000,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,201B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/8_2,/tmp/tmp.testpath/8_2,85432102,85432102,2
-local#throttle#DATE_0_1TTIME_0_1.080000,label8_3a,/tmp/tmp.testpath/8_3,read,all,bandwidth,2021B/100ms,2000B/100ms,host1,26045,1,/usr/bin/cat /tmp/tmp.testpath/8_3,/tmp/tmp.testpath/8_3,85432103,85432103,3
-local#throttle#DATE_0_0TTIME_0_0.800000,label8_3a,/tmp/tmp.testpath/8_3,write,all,bandwidth,2010B/100ms,2000B/100ms,host1,26045,1,/usr/bin/cat /tmp/tmp.testpath/8_3,/tmp/tmp.testpath/8_3,85432103,85432103,3
+local#throttle#DATE_0_15TTIME_0_15.000000,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,12B/50ms,10B/50ms,host1,26025,1,/bin/echo "hello 8_1",/tmp/tmp.testpath/8_1,85432101,85432101,1
+local#throttle#DATE_0_5TTIME_0_5.000008,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/bin/echo "hello 8_1",/tmp/tmp.testpath/8_1,85432101,85432101,1
+local#throttle#DATE_0_4TTIME_0_4.000080,label8_1,/tmp/tmp.testpath/8_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/bin/echo "hello 8_1",/tmp/tmp.testpath/8_1,85432101,85432101,1
+local#throttle#DATE_0_3TTIME_0_3.000800,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,200B/100ms,200B/100ms,host2,26039,2,/bin/echo "hello 8_2",/tmp/tmp.testpath/8_2,85432102,85432102,2
+local#throttle#DATE_0_2TTIME_0_2.008000,label8_2a,/tmp/tmp.testpath/8_2,read,all,bandwidth,201B/100ms,200B/100ms,host2,26039,2,/bin/echo "hello 8_2",/tmp/tmp.testpath/8_2,85432102,85432102,2
+local#throttle#DATE_0_1TTIME_0_1.080000,label8_3a,/tmp/tmp.testpath/8_3,read,all,bandwidth,2021B/100ms,2000B/100ms,host1,26045,1,/bin/echo "hello 8_3",/tmp/tmp.testpath/8_3,85432103,85432103,3
+local#throttle#DATE_0_0TTIME_0_0.800000,label8_3a,/tmp/tmp.testpath/8_3,write,all,bandwidth,2010B/100ms,2000B/100ms,host1,26045,1,/bin/echo "hello 8_3",/tmp/tmp.testpath/8_3,85432103,85432103,3
 :PGNDATAEND:8:
 :PGNSHUTDWN:
