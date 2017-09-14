@@ -1509,8 +1509,8 @@ static void *processing_thread(void *arg)
                 remque(message);
             } else if (__atomic_load_n(&complete, __ATOMIC_RELAXED)) {
                 /* If we have no more messages to process get the current state of the complete
-                 * flag,
-                 * as if an error occurred in the communication thread this will be set to true.
+                 * flag, as if an error occurred in the communication thread this will be set to
+                 * true.
                  */
                 ret = EXIT_FAILURE;
             }
@@ -1667,8 +1667,7 @@ int main(int argc, char **argv)
         pthread_join(thread_id, NULL);
     }
 
-    /*
-     * Even though the processing thread returns a success state we don't actually need to examine
+    /* Even though the processing thread returns a success state we don't actually need to examine
      * it as we just need to know whether or not to inform Mistral that we are shutting down.
      */
     if (!shutdown_message) {
