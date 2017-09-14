@@ -1,0 +1,32 @@
+.TH MISTRAL_GET_CALL_TYPE_NAME 3 2017-07-27 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_get_call_type_name \- Function called to return a standardised
+string representation of the passed call type mask
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "const char *mistral_get_call_type_name(uint32_t " mask ");"
+.fi
+.SH DESCRIPTION
+Unlike most other standard Mistral components there is no fixed array of
+valid call type combinations due to the large number of possible valid
+combinations.
+Instead unique call type masks are translated the first time they are
+seen within a Mistral log message and stored for use with future log
+messages.
+If the standardised representation of an arbitrary call type mask is
+required this function can be called to either look up the
+associated translation or generate and add it to the currently cached
+values.
+.LP
+The value of \fImask\fP must be less than \fICALL_TYPE_MASK_MAX\fP.
+.sp
+.SH RETURN VALUE
+Upon successful return, this function returns a pointer to the
+translated call type names string.
+If an error occurred the function will return \fBNULL\fP.
+.LP
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBmistral_startup\fP(3)
+

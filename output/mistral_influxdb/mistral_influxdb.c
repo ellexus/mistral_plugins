@@ -64,7 +64,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
 
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
         mistral_err("Could not set curl URL option: %s\n", curl_error);
-        mistral_shutdown = true;
+        mistral_shutdown();
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
         return false;
     }
@@ -137,8 +137,7 @@ static void usage(const char *name)
     return;
 }
 
-/*
- * influxdb_escape
+/* influxdb_escape
  *
  * InfluxDB query strings treat commas, spaces and equals signs as delimiters,
  * if these characters occur within the data to be sent they must be escaped
@@ -166,9 +165,59 @@ static char *influxdb_escape(const char *string)
     size_t len = strlen(string);
 
     char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
+    char *p, *q;
+    if (escaped) {
+        for (p = (char *)string, q = escaped; *p; p++, q++) {
+            if (*p == ' ' || *p == ',' || *p == '=') {
+                *q++ = '\\';
+            }
+            *q = *p;
+        }
+        /* Memory was allocated with calloc so string is already null terminated */
+        char *small_escaped = realloc(escaped, q - escaped + 1);
+        if (small_escaped) {
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success\n");
+            return small_escaped;
+        } else {
+            DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, partial success\n");
+            return escaped;
+        }
+    } else {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
+        return NULL;
+    }
+}
+
+/* influxdb_escape_field
+ *
+ * InfluxDB field strings are double quoted. We need to quote any double quotes
+ * that are part of the string value.
+ *
+ * This function allocates twice as much memory as is required to copy the
+ * passed string and then copies the string character by character escaping
+ * double quotes as they are encountered. Once the copy is complete the memory
+ * is reallocated to reduce wasteage.
+ *
+ * Parameters:
+ *   string - The field string whose content needs to be escaped
+ *
+ * Returns:
+ *   A pointer to newly allocated memory containing the escaped string or
+ *   NULL on error
+ */
+static char *influxdb_escape_field(const char *string)
+{
+    DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %s\n", string);
+    if (!string) {
+        DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, nothing to do\n");
+        return NULL;
+    }
+    size_t len = strlen(string);
+
+    char *escaped = calloc(1, (2 * len + 1) * sizeof(char));
     if (escaped) {
         for (char *p = (char *)string, *q = escaped; *p; p++, q++) {
-            if (*p == ' ' || *p == ',' || *p == '=') {
+            if (*p == '"') {
                 *q++ = '\\';
             }
             *q = *p;
@@ -530,42 +579,52 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     mistral_log *log_entry = log_list_head;
 
     while (log_entry) {
-        /* spaces, commas and equals signs in strings must be escaped in the
-         * command and filenames
-         */
-        char *command = influxdb_escape(log_entry->command);
-        char *file = influxdb_escape(log_entry->file);
+        /* Double quotes must must be escaped in the field strings. */
+        char *command = influxdb_escape_field(log_entry->command);
+        char *file = influxdb_escape_field(log_entry->file);
         const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
         const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
         char *new_data = NULL;
 
+        /* InfluxDB tags are always strings. They are indexed and stored in memory. Our current
+         * tags are measurement type, call type, job group ID, job ID, label and hostname. None
+         * of these tags should contain commas, spaces or equals signs, so we don't need to worry
+         * about escaping these characters.
+         *
+         * InfluxDB fields are not indexed and hence should not be used as query filters. They
+         * use different data types, like strings and integers. Strings are double-quoted, so we
+         * have to escape double quotes in command and file path. Integers require 'i' suffix,
+         * otherwise InfluxDB interprets the value as a float. For example, if you omit 'i' with
+         * size-max value 9223372036854775807, InfluxDB stores it as 9.223372036854776e+18 and
+         * returns 9223372036854776000.
+         */
         if (asprintf(&new_data,
-                     "%s%s%s,label=%s,calltype=%s,path=%s,threshold=%"
-                     PRIu64 ",timeframe=%" PRIu64 ",size-min=%" PRIu64
-                     ",size-max=%" PRIu64 ",file=%s,job-group=%s,"
-                     "job-id=%s,pid=%" PRId64 ",command=%s,host=%s,scope=%s,"
-                     "logtype=%s,cpu=%" PRIu32 ",mpirank=%" PRId32 "%s value=%"
+                     "%s%s%s,calltype=%s,job-group=%s,job-id=%s,label=%s,host=%s%s"
+                     " command=\"%s\",cpu=%" PRIu32 "i,file=\"%s\",logtype=\"%s\""
+                     ",mpirank=%" PRId32 "i,path=\"%s\",pid=%" PRId64 "i,scope=\"%s\""
+                     ",size-min=%" PRIu64 "i,size-max=%" PRIu64 "i,threshold=%" PRIu64
+                     "i,timeframe=%" PRIu64 "i,value=%"
                      PRIu64 " %ld%06" PRIu32,
                      (data) ? data : "", (data) ? "\n" : "",
                      mistral_measurement_name[log_entry->measurement],
-                     log_entry->label,
-                     mistral_call_type_names[log_entry->call_type_mask],
-                     log_entry->path,
-                     log_entry->threshold,
-                     log_entry->timeframe,
-                     log_entry->size_min,
-                     log_entry->size_max,
-                     file,
+                     log_entry->call_type_names,
                      job_gid,
                      job_id,
-                     log_entry->pid,
-                     command,
+                     log_entry->label,
                      log_entry->hostname,
-                     mistral_scope_name[log_entry->scope],
-                     mistral_contract_name[log_entry->contract_type],
-                     log_entry->cpu,
-                     log_entry->mpi_rank,
                      (custom_variables)? custom_variables : "",
+                     command,
+                     log_entry->cpu,
+                     file,
+                     mistral_contract_name[log_entry->contract_type],
+                     log_entry->mpi_rank,
+                     log_entry->path,
+                     log_entry->pid,
+                     mistral_scope_name[log_entry->scope],
+                     log_entry->size_min,
+                     log_entry->size_max,
+                     log_entry->threshold,
+                     log_entry->timeframe,
                      log_entry->measured,
                      log_entry->epoch.tv_sec,
                      log_entry->microseconds) < 0) {
@@ -573,7 +632,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             free(data);
             free(file);
             free(command);
-            mistral_shutdown = true;
+            mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
             return;
         }
@@ -592,7 +651,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
     if (data) {
         if (!set_curl_option(CURLOPT_POSTFIELDS, data)) {
-            mistral_shutdown = true;
+            mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
             return;
         }
@@ -605,7 +664,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
              */
             mistral_err("Could not run curl query: %s\n",
                         (*curl_error != '\0')? curl_error : curl_easy_strerror(ret));
-            mistral_shutdown = true;
+            mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
         }
     }

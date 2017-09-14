@@ -91,7 +91,7 @@ static bool set_curl_option(CURLoption option, void *parameter)
 
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
         mistral_err("Could not set curl option: %s\n", curl_error);
-        mistral_shutdown = true;
+        mistral_shutdown();
         return false;
     }
     return true;
@@ -417,14 +417,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Use a custom write function to save any response from Elasticsearch */
     if (!set_curl_option(CURLOPT_WRITEFUNCTION, write_callback)) {
-        mistral_shutdown = true;
+        mistral_shutdown();
         return;
     }
 
     /* All our queries are going to be using JSON so save a custom header */
     headers = curl_slist_append(headers, "Content-Type: application/json");
     if (!set_curl_option(CURLOPT_HTTPHEADER, headers)) {
-        mistral_shutdown = true;
+        mistral_shutdown();
         return;
     }
 
@@ -580,7 +580,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             mistral_err("Unable to calculate UTC time for log message: %ld\n",
                         log_entry->epoch.tv_sec);
             free(data);
-            mistral_shutdown = true;
+            mistral_shutdown();
             return;
         }
 
@@ -637,7 +637,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      mistral_contract_name[log_entry->contract_type],
                      log_entry->label,
                      mistral_measurement_name[log_entry->measurement],
-                     mistral_call_type_names[log_entry->call_type_mask],
+                     log_entry->call_type_names,
                      log_entry->path,
                      log_entry->threshold,
                      log_entry->timeframe,
@@ -660,7 +660,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             free(data);
             free(file);
             free(command);
-            mistral_shutdown = true;
+            mistral_shutdown();
             return;
         }
         free(data);
@@ -678,13 +678,13 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
     if (data) {
         if (!set_curl_option(CURLOPT_POSTFIELDS, data)) {
-            mistral_shutdown = true;
+            mistral_shutdown();
             return;
         }
 
         struct saved_resp full_response = {0, NULL};
         if (!set_curl_option(CURLOPT_WRITEDATA, &full_response)) {
-            mistral_shutdown = true;
+            mistral_shutdown();
             return;
         }
 
@@ -696,13 +696,13 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
              */
             mistral_err("Could not run curl query: %s\n",
                         (curl_error[0] != '\0') ? curl_error : curl_easy_strerror(ret));
-            mistral_shutdown = true;
+            mistral_shutdown();
         }
 
         if (full_response.body) {
             char *success = strstr(full_response.body, "\"errors\":false");
             if (!success) {
-                mistral_shutdown = true;
+                mistral_shutdown();
                 mistral_err("Could not index data\n");
                 mistral_err("Data sent:\n%s\n", data);
                 mistral_err("Response received:\n%s\n", full_response.body);

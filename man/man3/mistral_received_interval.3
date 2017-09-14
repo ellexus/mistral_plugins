@@ -1,4 +1,4 @@
-.TH MISTRAL_RECEIVED_INTERVAL 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH MISTRAL_RECEIVED_INTERVAL 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_received_interval \- Function called on receipt of an interval
 message
@@ -8,6 +8,9 @@ message
 .sp
 .BI "void mistral_received_interval(mistral_plugin *" plugin ");"
 .fi
+.sp
+Link with \fI\-pthread\fP.
+.sp
 .SH DESCRIPTION
 If this function is defined when linking with \fBplugin_control.o\fP
 it will be called when an interval message is received from Mistral.
@@ -21,11 +24,18 @@ contain the following members:
 .RS
 .nf
 
+\fBsem_t     \fPlock;
 \fBuint64_t  \fPinterval;
 \fBuint8_t   \fPtype;
 \fBFILE     *\fPerror_log;
 .fi
 .RE
+.LP
+As the contents of this structure are shared between threads in
+\fBplugin_control.o\fP access to any structure members must not be
+attempted until a call to \fBsem_wait\fP(3) or a similar function that
+can take the \fBlock\fP structure member as a parameter has successfully
+completed.
 .LP
 This \fIinterval\fP value is for information only and will be set to the
 period in seconds Mistral will wait between calls to an update plug-in
@@ -35,10 +45,11 @@ If the period between calls to the plug-in is important to the correct
 functioning of the plug-in the passed pointer \fIplugin\fP or value of
 the structure member \fIinterval\fP should be saved by this function.
 .LP
-If the value of the global variable \fBbool\fP \fImistral_shutdown\fP is
-set to true by this function then \fBplugin_control.o\fP will perform a
-clean plug-in shutdown on its return.
+If a call to \fBmistral_shutdown\fP(3) is made by this function then
+\fBplugin_control.o\fP will perform a clean plug-in shutdown on its
+return.
 .LP
 .SH "SEE ALSO"
-\fI"mistral_plugin.h"\fP, \fBmistral_startup\fP(3)
+\fI"mistral_plugin.h"\fP, \fBmistral_startup\fP(3),
+\fBmistral_shutdown\fP(3)
 
