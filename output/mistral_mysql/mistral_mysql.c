@@ -273,7 +273,7 @@ static bool insert_rule_details(mistral_log *log_entry, my_ulonglong *ptr_rule_i
     /* Set the variables to use for input parameters in the INSERT query */
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
     BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
-    BIND_STRING(input_bind, 2, mistral_call_type_names[log_entry->call_type_mask], 0, str_length_call);
+    BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
     BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
@@ -290,7 +290,7 @@ static bool insert_rule_details(mistral_log *log_entry, my_ulonglong *ptr_rule_i
      */
     str_length_label = strlen(log_entry->label);
     str_length_vio = strlen(log_entry->path);
-    str_length_call = strlen(mistral_call_type_names[log_entry->call_type_mask]);
+    str_length_call = strlen(log_entry->call_type_names);
     str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
     str_length_size_range = strlen(log_entry->size_range);
     str_length_threshold = strlen(log_entry->threshold_str);
@@ -667,7 +667,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Set the variables to use for input parameters in the SELECT query */
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
     BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
-    BIND_STRING(input_bind, 2, mistral_call_type_names[log_entry->call_type_mask], 0, str_length_call);
+    BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
     BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
@@ -685,7 +685,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Set the length of the values of the variables used in the query */
     str_length_label = strlen(log_entry->label);
     str_length_vio = strlen(log_entry->path);
-    str_length_call = strlen(mistral_call_type_names[log_entry->call_type_mask]);
+    str_length_call = strlen(log_entry->call_type_names);
     str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
     str_length_size_range = strlen(log_entry->size_range);
     str_length_threshold = strlen(log_entry->threshold_str);
@@ -1166,7 +1166,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             int num = get_table_number(log_entry);
             if (num < 0) {
                 mistral_err("get_table_number failed\n");
-                mistral_shutdown = true;
+                mistral_shutdown();
                 return;
             }
             date_changed = true;
@@ -1174,21 +1174,21 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             if (snprintf(table_name, LOG_TABLE_SIZE, LOG_TABLE_FMT, num)
                 >= (int)LOG_TABLE_SIZE) {
                 mistral_err("Unable to build log table name\n");
-                mistral_shutdown = true;
+                mistral_shutdown();
                 return;
             }
             /* Check if we have already stored our environment variables in the
              * corresponding table, if not insert them.
              */
             if (! insert_env_records(num, log_date)) {
-                mistral_shutdown = true;
+                mistral_shutdown();
                 return;
             }
         }
 
         /* Get (or create) the appropriate rule id for this log entry */
         if (! set_rule_id(log_entry, &rule_id)) {
-            mistral_shutdown = true;
+            mistral_shutdown();
             return;
         }
 
@@ -1211,7 +1211,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                 } else {
                     mistral_err("Insert log entry on max buffer size failed\n");
                 }
-                mistral_shutdown = true;
+                mistral_shutdown();
                 return;
             }
             date_changed = false;
@@ -1225,7 +1225,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                          "file_name, group_id, id, mpi_rank, plugin_run_id, "\
                          "log_id) VALUES %s", table_name, values) < 0) {
                 mistral_err("Unable to allocate memory for log insert\n");
-                mistral_shutdown = true;
+                mistral_shutdown();
                 return;
             }
             log_insert_len = strlen(log_insert);
@@ -1234,7 +1234,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             char *old_log_insert = log_insert;
             if (asprintf(&log_insert, "%s,%s", log_insert, values) < 0) {
                 mistral_err("Unable to allocate memory for log insert\n");
-                mistral_shutdown = true;
+                mistral_shutdown();
                 free(old_log_insert);
                 return;
             }
@@ -1254,7 +1254,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     /* Send any log entries to the database that are still pending */
     if(!insert_log_to_db()) {
         mistral_err("Insert log entry at end of block failed\n");
-        mistral_shutdown = true;
+        mistral_shutdown();
         return;
     }
 

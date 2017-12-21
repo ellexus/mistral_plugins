@@ -10,28 +10,52 @@
 #include <errno.h>              /* errno */
 #include <inttypes.h>           /* uint32_t, uint64_t */
 #include <limits.h>             /* SSIZE_MAX */
+#include <pthread.h>            /* pthread_t, pthread_create, etc */
+#include <search.h>             /* insque, remque */
+#include <semaphore.h>          /* sem_init, sem_wait, sem_post, sem_destroy */
+#include <signal.h>             /* sigaction, sigemptyset, etc */
 #include <stdarg.h>             /* va_start, va_list, va_end */
 #include <stdbool.h>            /* bool */
 #include <stdint.h>             /* uint64_t, UINT64_MAX */
-#include <stdio.h>              /* fprintf, asprintf, vfprintf */
+#include <stdio.h>              /* fprintf, asprintf, vfprintf, setvbuf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
-#include <sys/types.h>          /* getpid */
-#include <time.h>               /* gettimeofday, strptime, mktime, tzset */
-#include <unistd.h>             /* getpid, STDOUT_FILENO, STDIN_FILENO */
+#include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO, setsid */
 
 #include "plugin_control.h"
 
+typedef struct message_details {            /* Structure used to store received messages */
+    struct message_details *next;           /* Linked list pointer - forwards */
+    struct message_details *prev;           /* Linked list pointer - backwards */
+    enum mistral_message message;           /* Message type */
+    uint64_t block_num;                     /* Data block ID for start, end and raw data messages */
+    bool error;                             /* True, if there was an error parsing block_num */
+    char *data;                             /* Unprocessed contents of a data block message */
+} message_details;
+
+typedef struct mask_names_map {             /* Structure used to map a call type mask to a string */
+    uint32_t call_type_mask;                /* Call type mask */
+    char *call_types;                       /* A normalised string representation of the mask */
+} mask_names_map;
+
+/* Globals only used by the communication thread */
 static unsigned ver = MISTRAL_API_VERSION;  /* Supported version */
 static uint64_t data_count = 0;             /* Number of data blocks received */
 static bool in_data = false;                /* True, if mistral is sending data */
 static bool shutdown_message = false;       /* True, if mistral sent a shutdown message */
 static bool supported_version = false;      /* True, if supported versions were received */
 static uint64_t interval = 0;               /* Interval between plug-in calls in seconds */
-static mistral_plugin mistral_plugin_info;  /* Used to store plug-in type and calling interval */
+
+/* Globals used by both the communication and processing threads */
+static mistral_plugin mistral_plugin_info;  /* Used to store plug-in type, interval and error log */
+static bool shutdown = false;               /* If set to true plug-in will exit at next line */
+static bool complete = false;               /* If set to true no more messages will be read */
+static sem_t message_list;                  /* Control access to the messages linked list */
+static message_details *messages_head = NULL;   /* First element of the messages linked list */
+static message_details *messages_tail = NULL;   /* Last element of the messages linked list */
+static void *mask_root = NULL;              /* Root node of tsearch call type mask map */
 
 /* Global variables available to plug-in developers */
-bool mistral_shutdown = false;              /* If set to true plug-in will exit at next line */
 
 /* Define this value here in case the machine used to compile the plug-in functionality module uses
  * different values. This will allow a plug-in author to identify when the upper bound of a size
@@ -59,72 +83,192 @@ int mistral_err(const char *format, ...)
     va_start(ap, format);
     char *file_fmt = NULL;
     char *fmt = (char *)format;
+    FILE *log_stream = stderr;
+    bool sem_claimed = false;
 
-    if (mistral_plugin_info.error_log == stderr && format[strlen(format) - 1] != '\n') {
+    if (sem_wait(&mistral_plugin_info.lock) == 0) {
+        log_stream = mistral_plugin_info.error_log;
+        sem_claimed = true;
+    } else {
+        /* We didn't manage to claim the semaphore - proceed using stderr but log another error */
+        char buf[256];
+        fprintf(log_stream, "Error claiming semaphore, logging to stderr: %s\n",
+                strerror_r(errno, buf, sizeof buf));
+    }
+
+    if (log_stream == stderr && format[strlen(format) - 1] != '\n') {
         if (asprintf(&file_fmt, "%s\n", format) >= 0) {
             fmt = file_fmt;
         }
-    } else if (mistral_plugin_info.error_log != stderr) {
-        struct timeval tv = {0,0};
-        if(gettimeofday(&tv, NULL) == 0) {
+    } else if (log_stream != stderr) {
+        struct timeval tv = {0, 0};
+        if (gettimeofday(&tv, NULL) == 0) {
             if (asprintf(&file_fmt, "%ld.%06ld %s", tv.tv_sec, tv.tv_usec, format) >= 0) {
                 fmt = file_fmt;
             }
         }
     }
 
-    retval = vfprintf(mistral_plugin_info.error_log, fmt, ap);
+    retval = vfprintf(log_stream, fmt, ap);
     va_end(ap);
     free(file_fmt);
-    fflush(mistral_plugin_info.error_log);
+    fflush(log_stream);
+
+    if (sem_claimed && sem_post(&mistral_plugin_info.lock) != 0) {
+        /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+        char buf[256];
+        fprintf(log_stream, "Error releasing semaphore, exiting: %s\n",
+                strerror_r(errno, buf, sizeof buf));
+        /* Try to send a shutdown message outside of the robust message sending routines which
+         * may try to call this function.
+         */
+        fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
+        exit(EXIT_FAILURE);
+    }
+
     return retval;
 }
 
 /*
- * set_call_type_name
+ * mistral_shutdown
  *
- * This function initalises an array that potentially contains all the possible combinations of call
- * types. It is done this way to avoid memory management of the string within the plug-in but only
- * sparsely populated as (at the time of writing) there are 2^10 combinations.
+ * Atomically sets the shutdown flag.
  *
  * Parameters:
- *   i - Call type mask to translate
+ *   void
  *
  * Returns:
  *   void
  */
-void mistral_set_call_type_name(uint32_t i)
+void mistral_shutdown(void)
 {
-    size_t max_string = 0;
-#define X(name, str) max_string += sizeof(str) + 1;
-    CALL_TYPE(X)
-#undef X
-    char tmp1[max_string];
+    __atomic_store_n(&shutdown, true, __ATOMIC_RELAXED);
+}
 
-    if (i < CALL_TYPE_MASK_MAX && !(mistral_call_type_names[i][0])) {
-        tmp1[0] = '\0';
-        /* We've not seen this call type before, loop through the list of call types */
-        for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
-            if (tmp1[0] == '\0' && (i & BITMASK(j)) == BITMASK(j)) {
-                /* This is the first call type we have seen that is represented in this bitmask */
-                if (snprintf(tmp1, max_string, "%s", mistral_call_type_name[j]) < 0) {
-                    mistral_err("Could not initialise call type name array\n");
-                    mistral_shutdown = true;
-                }
-            } else if ((i & BITMASK(j)) == BITMASK(j)) {
-                /* This call type is in the bit mask but we need to append it to the current list */
-                char tmp2[max_string];
-                tmp2[0] = '\0';
-                strncpy(tmp2, tmp1, max_string);
-                if (snprintf(tmp1, max_string, "%s+%s", tmp2, mistral_call_type_name[j]) < 0) {
-                    mistral_err("Could not initialise call type name array\n");
-                    mistral_shutdown = true;
-                }
+/*
+ * mask_compare
+ *
+ * Comparison function for use with tsearch to compare two call type masks.
+ *
+ * Parameters:
+ *   p  - pointer to the first mask map stored in a mask_names_map structure
+ *   q  - pointer to the second mask map stored in a mask_names_map structure
+ *
+ * Returns:
+ *   < 0 if first rule is "less than" the second mask
+ *   0   if first rule is "equal to" the second mask
+ *   > 0 if first rule is "greater than" the second mask
+ */
+static int mask_compare(const void *p, const void *q)
+{
+    const mask_names_map *mask1 = p;
+    const mask_names_map *mask2 = q;
+
+    return (mask1->call_type_mask > mask2->call_type_mask) - \
+           (mask1->call_type_mask < mask2->call_type_mask);
+}
+
+/*
+ * mask_destroy
+ *
+ * Clean up function for use with tdestroy to free all memory associated with a mask map.
+ *
+ * Parameters:
+ *   p  - pointer to the mask_names_map structure to clean up
+ *
+ * Returns:
+ *   void
+ */
+static void mask_destroy(void *p)
+{
+    mask_names_map *mask = p;
+    free(mask->call_types);
+    free(mask);
+}
+
+/*
+ * mistral_get_call_type_name
+ *
+ * This function populates a binary tree with normalised string representations of a given call type
+ * mask. The tree is only populated with call type mask values that have been observed in log
+ * messages by default but this function is exposed so a plug-in author can generate more if needed.
+ *
+ * We do not generate all possible combinations as (at the time of writing) there are 2^20 different
+ * valid combinations.
+ *
+ * Parameters:
+ *   mask - Call type mask to translate
+ *
+ * Returns:
+ *   A pointer to the constructed call types string or
+ *   NULL on error
+ */
+const char *mistral_get_call_type_name(uint32_t mask)
+{
+    if (mask >= CALL_TYPE_MASK_MAX) {
+        return NULL;
+    }
+
+    size_t max_string = 0;
+    #define X(name, str) max_string += sizeof(str);
+    CALL_TYPE(X)
+    #undef X
+    char tmp1[max_string];
+    mask_names_map **found;
+    mask_names_map *this_mask_map;
+    this_mask_map = calloc(1, sizeof(mask_names_map));
+
+    if (this_mask_map) {
+        this_mask_map->call_type_mask = mask;
+        found = tsearch((void *)this_mask_map, &mask_root, mask_compare);
+
+        if (found == NULL) {
+            mistral_err("Out of memory in tsearch - call type mask check\n");
+            free(this_mask_map);
+            this_mask_map = NULL;
+            mistral_shutdown();
+            return NULL;
+        } else if (*found != this_mask_map) {
+            /* Already saved the normalised string representation of this call type mask */
+            free(this_mask_map);
+            return (*found)->call_types;
+        }
+    } else {
+        mistral_err("Could not allocate memory for call type mask name map\n");
+        mistral_shutdown();
+        return NULL;
+    }
+
+    /* If we have got here this is the first time we have seen this call type mask, construct the
+     * normalised call type name string by looping through the list of call types.
+     */
+
+    tmp1[0] = '\0';
+    for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
+        if (tmp1[0] == '\0' && (mask & BITMASK(j)) == BITMASK(j)) {
+            /* This is the first call type we have seen that is represented in this bitmask */
+            if (snprintf(tmp1, max_string, "%s", mistral_call_type_name[j]) < 0) {
+                mistral_err("Could not initialise call type name array\n");
+                mistral_shutdown();
+            }
+        } else if ((mask & BITMASK(j)) == BITMASK(j)) {
+            /* This call type is in the bit mask but we need to append it to the current list */
+            char tmp2[max_string];
+            tmp2[0] = '\0';
+            strncpy(tmp2, tmp1, max_string);
+            if (snprintf(tmp1, max_string, "%s+%s", tmp2, mistral_call_type_name[j]) < 0) {
+                mistral_err("Could not initialise call type name array\n");
+                mistral_shutdown();
             }
         }
-        strncpy((char *)mistral_call_type_names[i], tmp1, sizeof(mistral_call_type_names[i]));
     }
-    return;
+    if (((*found)->call_types = strdup(tmp1)) == NULL) {
+        mistral_err("Could not allocate memory for call type mask name map\n");
+        mistral_shutdown();
+        return NULL;
+    }
+
+    return (const char *)(*found)->call_types;
 }
 
 /*
@@ -180,7 +324,8 @@ static bool send_string_to_mistral(const char *message)
             }
 
             if ((w_res < 0 && errno == EINTR) || (w_res < 0 && errno == EAGAIN) ||
-                (w_res >= 0 && message_len != 0)) {
+                (w_res >= 0 && message_len != 0))
+            {
                 /* Try and send the remaining portion of the message again if we were
                  * interrupted, encountered a full pipe or only managed a partial write. The
                  * pipe will be retested in case Mistral has exited.
@@ -228,7 +373,8 @@ static bool send_message_to_mistral(enum mistral_message message)
     case PLUGIN_MESSAGE_USED_VERSION:
         if (asprintf(&message_string, "%s%u%s\n",
                      mistral_log_message[PLUGIN_MESSAGE_USED_VERSION],
-                     ver, PLUGIN_MESSAGE_END) < 0) {
+                     ver, PLUGIN_MESSAGE_END) < 0)
+        {
             mistral_err("Unable to construct used version message.\n");
             goto fail_asprintf;
         }
@@ -324,7 +470,7 @@ static char **str_split(const char *s, int sep, size_t *field_count)
  *   Index of the matching entry in the array if a match is found
  *   -1 on error
  */
-static ssize_t find_in_array(const char *s, const char *const *array)
+static ssize_t find_in_array(const char *s, const char * const *array)
 {
     assert(array);
     for (size_t i = 0; array[i]; ++i) {
@@ -377,7 +523,7 @@ static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
     /* Check if the size calculation above overflowed */
 
     switch (mistral_unit_type[*unit]) {
-        /* Because of the differing types each block has to be handled separately */
+    /* Because of the differing types each block has to be handled separately */
     case UNIT_CLASS_TIME:
     case UNIT_CLASS_COUNT:
         /* Cast to a double so we shouldn't suffer from integer overflows in the comparison */
@@ -508,7 +654,8 @@ static bool parse_log_entry(const char *line)
 
     char **hash_split = str_split(comma_split[FIELD_TIMESTAMP], '#', &field_count);
     if (!hash_split) {
-        mistral_err("Unable to allocate memory for mistral fields: %s\n", comma_split[FIELD_TIMESTAMP]);
+        mistral_err("Unable to allocate memory for mistral fields: %s\n",
+                    comma_split[FIELD_TIMESTAMP]);
         goto fail_split_hashes;
     }
 
@@ -613,12 +760,17 @@ static bool parse_log_entry(const char *line)
     }
 
     /* Initialise the standardised version of the call type string */
-    mistral_set_call_type_name(log_entry->call_type_mask);
+    log_entry->call_type_names = mistral_get_call_type_name(log_entry->call_type_mask);
+    if (!log_entry->call_type_names) {
+        mistral_err("Unable to normalise call type names: %s\n", comma_split[FIELD_CALL_TYPE]);
+        goto fail_log_call_type_names;
+    }
 
     /* Record the rule size range, default/missing values are 0 for min, SSIZE_MAX for max */
     char **size_range_split = str_split(comma_split[FIELD_SIZE_RANGE], '-', &field_count);
     if (!size_range_split) {
-        mistral_err("Unable to allocate memory for size range: %s\n", comma_split[FIELD_SIZE_RANGE]);
+        mistral_err("Unable to allocate memory for size range: %s\n",
+                    comma_split[FIELD_SIZE_RANGE]);
         goto fail_log_size_range_split;
     }
 
@@ -633,7 +785,8 @@ static bool parse_log_entry(const char *line)
         /* size range contained a '-' so parse each string that is present (blank => min/max) */
         if (strcmp(size_range_split[0], "")) {
             if (!parse_size(size_range_split[0], &range, &log_entry->size_min_unit)) {
-                mistral_err("Unable to parse size range minimum: %s\n", comma_split[FIELD_SIZE_RANGE]);
+                mistral_err("Unable to parse size range minimum: %s\n",
+                            comma_split[FIELD_SIZE_RANGE]);
                 goto fail_log_size_range;
             }
             log_entry->size_min = (ssize_t)range;
@@ -645,7 +798,8 @@ static bool parse_log_entry(const char *line)
         }
         if (strcmp(size_range_split[1], "")) {
             if (!parse_size(size_range_split[1], &range, &log_entry->size_max_unit)) {
-                mistral_err("Unable to parse size range maximum: %s\n", comma_split[FIELD_SIZE_RANGE]);
+                mistral_err("Unable to parse size range maximum: %s\n",
+                            comma_split[FIELD_SIZE_RANGE]);
                 goto fail_log_size_range;
             }
             log_entry->size_max = (ssize_t)range;
@@ -663,7 +817,8 @@ static bool parse_log_entry(const char *line)
 
     /* Finally simply store the raw string */
     if ((log_entry->size_range = strdup(comma_split[FIELD_SIZE_RANGE])) == NULL) {
-        mistral_err("Unable to allocate memory for size range: %s\n", comma_split[FIELD_SIZE_RANGE]);
+        mistral_err("Unable to allocate memory for size range: %s\n",
+                    comma_split[FIELD_SIZE_RANGE]);
         goto fail_log_size_range;
     }
 
@@ -684,7 +839,8 @@ static bool parse_log_entry(const char *line)
 
     /* And also store its constituent parts */
     if (!parse_rate(comma_split[FIELD_THRESHOLD], &log_entry->threshold, &log_entry->threshold_unit,
-                    &log_entry->timeframe, &log_entry->timeframe_unit)) {
+                    &log_entry->timeframe, &log_entry->timeframe_unit))
+    {
         goto fail_log_allowed;
     }
 
@@ -696,18 +852,19 @@ static bool parse_log_entry(const char *line)
 
     /* And also store its constituent parts */
     if (!parse_rate(comma_split[FIELD_MEASURED], &log_entry->measured, &log_entry->measured_unit,
-                    &log_entry->measured_time, &log_entry->measured_time_unit)) {
+                    &log_entry->measured_time, &log_entry->measured_time_unit))
+    {
         goto fail_log_observed;
     }
 
     /* Record the hostname */
     if ((log_entry->full_hostname = strdup(comma_split[FIELD_HOSTNAME])) == NULL) {
-        mistral_err("Unable to allocate memory for full hostname: %s\n", comma_split[FIELD_HOSTNAME]);
+        mistral_err("Unable to allocate memory for full hostname: %s\n",
+                    comma_split[FIELD_HOSTNAME]);
         goto fail_log_fullhost;
-
     }
 
-    /* Now we've stored the full hostname save a version trunctated at the first '.' */
+    /* Now we've stored the full hostname save a version truncated at the first '.' */
     char *dot;
     if ((dot = strchr(comma_split[FIELD_HOSTNAME], '.'))) {
         *dot = '\0';
@@ -728,7 +885,7 @@ static bool parse_log_entry(const char *line)
         goto fail_log_pid;
     }
 
-    /* Record the CPU ID - this is inlikely to be large but use a uint32_t to future proof */
+    /* Record the CPU ID - this is unlikely to be large but use a uint32_t to future proof */
     end = NULL;
     errno = 0;
     log_entry->cpu = (uint32_t)strtoul(comma_split[FIELD_CPU], &end, 10);
@@ -804,14 +961,18 @@ static bool parse_log_entry(const char *line)
     size_t offset = field - FIELD_FILENAME - 1;
 
     /* Record the job group id */
-    if ((log_entry->job_group_id = (const char *)strdup(comma_split[FIELD_JOB_GROUP_ID + offset])) == NULL) {
-        mistral_err("Unable to allocate memory for job group id: %s\n", comma_split[FIELD_JOB_GROUP_ID + offset]);
+    if ((log_entry->job_group_id = (const char *)strdup(comma_split[FIELD_JOB_GROUP_ID +
+                                                                    offset])) == NULL)
+    {
+        mistral_err("Unable to allocate memory for job group id: %s\n",
+                    comma_split[FIELD_JOB_GROUP_ID + offset]);
         goto fail_log_group;
     }
 
     /* Record the job id */
     if ((log_entry->job_id = (const char *)strdup(comma_split[FIELD_JOB_ID + offset])) == NULL) {
-        mistral_err("Unable to allocate memory for job id: %s\n", comma_split[FIELD_JOB_ID + offset]);
+        mistral_err("Unable to allocate memory for job id: %s\n", comma_split[FIELD_JOB_ID +
+                                                                              offset]);
         goto fail_log_job;
     }
 
@@ -825,6 +986,15 @@ static bool parse_log_entry(const char *line)
         goto fail_log_mpi_rank;
     }
 
+    end = NULL;
+    errno = 0;
+    log_entry->sequence = (int64_t)strtoll(comma_split[FIELD_SEQUENCE], &end, 10);
+
+    if (!end || *end != '\0' || end == comma_split[FIELD_SEQUENCE] || errno) {
+        mistral_err("Invalid sequence seen: [%s].\n", comma_split[FIELD_SEQUENCE]);
+        goto fail_log_sequence;
+    }
+
     CALL_IF_DEFINED(mistral_received_log, log_entry);
 
     free(size_range_split);
@@ -833,6 +1003,7 @@ static bool parse_log_entry(const char *line)
     free(comma_split);
     return true;
 
+fail_log_sequence:
 fail_log_mpi_rank:
 fail_log_job:
 fail_log_group:
@@ -850,6 +1021,7 @@ fail_log_measurement:
 fail_log_size_range:
     free(size_range_split);
 fail_log_size_range_split:
+fail_log_call_type_names:
 fail_log_call_type:
 fail_log_call_types:
     free(call_type_split);
@@ -874,9 +1046,28 @@ fail_split_commas:
 }
 
 /*
+ * destroy_message_details
+ *
+ * Used to clean up a message details structure created by parse_message.
+ *
+ * Parameters:
+ *   log_entry - a pointer to the log entry to destroy
+ *
+ * Returns:
+ *   void
+ */
+static void destroy_message_details(message_details *message)
+{
+    if (message) {
+        free(message->data);
+        free(message);
+    }
+}
+
+/*
  * mistral_destroy_log_entry
  *
- * Used to clean up a log entry structure created by parse_message.
+ * Used to clean up a log entry structure created by parse_log_entry.
  *
  * Parameters:
  *   log_entry - a pointer to the log entry to destroy
@@ -905,9 +1096,9 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
 /*
  * parse_message
  *
- * Check the content of the passed line for valid message data. The function looks at the line in
- * the context of the current state (currently receiving data or not). Trailing new line characters
- * will be removed from the message.
+ * Parse the message type, and then validate control messages. Messages that require immediate
+ * response are acted on. All valid messages are then added to a linked list for further processing
+ * by the processing thread.
  *
  * Parameters:
  *   line           - Standard null terminated string containing the line to be checked
@@ -915,7 +1106,7 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
  * Returns:
  *   PLUGIN_DATA_ERR  - If a control message was recognised but contained invalid data
  *   PLUGIN_FATAL_ERR - If this plug-in does not use a supported API version or was unable to send
- *                      the API version to use to Mistral
+ *                      the API version to use to Mistral. An attempt to allocate memory failed.
  *   value of message - The PLUGIN_MESSAGE_ enum message type seen
  */
 static enum mistral_message parse_message(char *line)
@@ -930,20 +1121,21 @@ static enum mistral_message parse_message(char *line)
     if (line_len > 0 && line[line_len - 1] == '\n') {
         line[line_len - 1] = '\0';
     }
-#define X(P, V)                               \
-    if (strncmp(line, V, sizeof(V) - 1) == 0) \
-    {                                         \
-        message = PLUGIN_MESSAGE_ ##P;        \
-    } else
+    #define X(P, V)                               \
+        if (strncmp(line, V, sizeof(V) - 1) == 0) \
+        {                                         \
+            message = PLUGIN_MESSAGE_ ## P;       \
+        } else
     PLUGIN_MESSAGE(X)
-#undef X
+    #undef X
     {
         /* Final else - do nothing */
     }
 
     /* Do some generic error checking before we handle the message */
     if (!supported_version && message != PLUGIN_MESSAGE_SUP_VERSION &&
-        message != PLUGIN_MESSAGE_SHUTDOWN) {
+        message != PLUGIN_MESSAGE_SHUTDOWN)
+    {
         mistral_err("Message seen before supported versions received [%s].\n", line);
         return PLUGIN_DATA_ERR;
     } else if (in_data) {       /* We are currently processing a data block */
@@ -966,21 +1158,31 @@ static enum mistral_message parse_message(char *line)
     }
 
     /* If we have a valid control message it should end with PLUGIN_MESSAGE_END */
-    if (message != PLUGIN_MESSAGE_DATA_LINE
-        && strcmp(PLUGIN_MESSAGE_END, &line[line_len - sizeof(PLUGIN_MESSAGE_END)])) {
+    if (message != PLUGIN_MESSAGE_DATA_LINE &&
+        strcmp(PLUGIN_MESSAGE_END, &line[line_len - sizeof(PLUGIN_MESSAGE_END)]))
+    {
         mistral_err("Invalid data: [%s]. Expected control message.\n", line);
         return PLUGIN_DATA_ERR;
     }
 
-    switch (message) {
+    /* The message is one we want to process so create a message_details entry */
+    message_details *this_message = calloc(1, sizeof(message_details));
+    if (this_message == NULL) {
+        mistral_err("Unable to allocate memory for message details: %s\n", line);
+        return PLUGIN_FATAL_ERR;
+    }
+    this_message->message = message;
 
+    switch (message) {
     case PLUGIN_MESSAGE_USED_VERSION:
         /* We should only send, never receive this message */
+        free(this_message);
         mistral_err("Invalid data: [%s]. Don't expect to receive this message.\n", line);
         return PLUGIN_DATA_ERR;
-    case PLUGIN_MESSAGE_INTERVAL:{
-        /* Only seen in update plug-ins */
-        /* Store the update interval */
+    case PLUGIN_MESSAGE_INTERVAL: {
+        /* Only seen in update plug-ins
+         * Store the update interval
+         */
         char *p = NULL;
         char *end = NULL;
 
@@ -990,17 +1192,36 @@ static enum mistral_message parse_message(char *line)
         interval = (uint64_t)strtoull(p, &end, 10);
 
         if (interval == 0 || !end || *end != PLUGIN_MESSAGE_SEP_C || errno) {
+            free(this_message);
             mistral_err("Invalid interval seen: [%s].\n", line);
             return PLUGIN_DATA_ERR;
         }
 
-        mistral_plugin_info.interval = interval;
-
-        CALL_IF_DEFINED(mistral_received_interval, &mistral_plugin_info);
-
+        if (sem_wait(&mistral_plugin_info.lock) == 0) {
+            mistral_plugin_info.interval = interval;
+            if (sem_post(&mistral_plugin_info.lock) != 0) {
+                /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+                char buf[256];
+                fprintf(stderr, "Error releasing semaphore after saving interval, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+                /* Try to send a shutdown message outside of the robust message sending routines
+                 * which may try to call mistral_err that relies on this semaphore.
+                 */
+                fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            char buf[256];
+            /* The mistral_err function will also try to claim this semaphore but will fall back to
+             * using stderr on error.
+             */
+            mistral_err("Error claiming semaphore saving interval, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+            mistral_shutdown();
+        }
         break;
     }
-    case PLUGIN_MESSAGE_SUP_VERSION:{
+    case PLUGIN_MESSAGE_SUP_VERSION: {
         /* Extract minimum and current version supported */
         unsigned min_ver = 0;
         unsigned cur_ver = 0;
@@ -1011,27 +1232,31 @@ static enum mistral_message parse_message(char *line)
         if (sscanf(line, ":PGNSUPVRSN:%u:%u:\n", &min_ver, &cur_ver) != 2) {
             /* The assert should identify if we've modified the message literal */
             assert(strncmp(mistral_log_message[PLUGIN_MESSAGE_SUP_VERSION], ":PGNSUPVRSN:", 12));
+            free(this_message);
             mistral_err("Invalid supported versions format received: [%s].\n", line);
             return PLUGIN_DATA_ERR;
         }
 
         if (min_ver == 0 || cur_ver == 0 || min_ver > cur_ver) {
+            free(this_message);
             mistral_err("Invalid supported version numbers received: [%s].\n", line);
             return PLUGIN_DATA_ERR;
         }
 
         if (ver < min_ver || ver > cur_ver) {
+            free(this_message);
             mistral_err("API version used [%u] is not supported [%s].\n", ver, line);
             return PLUGIN_FATAL_ERR;
         } else {
             supported_version = true;
             if (!send_message_to_mistral(PLUGIN_MESSAGE_USED_VERSION)) {
+                free(this_message);
                 return PLUGIN_FATAL_ERR;
             }
         }
         break;
     }
-    case PLUGIN_MESSAGE_DATA_START:{
+    case PLUGIN_MESSAGE_DATA_START: {
         /* Check if the data block number is one higher than the last version seen */
         char *p = NULL;
         char *end = NULL;
@@ -1048,21 +1273,22 @@ static enum mistral_message parse_message(char *line)
         }
 
         if (block_count != data_count + 1) {
-            mistral_err("Unexpected data block number %"PRIu64" seen (expected %"PRIu64").\n",
+            mistral_err("Unexpected data block number %" PRIu64 " seen (expected %" PRIu64 ").\n",
                         block_count, data_count + 1);
             error_seen = true;
         }
 
-        CALL_IF_DEFINED(mistral_received_data_start, block_count, error_seen);
+        this_message->block_num = block_count;
+        this_message->error = error_seen;
 
         in_data = true;
         data_count = block_count;
         if (error_seen) {
-            return PLUGIN_DATA_ERR;
+            message = PLUGIN_DATA_ERR;
         }
         break;
     }
-    case PLUGIN_MESSAGE_DATA_END:{
+    case PLUGIN_MESSAGE_DATA_END: {
         /* Check if the data block number matches the last value seen */
         uint64_t end_block_count = 0;
         char *p = NULL;
@@ -1080,33 +1306,74 @@ static enum mistral_message parse_message(char *line)
         }
 
         if (data_count != end_block_count) {
-            mistral_err("Unexpected data block number %"PRIu64" seen (expected %"PRIu64"), data may be corrupt.\n",
-                        end_block_count, data_count);
+            mistral_err("Unexpected data block number %" PRIu64 " seen (expected %" PRIu64
+                        "), data may be corrupt.\n", end_block_count, data_count);
             error_seen = true;
         }
         in_data = false;
 
-        CALL_IF_DEFINED(mistral_received_data_end, end_block_count, error_seen);
+        this_message->block_num = end_block_count;
+        this_message->error = error_seen;
 
         if (error_seen) {
-            return PLUGIN_DATA_ERR;
+            message = PLUGIN_DATA_ERR;
         }
         break;
     }
     case PLUGIN_MESSAGE_SHUTDOWN:
         /* Handle a clean shut down */
         shutdown_message = true;
-        CALL_IF_DEFINED(mistral_received_shutdown);
+        /* Once we've been told to shutdown Mistral will not read any message we send so simply
+         * detach the process. This will prevent blocking Mistral from exiting while we finish
+         * processing any stored messages.
+         */
+        if (setsid() < 0) {
+            /* This is non-fatal, it just means Mistral will wait for the plug-in to finish
+             * processing data before exiting. Log an error for information. This will always appear
+             * if the plug-in is run directly.
+             */
+            mistral_err("Unable to detach plug-in process on shutdown\n");
+        }
+
+        break;
+    case PLUGIN_MESSAGE_DATA_LINE:
+        this_message->block_num = data_count;
+        this_message->data = strdup(line);
         break;
     default:
-        /* Should only get here with a contract line */
-        /* This is output plug-in specific */
-        if (!parse_log_entry((const char *)line)) {
-            mistral_err("Invalid log message received: %s.\n", line);
-        }
+        mistral_err("Unknown message type [%d]\n", message);
         break;
-
     } /* End of message types */
+
+    /* Add the message to the linked list */
+    if (sem_wait(&message_list) == 0) {
+        if (!messages_head) {
+            /* Initialise linked list */
+            messages_head = this_message;
+            messages_tail = this_message;
+            insque(this_message, NULL);
+        } else {
+            insque(this_message, messages_tail);
+            messages_tail = this_message;
+        }
+
+        if (sem_post(&message_list) != 0) {
+            /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+            char buf[256];
+            /* Although mistral_err uses a semaphore it is not this semaphore, so let's try to do
+             * things properly.
+             */
+            mistral_err("Error releasing semaphore after saving message, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+            send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        char buf[256];
+        mistral_err("Error claiming semaphore saving message, exiting: %s\n",
+                    strerror_r(errno, buf, sizeof buf));
+        mistral_shutdown();
+    }
 
     return message;
 }
@@ -1143,6 +1410,9 @@ static bool read_data_from_mistral(void)
 
     bool retval = true;
 
+    /* If we knew the update interval we could alter this section to check stdin before every call
+     * to getline however currently only update plug-ins are sent this information.
+     */
     do {
         result = select(1 + STDIN_FILENO, &read_set, NULL, NULL, &timeout);
     } while (result == -1 && errno == EINTR);   /* retry if interrupted */
@@ -1156,22 +1426,31 @@ static bool read_data_from_mistral(void)
 
     if (FD_ISSET(STDIN_FILENO, &read_set)) {
         /* Data is available now. */
-        while (!mistral_shutdown && getline(&line, &line_length, stdin) > 0) {
+        ssize_t gl_res = 0;
+        while (!__atomic_load_n(&shutdown, __ATOMIC_RELAXED) &&
+               (gl_res = getline(&line, &line_length, stdin)) > 0)
+        {
             enum mistral_message message = parse_message(line);
 
             if (message == PLUGIN_MESSAGE_SHUTDOWN) {
                 /* Stop processing */
                 goto read_shutdown;
-
             } else if (message == PLUGIN_DATA_ERR) {
                 /* Ignore bad data */
                 continue;
-
             } else if (message == PLUGIN_FATAL_ERR) {
                 /* But do not continue if a serious error was seen. */
                 retval = false;
                 goto read_error;
             }
+        }
+        /* If we've got here one of the while conditions failed, if we are shutting down an error
+         * should already have been output but we need to handle a getline call error.
+         */
+        if (gl_res < 0) {
+            char buf[256];
+            mistral_err("Error while reading from mistral: %s.\n",
+                        strerror_r(errno, buf, sizeof buf));
         }
     }
 
@@ -1180,14 +1459,134 @@ read_shutdown:
     free(line);
 
 read_fail_select:
+    /* In error cases we will not have seen a shutdown message so set a flag to tell the processing
+     * thread that no more messages are going to be seen.
+     */
+    __atomic_store_n(&complete, true, __ATOMIC_RELAXED);
     return retval;
+}
+
+/*
+ * processing_thread
+ *
+ * This function is used to initialise the data processing thread. This thread checks for the
+ * existence of messages in a linked list populated by by the main communication thread. This is
+ * done so that slow processing of message contents does not disrupt communication with Mistral.
+ *
+ * Calls parse_log_entry to process log data lines.
+ *
+ * Parameters:
+ *   arg  - A pointer to the set of signals this thread should unblock.
+ *
+ * Returns:
+ *   EXIT_SUCCESS on success
+ *   EXIT_FAILURE otherwise
+ */
+static void *processing_thread(void *arg)
+{
+    int ret = EXIT_SUCCESS;
+    int res = 0;
+    bool shutdown_seen = false;
+    sigset_t *set = arg;
+
+    /* Restore the signals blocked in the main thread */
+    res = pthread_sigmask(SIG_UNBLOCK, set, NULL);
+    if (res) {
+        char buf[256];
+        mistral_err("Unable to unblock signals: (%s)\n", strerror_r(res, buf, sizeof buf));
+        ret = EXIT_FAILURE;
+    }
+
+    message_details *message;
+    while (ret == EXIT_SUCCESS && !shutdown_seen) {
+        /* Main data processing loop */
+        message = NULL;
+        if (sem_wait(&message_list) == 0) {
+            message = messages_head;
+
+            if (message) {
+                messages_head = message->next;
+                remque(message);
+            } else if (__atomic_load_n(&complete, __ATOMIC_RELAXED)) {
+                /* If we have no more messages to process get the current state of the complete
+                 * flag, as if an error occurred in the communication thread this will be set to
+                 * true.
+                 */
+                ret = EXIT_FAILURE;
+            }
+
+            if (sem_post(&message_list) != 0) {
+                /* We didn't free the semaphore - this is going to go very wrong exit immediately */
+                char buf[256];
+                /* Although mistral_err uses a semaphore it is not this semaphore, so let's try to
+                 * do things properly.
+                 */
+                mistral_err("Error releasing semaphore after getting message, exiting: %s\n",
+                            strerror_r(errno, buf, sizeof buf));
+                send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+                exit(EXIT_FAILURE);
+            }
+        } else {
+            char buf[256];
+            mistral_err("Error claiming semaphore getting message, exiting: %s\n",
+                        strerror_r(errno, buf, sizeof buf));
+            mistral_shutdown();
+        }
+
+        if (message) {
+            /* Process the message */
+            switch (message->message) {
+            case PLUGIN_MESSAGE_SUP_VERSION:
+                break;
+            case PLUGIN_MESSAGE_INTERVAL:
+                CALL_IF_DEFINED(mistral_received_interval, &mistral_plugin_info);
+                break;
+            case PLUGIN_MESSAGE_DATA_START:
+                CALL_IF_DEFINED(mistral_received_data_start, message->block_num, message->error);
+                break;
+            case PLUGIN_MESSAGE_DATA_END:
+                CALL_IF_DEFINED(mistral_received_data_end, message->block_num, message->error);
+                break;
+            case PLUGIN_MESSAGE_SHUTDOWN:
+                shutdown_seen = true;
+                CALL_IF_DEFINED(mistral_received_shutdown);
+                break;
+            case PLUGIN_MESSAGE_DATA_LINE:
+                /* This is output plug-in specific */
+                if (!parse_log_entry(message->data)) {
+                    mistral_err("Invalid log message received: %s.\n", message->data);
+                }
+                break;
+            default:
+                mistral_err("Unexpected message type [%d]\n", message->message);
+                ret = EXIT_FAILURE;
+                break;
+            } /* End of message types */
+
+            /* If the global shutdown flag is now set something went wrong in the called function */
+            if (__atomic_load_n(&shutdown, __ATOMIC_RELAXED)) {
+                mistral_err("Error while processing message [%s]\n",
+                            mistral_log_message[message->message]);
+                ret = EXIT_FAILURE;
+            }
+            destroy_message_details(message);
+        } else {
+            sleep(1);
+        }
+    }
+    pthread_exit(&ret);
 }
 
 /*
  * main
  *
- * Call the mistral_startup function to get required initialisation for the plug-in then start the
- * main read and processing loop.
+ * Call the mistral_startup function to get required initialisation for the plug-in then create a
+ * thread to handle data processing. The main thread will handle all communication to and from
+ * Mistral and store messages received in a linked list. The data processing thread will pop
+ * messages off the top of this linked list and process the message contents if necessary.
+ *
+ * Once a shutdown message is seen the communication thread will wait for the processing thread to
+ * finish processing any outstanding messages.
  *
  * Parameters:
  *   argc - The number of arguments in the argv array
@@ -1199,21 +1598,99 @@ read_fail_select:
  */
 int main(int argc, char **argv)
 {
+    int res = 0;
+    pthread_t thread_id = 0;
+    if (sem_init(&mistral_plugin_info.lock, 0, 1) < 0) {
+        char buf[256];
+        /* We can't use mistral_err as it relies on this semaphore, exit immediately */
+        fprintf(stderr, "Error initialising plug-in semaphore: (%s)\n",
+                strerror_r(errno, buf, sizeof buf));
+        /* Try to send a shutdown message outside of the robust message sending routines which all
+         * may call mistral_err
+         */
+        fprintf(stdout, "%s\n", mistral_log_message[PLUGIN_MESSAGE_SHUTDOWN]);
+        return EXIT_FAILURE;
+    }
+    if (sem_init(&message_list, 0, 1)) {
+        /* The messaging semaphore is initialised so we can be more conservative here */
+        char buf[256];
+        mistral_err("Error initialising message semaphore: (%s)\n",
+                    strerror_r(errno, buf, sizeof buf));
+        send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+        return EXIT_FAILURE;
+    }
+
     mistral_plugin_info.type = MAX_PLUGIN;
     mistral_plugin_info.error_log = stderr;
+
+    /* Set stdin to be unbuffered - needed if we want to timeout on every read of stdin. */
+    if (setvbuf(stdin, NULL, _IONBF, 0) != 0) {
+        char buf[256];
+        mistral_err("Error making stdin non-buffered: (%s)\n", strerror_r(errno, buf, sizeof buf));
+        send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+        return EXIT_FAILURE;
+    }
 
     /* used to set the type of plug-in we should run as */
     mistral_startup(&mistral_plugin_info, argc, argv);
 
     if (mistral_plugin_info.type != MAX_PLUGIN) {
-        read_data_from_mistral();
+        /*
+         * Block all signals in the main thread which will handle communication with Mistral.
+         * They will be re-enabled in the processing thread which will process the data received.
+         */
+        sigset_t set;
+        sigfillset(&set);
+        res = pthread_sigmask(SIG_SETMASK, &set, NULL);
+        if (res) {
+            char buf[256];
+            mistral_err("Unable to block signals: (%s)\n", strerror_r(res, buf, sizeof buf));
+            send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+            return EXIT_FAILURE;
+        }
+
+        /* Create the processing thread */
+        res = pthread_create(&thread_id, NULL, processing_thread, &set);
+        if (res == 0) {
+            read_data_from_mistral();
+        } else {
+            char buf[256];
+            mistral_err("Unable to start processing thread: (%s)\n",
+                        strerror_r(res, buf, sizeof buf));
+            send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
+            return EXIT_FAILURE;
+        }
     }
 
+    /* Wait for the processing thread to finish processing the message list */
+    if (res == 0) {
+        pthread_join(thread_id, NULL);
+    }
+
+    /* Even though the processing thread returns a success state we don't actually need to examine
+     * it as we just need to know whether or not to inform Mistral that we are shutting down.
+     */
     if (!shutdown_message) {
         /* Mistral did not tell us to exit */
         send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
     }
 
+    /* In the event of an error we may have some left over messages to clean up, at this point we
+     * should be single threaded again due to the pthread_join above so there is no need to claim
+     * the message_list semaphore.
+     */
+    message_details *message = messages_head;
+    while (message) {
+        messages_head = message->next;
+        remque(message);
+        destroy_message_details(message);
+        message = messages_head;
+    }
+    messages_tail = NULL;
+    sem_destroy(&message_list);
+    sem_destroy(&mistral_plugin_info.lock);
+    tdestroy(mask_root, mask_destroy);
+    mask_root = NULL;
     CALL_IF_DEFINED(mistral_exit);
     return EXIT_SUCCESS;
 }

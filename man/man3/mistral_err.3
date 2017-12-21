@@ -1,4 +1,4 @@
-.TH MISTRAL_ERR 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH MISTRAL_ERR 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_err \- Output an error message
 .SH SYNOPSIS
@@ -7,6 +7,9 @@ mistral_err \- Output an error message
 .sp
 .BI "void mistral_err(const char *" format ", ...);"
 .fi
+.sp
+Link with \fI\-pthread\fP.
+.sp
 .SH DESCRIPTION
 The \fBmistral_err()\fP function will produce output according to a
 \fIformat\fP as described in the man page for \fBvfprintf\fP(3).

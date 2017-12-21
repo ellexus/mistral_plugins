@@ -398,7 +398,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
                      path,
-                     mistral_call_type_names[log_entry->call_type_mask],
+                     log_entry->call_type_names,
                      log_entry->size_range,
                      job_gid,
                      job_id,
@@ -409,7 +409,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->epoch.tv_sec) < 0) {
 
             mistral_err("Could not allocate memory for log entry\n");
-            mistral_shutdown = true;
+            mistral_shutdown();
+            free(path);
+            free(job_id);
+            free(job_gid);
             return;
         }
         free(path);

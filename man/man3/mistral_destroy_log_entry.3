@@ -1,4 +1,4 @@
-.TH MISTRAL_DESTROY_LOG_ENTRY 3 2016-06-16 Ellexus "Mistral Plug-in Programmer's Manual"
+.TH MISTRAL_DESTROY_LOG_ENTRY 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
 .SH NAME
 mistral_destroy_log_entry \- Clean up a log_entry structure
 .SH SYNOPSIS
@@ -7,6 +7,9 @@ mistral_destroy_log_entry \- Clean up a log_entry structure
 .sp
 .BI "void mistral_destroy_log_entry(mistral_log *" log_entry );
 .fi
+.sp
+Link with \fI\-pthread\fP.
+.sp
 .SH DESCRIPTION
 The \fBmistral_destroy_log_entry()\fP function attempts to free all
 memory associated with the log entry structure pointed to by

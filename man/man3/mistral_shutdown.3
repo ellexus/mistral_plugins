@@ -1,0 +1,25 @@
+.TH MISTRAL_SHUTDOWN 3 2017-06-22 Ellexus "Mistral Plug-in Programmer's Manual"
+.SH NAME
+mistral_shutdown \- Function called to initiate a clean exit of a plug-in
+.SH SYNOPSIS
+.nf
+.B #include """mistral_plugin.h"""
+.sp
+.BI "void mistral_shutdown(void);"
+.fi
+.sp
+Link with \fI\-pthread\fP.
+.sp
+.SH DESCRIPTION
+This function can be called at any time within a plug-in to initiate a
+clean shutdown of the plug-in.
+.LP
+Once this function has been called the main plug-in framework will
+complete any processing in progress, communicate the shutdown to Mistral
+and tidy up resources in use.
+This includes calling the function \fImistral_exit\fP(3) if this
+function is defined when linking with \fBplugin_control.o\fP.
+.sp
+.SH "SEE ALSO"
+\fI"mistral_plugin.h"\fP, \fBmistral_exit\fP(3)
+
