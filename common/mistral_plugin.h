@@ -197,6 +197,7 @@ typedef struct mistral_log {
     const char *full_hostname;
     uint32_t cpu;
     int32_t mpi_rank;
+    int64_t sequence;
 } mistral_log;
 
 typedef struct mistral_header {
