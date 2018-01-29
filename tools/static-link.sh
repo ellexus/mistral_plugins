@@ -25,6 +25,9 @@ function main () {
     local extra_lib=""
     local dynamiclibs=""
     local staticlibs=""
+    local req_k5crypto=false
+    local req_crypto=false
+    local req_ssl=false
 
     # Iterate over the command used to dynamically link the plugin.
     #
@@ -35,9 +38,23 @@ function main () {
     # link dynamically.
     #
     # The remaining libraries are the ones that we want to statically link with.
+    #
+    # There are some static libraries, "-lss", "-lcrypto" and '-lk5crypto", that require a specific
+    # order when linking that is not required when using dynamic versions so may have been provided
+    # out of order. We handle these libraries separately, appending those we see to the end of the
+    # static library list in the correct order once we have parsed all the provided options.
 
     for word in ${config} ; do
         case $word in
+            -lk5crypto)
+                req_k5crypto=true
+                ;;
+            -lcrypto)
+                req_crypto=true
+                ;;
+            -lssl)
+                req_ssl=true
+                ;;
             -L*)
                 staticlibs="${staticlibs} ${word}"
                 dynamiclibs="${dynamiclibs} ${word}"
@@ -52,6 +69,17 @@ function main () {
                 ;;
         esac
     done
+
+    # Append order dependent static libraries to the end of the static libraries list
+    if [[ $req_ssl = true ]]; then
+        staticlibs="${staticlibs} -lssl"
+    fi
+    if [[ $req_crypto = true ]]; then
+        staticlibs="${staticlibs} -lcrypto"
+    fi
+    if [[ $req_k5crypto = true ]]; then
+        staticlibs="${staticlibs} -lk5crypto"
+    fi
 
     # The dynamically linked plugin will probably refer to other libraries which were not
     # explicitly stated when it was linked. We will dynamically link these libraries.

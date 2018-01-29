@@ -11,8 +11,8 @@ set -e
 
 # Build the sample plugins on the same machines that we use to build mistral.
 
-REMOTE_BUILD_MACHINE_32=ellexus@10.33.0.101
-REMOTE_BUILD_MACHINE_64=ellexus@10.33.0.102
+REMOTE_BUILD_MACHINE_32=ellexus@10.33.0.103
+REMOTE_BUILD_MACHINE_64=ellexus@10.33.0.104
 
 
 # Cleanup all temporary files on the local machine, and arrange for this to
