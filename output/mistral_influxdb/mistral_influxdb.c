@@ -36,6 +36,8 @@ static unsigned long debug_level = 0;
 static FILE **log_file_ptr = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
+static char *url = NULL;
+static char *auth = NULL;
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
@@ -439,8 +441,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Set InfluxDB connection options and set precision to microseconds as this
      * is what we see in logs
+     *
+     * Some versions of libcurl appear to use pointers to the original data for
+     * option values, therefore we use global variables for both the URL and
+     * authentication strings.
      */
-    char *url = NULL;
     if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=u", protocol, host,
                  port, database) < 0) {
         mistral_err("Could not allocate memory for connection URL\n");
@@ -454,10 +459,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         free(url);
         return;
     }
-    free(url);
 
     /* Set up authentication */
-    char *auth;
     if (asprintf(&auth, "%s:%s", (username)? username : "",
                                  (password)? password : "" ) < 0) {
         mistral_err("Could not allocate memory for authentication\n");
@@ -473,7 +476,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             return;
         }
     }
-    free(auth);
 
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
@@ -507,6 +509,8 @@ void mistral_exit(void)
     curl_global_cleanup();
 
     free(custom_variables);
+    free(auth);
+    free(url);
 
     if (log_file_ptr && *log_file_ptr != stderr) {
         DEBUG_OUTPUT(DBG_ENTRY, "Closing log file\n");

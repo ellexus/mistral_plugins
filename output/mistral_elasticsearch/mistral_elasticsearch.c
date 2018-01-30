@@ -19,6 +19,8 @@
 static FILE **log_file_ptr = NULL;
 static CURL *easyhandle = NULL;
 static char curl_error[CURL_ERROR_SIZE] = "";
+static char *url = NULL;
+static char *auth = NULL;
 
 static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
@@ -429,8 +431,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
 
-    /* Set Elasticsearch connection options */
-    char *url = NULL;
+    /* Set Elasticsearch connection options
+     *
+     * Some versions of libcurl appear to use pointers to the original data for
+     * option values, therefore we use global variables for both the URL and
+     * authentication strings.
+     */
     if (asprintf(&url, "%s://%s:%d/_bulk", protocol, host, port) < 0) {
         mistral_err("Could not allocate memory for connection URL\n");
         return;
@@ -440,10 +446,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         free (url);
         return;
     }
-    free (url);
 
     /* Set up authentication */
-    char *auth;
     if (asprintf(&auth, "%s:%s", username ? username : "",
                                  password ? password : "") < 0) {
         mistral_err("Could not allocate memory for authentication\n");
@@ -457,7 +461,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             return;
         }
     }
-    free (auth);
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 }
@@ -492,6 +495,8 @@ void mistral_exit(void)
     curl_global_cleanup();
 
     free(custom_variables);
+    free (auth);
+    free (url);
 
     if (log_file_ptr && *log_file_ptr != stderr) {
         fclose(*log_file_ptr);

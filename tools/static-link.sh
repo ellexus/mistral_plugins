@@ -25,6 +25,7 @@ function main () {
     local extra_lib=""
     local dynamiclibs=""
     local staticlibs=""
+    local req_z=false
     local req_k5crypto=false
     local req_crypto=false
     local req_ssl=false
@@ -39,21 +40,28 @@ function main () {
     #
     # The remaining libraries are the ones that we want to statically link with.
     #
-    # There are some static libraries, "-lss", "-lcrypto" and '-lk5crypto", that require a specific
-    # order when linking that is not required when using dynamic versions so may have been provided
-    # out of order. We handle these libraries separately, appending those we see to the end of the
-    # static library list in the correct order once we have parsed all the provided options.
+    # There are some static libraries, "-lss", "-lcrypto", '-lk5crypto", and "-lz", that require a
+    # specific order when linking that is not required when using dynamic versions so may have been
+    # provided out of order. We handle these libraries separately, appending those we see to the end
+    # of the static library list in the correct order once we have parsed all the provided options.
 
     for word in ${config} ; do
         case $word in
+            -lz)
+                req_z=true
+                config_lib="${config_lib} ${word}"
+                ;;
             -lk5crypto)
                 req_k5crypto=true
+                config_lib="${config_lib} ${word}"
                 ;;
             -lcrypto)
                 req_crypto=true
+                config_lib="${config_lib} ${word}"
                 ;;
             -lssl)
                 req_ssl=true
+                config_lib="${config_lib} ${word}"
                 ;;
             -L*)
                 staticlibs="${staticlibs} ${word}"
@@ -79,6 +87,9 @@ function main () {
     fi
     if [[ $req_k5crypto = true ]]; then
         staticlibs="${staticlibs} -lk5crypto"
+    fi
+    if [[ $req_z = true ]]; then
+        staticlibs="${staticlibs} -lz"
     fi
 
     # The dynamically linked plugin will probably refer to other libraries which were not
