@@ -25,6 +25,10 @@ function main () {
     local extra_lib=""
     local dynamiclibs=""
     local staticlibs=""
+    local req_z=false
+    local req_k5crypto=false
+    local req_crypto=false
+    local req_ssl=false
 
     # Iterate over the command used to dynamically link the plugin.
     #
@@ -35,9 +39,30 @@ function main () {
     # link dynamically.
     #
     # The remaining libraries are the ones that we want to statically link with.
+    #
+    # There are some static libraries, "-lss", "-lcrypto", '-lk5crypto", and "-lz", that require a
+    # specific order when linking that is not required when using dynamic versions so may have been
+    # provided out of order. We handle these libraries separately, appending those we see to the end
+    # of the static library list in the correct order once we have parsed all the provided options.
 
     for word in ${config} ; do
         case $word in
+            -lz)
+                req_z=true
+                config_lib="${config_lib} ${word}"
+                ;;
+            -lk5crypto)
+                req_k5crypto=true
+                config_lib="${config_lib} ${word}"
+                ;;
+            -lcrypto)
+                req_crypto=true
+                config_lib="${config_lib} ${word}"
+                ;;
+            -lssl)
+                req_ssl=true
+                config_lib="${config_lib} ${word}"
+                ;;
             -L*)
                 staticlibs="${staticlibs} ${word}"
                 dynamiclibs="${dynamiclibs} ${word}"
@@ -52,6 +77,20 @@ function main () {
                 ;;
         esac
     done
+
+    # Append order dependent static libraries to the end of the static libraries list
+    if [[ $req_ssl = true ]]; then
+        staticlibs="${staticlibs} -lssl"
+    fi
+    if [[ $req_crypto = true ]]; then
+        staticlibs="${staticlibs} -lcrypto"
+    fi
+    if [[ $req_k5crypto = true ]]; then
+        staticlibs="${staticlibs} -lk5crypto"
+    fi
+    if [[ $req_z = true ]]; then
+        staticlibs="${staticlibs} -lz"
+    fi
 
     # The dynamically linked plugin will probably refer to other libraries which were not
     # explicitly stated when it was linked. We will dynamically link these libraries.
