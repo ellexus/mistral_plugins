@@ -923,7 +923,7 @@ static bool parse_log_entry(const char *line)
             }
         }
         field++;
-    } while (field < log_field_count - (FIELD_MAX - FIELD_COMMAND) &&
+    } while (field < log_field_count - (FIELD_MAX - FIELD_COMMAND) + 1 &&
              strlen(command) + strlen(comma_split[field]) + 2 <= PLUGIN_MESSAGE_CMD_LEN);
 
     log_entry->command = command;
@@ -954,7 +954,7 @@ static bool parse_log_entry(const char *line)
             }
         }
         field++;
-    } while (field < log_field_count - (FIELD_MAX - FIELD_FILENAME));
+    } while (field < log_field_count - (FIELD_MAX - FIELD_FILENAME) + 1);
 
     log_entry->file = filename;
 
@@ -988,10 +988,10 @@ static bool parse_log_entry(const char *line)
 
     end = NULL;
     errno = 0;
-    log_entry->sequence = (int64_t)strtoll(comma_split[FIELD_SEQUENCE], &end, 10);
+    log_entry->sequence = (int64_t)strtoll(comma_split[FIELD_SEQUENCE + offset], &end, 10);
 
-    if (!end || *end != '\0' || end == comma_split[FIELD_SEQUENCE] || errno) {
-        mistral_err("Invalid sequence seen: [%s].\n", comma_split[FIELD_SEQUENCE]);
+    if (!end || *end != '\0' || end == comma_split[FIELD_SEQUENCE + offset] || errno) {
+        mistral_err("Invalid sequence seen: [%s].\n", comma_split[FIELD_SEQUENCE + offset]);
         goto fail_log_sequence;
     }
 
