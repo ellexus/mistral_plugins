@@ -923,7 +923,7 @@ static bool parse_log_entry(const char *line)
             }
         }
         field++;
-    } while (field < log_field_count - (FIELD_MAX - FIELD_COMMAND) + 1 &&
+    } while (field < (log_field_count - (FIELD_MAX - FIELD_COMMAND) + 1) &&
              strlen(command) + strlen(comma_split[field]) + 2 <= PLUGIN_MESSAGE_CMD_LEN);
 
     log_entry->command = command;
@@ -954,7 +954,7 @@ static bool parse_log_entry(const char *line)
             }
         }
         field++;
-    } while (field < log_field_count - (FIELD_MAX - FIELD_FILENAME) + 1);
+    } while (field < (log_field_count - (FIELD_MAX - FIELD_FILENAME) + 1));
 
     log_entry->file = filename;
 
