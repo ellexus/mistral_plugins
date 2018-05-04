@@ -143,9 +143,23 @@ function main() {
         auth="-u $auth"
     fi
 
+    outval=$($curl_cmd -s $auth -XGET $protocol://$host:$port)
+    retval=$?
+
+    if [[ "$retval" -ne 0 ]]; then
+        >&2 echo Error, could not get Elasticsearch version. Curl exited with error code $retval
+        exit $retval
+    elif [[ "${outval:0:9}" = '{"error":' ]]; then
+        >&2 echo Error, could not get Elasticsearch version. ElasticSearch query failed:
+        echo "$outval" | >&2 sed -e 's/.*reason":\([^}]*\)}.*/  \1/;s/,/\n  /g'
+        exit 2
+    else
+        ver=$(echo "$outval" | grep number | sed -e 's/.*number" : "\([0-9]\+\).*/\1/g')
+    fi
+
     outval=$($curl_cmd -s $auth -XPUT -H "Content-Type: application/json" \
         $protocol://$host:$port/_template/$database -d \
-        "$(sed -e "s/mistral/$database/" $scriptdir/mappings.json)" \
+        "$(sed -e "s/mistral/$database/" $scriptdir/mappings_$ver.x.json)" \
         )
     retval=$?
 

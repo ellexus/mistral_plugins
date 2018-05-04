@@ -1485,7 +1485,7 @@ read_fail_select:
 static void *processing_thread(void *arg)
 {
     int ret = EXIT_SUCCESS;
-    int res = 0;
+    int res = -1;
     bool shutdown_seen = false;
     sigset_t *set = arg;
 
