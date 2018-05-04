@@ -160,6 +160,11 @@ static void usage(const char *name)
                 "  -v var-name\n"
                 "     The name of an environment variable, the value of which should be\n"
                 "     stored by the plug-in. This option can be specified multiple times.\n"
+                "\n"
+                "  --es-version=num\n"
+                "  -V num\n"
+                "     The major version of the Elasticsearch server to connect to.\n"
+                "     If not specified the plug-in will default to \"5\".\n"
                 "\n");
 }
 
