@@ -1598,7 +1598,7 @@ static void *processing_thread(void *arg)
  */
 int main(int argc, char **argv)
 {
-    int res = 0;
+    int res = -1;
     pthread_t thread_id = 0;
     if (sem_init(&mistral_plugin_info.lock, 0, 1) < 0) {
         char buf[256];
