@@ -45,6 +45,20 @@ fi
 
 echo "$es_pass" > "$results_dir/es_pass.txt"
 
+outval=$($curl_cmd -s $es_auth -XGET $es_protocol://$es_host:$es_port)
+retval=$?
+
+if [[ "$retval" -ne 0 ]]; then
+    >&2 echo Error, could not get Elasticsearch version. Curl exited with error code $retval
+    exit 6
+elif [[ "${outval:0:9}" = '{"error":' ]]; then
+    >&2 echo Error, could not get Elasticsearch version. ElasticSearch query failed:
+    echo "$outval" | >&2 sed -e 's/.*reason":\([^}]*\)}.*/  \1/;s/,/\n  /g'
+    exit 7
+else
+    es_version=$(echo "$outval" | grep number | sed -e 's/.*number" : "\([0-9]\+\).*/\1/')
+fi
+
 $plugin_dir/schema/mistral_create_elastic_template.sh -i "$es_index" \
     -h "$es_host" -n "$es_port" $create_protocol_flag -u $es_user \
     -p "$results_dir/es_pass.txt" > $summary_file
@@ -69,9 +83,18 @@ fi
 # Set a custom value to be included in the output
 export _test_var=MISTRAL
 
+# Set up expected results
+if [[ "$es_version" -eq 6 ]]; then
+    sed -e 's/throttle/_doc/' expected_v5.txt > expected.txt
+elif [[ "$es_version" -lt 6 ]]; then
+    cp expected_v5.txt expected.txt
+else
+    sed -e 's/,"_type":"throttle"//g' expected_v5.txt > expected.txt
+fi
+
 # Run a standard test
 run_test -i "$es_index" -h "$es_host" -P "$es_port" $secure -u \
-    "$es_user" -p "$es_pass" -v _test_var
+    "$es_user" -p "$es_pass" -v _test_var -V "$es_version"
 
 # Get the results - it can take a little while for the data to sync so sleep for
 # 2 seconds to ensure we get all results returned.

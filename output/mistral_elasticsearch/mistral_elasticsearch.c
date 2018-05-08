@@ -11,7 +11,6 @@
 #include <sys/stat.h>           /* open, umask */
 #include <sys/types.h>          /* open, umask */
 
-
 #include "mistral_plugin.h"
 
 #define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
@@ -26,6 +25,7 @@ static mistral_log *log_list_head = NULL;
 static mistral_log *log_list_tail = NULL;
 static const char *es_index = "mistral";
 static char *custom_variables = NULL;
+static unsigned long es_version = 5;
 
 struct saved_resp {
     size_t size;
@@ -52,7 +52,7 @@ static struct curl_slist *headers = NULL;
 static size_t write_callback(void *data, size_t size, size_t nmemb, void *saved)
 {
     size_t data_len = size * nmemb;
-    struct saved_resp *response = (struct saved_resp *) saved;
+    struct saved_resp *response = (struct saved_resp *)saved;
 
     char *new_body = realloc(response->body, response->size + data_len + 1);
     if (new_body == NULL) {
@@ -90,7 +90,6 @@ static size_t write_callback(void *data, size_t size, size_t nmemb, void *saved)
  */
 static bool set_curl_option(CURLoption option, void *parameter)
 {
-
     if (curl_easy_setopt(easyhandle, option, parameter) != CURLE_OK) {
         mistral_err("Could not set curl option: %s\n", curl_error);
         mistral_shutdown();
@@ -118,7 +117,8 @@ static void usage(const char *name)
      * line.
      */
     mistral_err("Usage:\n"
-                "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n", name);
+                "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n",
+                name);
     mistral_err("\n"
                 "  --error=file\n"
                 "  -e file\n"
@@ -160,8 +160,12 @@ static void usage(const char *name)
                 "  -v var-name\n"
                 "     The name of an environment variable, the value of which should be\n"
                 "     stored by the plug-in. This option can be specified multiple times.\n"
+                "\n"
+                "  --es-version=num\n"
+                "  -V num\n"
+                "     The major version of the Elasticsearch server to connect to.\n"
+                "     If not specified the plug-in will default to \"5\".\n"
                 "\n");
-    return;
 }
 
 /*
@@ -274,6 +278,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"ssl", no_argument, NULL, 's'},
         {"username", required_argument, NULL, 'u'},
         {"var", required_argument, NULL, 'v'},
+        {"es-version", required_argument, NULL, 'V'},
         {0, 0, 0, 0},
     };
 
@@ -286,7 +291,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     int opt;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:su:v:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:su:v:V:", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -297,7 +302,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'i':
             es_index = optarg;
             break;
-        case 'm':{
+        case 'm': {
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
             if (!end || *end) {
@@ -311,7 +316,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
 
             if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
+                mistral_err(
+                    "Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n",
+                    optarg);
                 new_mode = 0;
             }
             break;
@@ -319,7 +326,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'p':
             password = optarg;
             break;
-        case 'P':{
+        case 'P': {
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port == 0 || tmp_port > UINT16_MAX || !end || *end) {
@@ -335,7 +342,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'u':
             username = optarg;
             break;
-        case 'v':{
+        case 'v': {
             char *var_val = NULL;
             char *new_var = NULL;
 
@@ -345,17 +352,19 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                     var_val = strdup("N/A");
                 }
                 if (var_val == NULL) {
-                    mistral_err("Could not allocate memory for environment variable value %s\n", optarg);
+                    mistral_err("Could not allocate memory for environment variable value %s\n",
+                                optarg);
                     return;
                 }
             } else {
                 mistral_err("Invalid environment variable name %s\n", optarg);
             }
             if (asprintf(&new_var, "%s%s\"%s\":\"%s\"",
-                                   (custom_variables)? custom_variables : "",
-                                   (custom_variables)? "," : "",
-                                   optarg,
-                                   var_val) < 0) {
+                         (custom_variables) ? custom_variables : "",
+                         (custom_variables) ? "," : "",
+                         optarg,
+                         var_val) < 0)
+            {
                 mistral_err("Could not allocate memory for environment variable %s\n", optarg);
                 free(var_val);
                 return;
@@ -363,6 +372,15 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             free(var_val);
             free(custom_variables);
             custom_variables = new_var;
+            break;
+        }
+        case 'V': {
+            char *end = NULL;
+            es_version = strtoul(optarg, &end, 10);
+            if (es_version < 2 || es_version > 6 || !end || *end) {
+                mistral_err("Unsupported Elasticsearch version \"%s\" specified\n", optarg);
+                return;
+            }
             break;
         }
         default:
@@ -430,7 +448,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
-
     /* Set Elasticsearch connection options
      *
      * Some versions of libcurl appear to use pointers to the original data for
@@ -443,13 +460,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (!set_curl_option(CURLOPT_URL, url)) {
-        free (url);
+        free(url);
         return;
     }
 
     /* Set up authentication */
     if (asprintf(&auth, "%s:%s", username ? username : "",
-                                 password ? password : "") < 0) {
+                 password ? password : "") < 0)
+    {
         mistral_err("Could not allocate memory for authentication\n");
         return;
     }
@@ -457,7 +475,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     if (strcmp(auth, ":")) {
         if (curl_easy_setopt(easyhandle, CURLOPT_USERPWD, auth) != CURLE_OK) {
             mistral_err("Could not set up authentication\n");
-            free (auth);
+            free(auth);
             return;
         }
     }
@@ -495,8 +513,8 @@ void mistral_exit(void)
     curl_global_cleanup();
 
     free(custom_variables);
-    free (auth);
-    free (url);
+    free(auth);
+    free(url);
 
     if (log_file_ptr && *log_file_ptr != stderr) {
         fclose(*log_file_ptr);
@@ -564,22 +582,28 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
     mistral_log *log_entry = log_list_head;
 
-    while (log_entry) {
-        /* Elasticsearch 5.3.0 appears to treat dates inserted into date fields
-         * as seconds since epoch as long ints rather than dates even with a
-         * date mapping defined. Therefore we must use a string representation
-         * for the date. Again while Elasticsearch should cope with time zones
-         * in practice it seems that every timestamp must be in the same time
-         * zone for searches to work as expected. Logstash uses zulu time format
-         * (UTC) into a field named "@timestamp" therefore we will do the same
-         * as this should maximise compatibility.
-         */
-        size_t date_len = sizeof("YYYY-MM-DD"); /* strftime format = %F */
-        size_t ts_len = sizeof("YYYY-MM-DDTHH:MI:SS"); /* = %FT%T */
-        char strdate[date_len];
-        char strts[ts_len];
-        struct tm utc_time;
+    /* Elasticsearch 5.3.0 appears to treat dates inserted into date fields
+     * as seconds since epoch as long ints rather than dates even with a
+     * date mapping defined. Therefore we must use a string representation
+     * for the date. Again while Elasticsearch should cope with time zones
+     * in practice it seems that every timestamp must be in the same time
+     * zone for searches to work as expected. Logstash uses zulu time format
+     * (UTC) into a field named "@timestamp" therefore we will do the same
+     * as this should maximise compatibility.
+     */
+    size_t date_len = sizeof("YYYY-MM-DD"); /* strftime format = %F */
+    size_t ts_len = sizeof("YYYY-MM-DDTHH:MI:SS"); /* = %FT%T */
+    size_t type_len = sizeof(",\"_type\":\"throttle\""); /* Max possible len */
+    char strdate[date_len];
+    char strts[ts_len];
+    char doc_type[type_len];
+    struct tm utc_time;
 
+    if (es_version == 6) {
+        strcpy(doc_type, ",\"_type\":\"_doc\"");
+    }
+
+    while (log_entry) {
         /* Calculate UTC time */
         if (gmtime_r(&log_entry->epoch.tv_sec, &utc_time) == NULL) {
             mistral_err("Unable to calculate UTC time for log message: %ld\n",
@@ -599,9 +623,14 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         const char *job_id = (log_entry->job_id[0] == 0) ? "N/A" : log_entry->job_id;
         char *new_data = NULL;
 
+        if (es_version < 6) {
+            sprintf(doc_type, ",\"_type\":\"%s\"",
+                    mistral_contract_name[log_entry->contract_type]);
+        }
+
         if (asprintf(&new_data,
                      "%s"
-                     "{\"index\":{\"_index\":\"%s-%s\",\"_type\":\"%s\"}}\n"
+                     "{\"index\":{\"_index\":\"%s-%s\"%s}}\n"
                      "{\"@timestamp\": \"%s.%03" PRIu32 "Z\","
                      "\"rule\":{"
                      "\"scope\":\"%s\","
@@ -633,9 +662,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"value\":%" PRIu64
                      "}\n",
                      (data) ? data : "",
-                     es_index,
-                     strdate,
-                     mistral_contract_name[log_entry->contract_type],
+                     es_index, strdate, doc_type,
                      strts,
                      (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
                      mistral_scope_name[log_entry->scope],
@@ -656,11 +683,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      file,
                      log_entry->cpu,
                      log_entry->mpi_rank,
-                     (custom_variables)? "\"environment\":{" : "",
-                     (custom_variables)? custom_variables : "",
-                     (custom_variables)? "}," : "",
-                     log_entry->measured) < 0) {
-
+                     (custom_variables) ? "\"environment\":{" : "",
+                     (custom_variables) ? custom_variables : "",
+                     (custom_variables) ? "}," : "",
+                     log_entry->measured) < 0)
+        {
             mistral_err("Could not allocate memory for log entry\n");
             free(data);
             free(file);
