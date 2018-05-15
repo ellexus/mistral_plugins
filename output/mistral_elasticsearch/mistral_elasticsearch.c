@@ -619,6 +619,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         /* Command and filename must be JSON escaped */
         char *command = elasticsearch_escape(log_entry->command);
         char *file = elasticsearch_escape(log_entry->file);
+        char *path = elasticsearch_escape(log_entry->path);
         const char *job_gid = (log_entry->job_group_id[0] == 0) ? "N/A" : log_entry->job_group_id;
         const char *job_id = (log_entry->job_id[0] == 0) ? "N/A" : log_entry->job_id;
         char *new_data = NULL;
@@ -670,7 +671,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->label,
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->call_type_names,
-                     log_entry->path,
+                     path,
                      log_entry->threshold,
                      log_entry->timeframe,
                      log_entry->size_min,
@@ -690,12 +691,14 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         {
             mistral_err("Could not allocate memory for log entry\n");
             free(data);
+            free(path);
             free(file);
             free(command);
             mistral_shutdown();
             return;
         }
         free(data);
+        free(path);
         free(file);
         free(command);
         data = new_data;

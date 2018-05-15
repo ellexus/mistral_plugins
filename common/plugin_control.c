@@ -458,6 +458,87 @@ static char **str_split(const char *s, int sep, size_t *field_count)
 }
 
 /*
+ * csv_split
+ *
+ * Function to split an RFC 4180 compliant CSV formatted string into an array of strings. A trailing
+ * NULL pointer will be added to the array so it can be used by functions that use this convention
+ * rather than taking array length as a parameter.
+ *
+ * Consecutive separators will not be consolidated , i.e. empty strings will be produced.
+ *
+ * The value of field_count will be set to the number of strings in the array.
+ *
+ * Parameters:
+ *   s           - Standard null terminated string to be separated
+ *   field_count - Integer value to be updated with the number of fields in the array
+ *
+ * Returns:
+ *   A pointer to the start of the array if successful
+ *   NULL otherwise
+ */
+static char **csv_split(const char *s, size_t *field_count)
+{
+    size_t n = 1;               /* One more string than separators. */
+    size_t len;                 /* Length of 's' */
+    bool in_string = false;
+
+    assert(s);
+    assert(field_count);
+    /* Count separators. */
+    for (len = 0; s[len]; ++len) {
+        if (s[len] == ',' && !in_string) {
+            n++;
+        } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
+            /* Leading quote */
+            in_string = true;
+        } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
+            /* Trailing quote */
+            in_string = false;
+        }
+    }
+    *field_count = n;
+
+    /* Allocate the result array (including space for a NULL at the end), plus space for a copy of
+     * 's' (this may be up to twice the length required if the entire string is escaped quotes).
+     */
+    void *alloc = calloc(1, len + 1 + (n + 1) * sizeof(char *));
+    if (!alloc) {
+        return NULL;
+    }
+    char **result = alloc;
+    char *copy = alloc;
+    copy += (n + 1) * sizeof(char *);
+
+    size_t i = 0;
+    result[i] = copy;
+    size_t qcount = 0;
+    for (len = 0; s[len]; ++len) {
+        if (s[len] == ',' && !in_string) {
+            copy++;
+            result[++i] = copy;
+            qcount = 0;
+        } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
+            /* Leading quote */
+            in_string = true;
+        } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
+            /* Trailing quote */
+            in_string = false;
+        } else if (s[len] == '"' && in_string) {
+            /* ignore the first double quote we see in a string */
+            if (++qcount % 2 == 0) {
+                *copy++ = s[len];
+            }
+        } else {
+            *copy++ = s[len];
+            qcount = 0;
+        }
+    }
+    *copy = '\0';
+    result[n] = NULL;
+    return result;
+}
+
+/*
  * find_in_array
  *
  * Search for the passed string in an array of strings that is terminated with a NULL pointer
@@ -639,7 +720,7 @@ static bool parse_log_entry(const char *line)
     size_t field_count;
     mistral_log *log_entry = NULL;
 
-    char **comma_split = str_split(line, ',', &field_count);
+    char **comma_split = csv_split(line, &field_count);
     size_t log_field_count = field_count;
     if (!comma_split) {
         mistral_err("Unable to allocate memory for split log line: %s\n", line);

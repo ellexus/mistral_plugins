@@ -1,8 +1,8 @@
 :PGNSUPVRSN:4:5:
 :PGNDATASRT:1:
-local#throttle#DATE_60_15TTIME_60_15.000000,label1_1,/tmp/tmp.testpath/1_1,read+write,all,bandwidth,12B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp,testpath/1_1,/tmp/tmp.testpath/1_1,15432101,15432101,1,1
-local#throttle#DATE_60_5TTIME_60_5.000001,label1_1,/tmp/tmp.testpath/1_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/1_1,/tmp/tmp,testpath/1_1,15432101,15432101,1,2
-local#throttle#DATE_60_4TTIME_60_4.000010,label1_1,/tmp/tmp.testpath/1_1,read,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp,testpath/1_1,/tmp/tmp,testpath/1_1,15432101,15432101,1,3
+local#throttle#DATE_60_15TTIME_60_15.000000,label1_1,/tmp/tmp.testpath/1_1,read+write,all,bandwidth,12B/50ms,10B/50ms,host1,26025,1,"/usr/bin/cat /tmp/tmp,testpath/1_1",/tmp/tmp.testpath/1_1,15432101,15432101,1,1
+local#throttle#DATE_60_5TTIME_60_5.000001,label1_1,/tmp/tmp.testpath/1_1,write,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,/usr/bin/cat /tmp/tmp.testpath/1_1,"/tmp/tmp,testpath/1_1",15432101,15432101,1,2
+local#throttle#DATE_60_4TTIME_60_4.000010,label1_1,/tmp/tmp.testpath/1_1,read,all,bandwidth,11B/50ms,10B/50ms,host1,26025,1,"/usr/bin/cat /tmp/tmp,testpath/1_1","/tmp/tmp,testpath/1_1",15432101,15432101,1,3
 local#throttle#DATE_60_3TTIME_60_3.000100,label1_2a,/tmp/tmp.testpath/1_2,write,all,bandwidth,200B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/1_2,/tmp/tmp.testpath/1_2,15432102,15432102,2,4
 local#throttle#DATE_60_2TTIME_60_2.001000,label1_2a,/tmp/tmp.testpath/1_2,read,all,bandwidth,201B/100ms,200B/100ms,host2,26039,2,/usr/bin/cat /tmp/tmp.testpath/1_2,/tmp/tmp.testpath/1_2,15432102,15432102,2,5
 local#throttle#DATE_60_1TTIME_60_1.010000,label1_3a,/tmp/tmp.testpath/1_3,write,all,bandwidth,2001B/100ms,2000B/100ms,host1,26045,1,/usr/bin/cat /tmp/tmp.testpath/1_3,/tmp/tmp.testpath/1_3,15432103,15432103,3,6
