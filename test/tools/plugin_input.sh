@@ -52,6 +52,7 @@ for day in 60 45 30 8 7 2 1 0; do
         eval "echo s/DATE_${day}_${mins}/\${date${day}time${mins}% *}/g" >> "$output"
         eval "echo s/TIME_${day}_${mins}/\${date${day}time${mins}#* }/g" >> "$output"
         eval "echo s/TS_${day}_${mins}/\${date${day}time${mins}}/g" >> "$output"
+        eval "echo s/CTZ_${day}_${mins}/\$(date --date=\"$refdate -$day days -$mins minutes\" +\"%:z\")/g" >> "$output"
         eval "echo s/TZ_${day}_${mins}/\$(date --date=\"$refdate -$day days -$mins minutes\" +\"%z\")/g" >> "$output"
     done
 done
