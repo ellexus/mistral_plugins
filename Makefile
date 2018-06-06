@@ -1,6 +1,6 @@
 .PHONY: all
 all: build-common build-mistral_elasticsearch build-mistral_graphite \
-    build-mistral_influxdb build-mistral_mysql build-mistral_rtm
+    build-mistral_influxdb build-mistral_mysql build-mistral_rtm build-mistral_splunk
 
 .PHONY: build-common
 build-common:
@@ -26,6 +26,10 @@ build-mistral_influxdb:
 build-mistral_rtm:
 	$(MAKE) -C output/mistral_rtm
 
+.PHONY: build-mistral_splunk
+build-mistral_splunk:
+	$(MAKE) -C output/mistral_splunk
+
 .PHONY: package
 package:
 	$(MAKE) -C common
@@ -34,6 +38,7 @@ package:
 	$(MAKE) -C output/mistral_mysql package
 	$(MAKE) -C output/mistral_influxdb package
 	$(MAKE) -C output/mistral_rtm package
+	$(MAKE) -C output/mistral_splunk package
 
 .PHONY: clean
 clean:
@@ -43,3 +48,4 @@ clean:
 	$(MAKE) -C output/mistral_mysql clean
 	$(MAKE) -C output/mistral_influxdb clean
 	$(MAKE) -C output/mistral_rtm clean
+	$(MAKE) -C output/mistral_splunk clean
