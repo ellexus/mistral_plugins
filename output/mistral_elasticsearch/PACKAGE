@@ -1,3 +1,5 @@
 readme.rst
-schema/mappings.json
+schema/mappings_2.x.json
+schema/mappings_5.x.json
+schema/mappings_6.x.json
 schema/mistral_create_elastic_template.sh
