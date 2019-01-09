@@ -18,38 +18,38 @@
     X(UPDATE)
 
 enum __attribute__((packed)) mistral_plugin_type {
-#define X(name) name ## _PLUGIN,
+    #define X(name) name ## _PLUGIN,
     PLUGIN(X)
-#undef X
+    #undef X
     MAX_PLUGIN
 };
 
-#define CONTRACT(X)                                \
-    X(MONITORING, "monitor",  "monitortimeframe")  \
+#define CONTRACT(X)                               \
+    X(MONITORING, "monitor",  "monitortimeframe") \
     X(THROTTLING, "throttle", "throttletimeframe")
 
 enum __attribute__((packed)) mistral_contract {
-#define X(name, str, header) CONTRACT_ ## name,
+    #define X(name, str, header) CONTRACT_ ## name,
     CONTRACT(X)
-#undef X
+    #undef X
     CONTRACT_MAX
 };
 
-extern const char *const mistral_contract_name[];
-extern const char *const mistral_contract_header[];
+extern const char * const mistral_contract_name[];
+extern const char * const mistral_contract_header[];
 
-#define SCOPE(X)        \
-    X(LOCAL,  "local")  \
+#define SCOPE(X)       \
+    X(LOCAL,  "local") \
     X(GLOBAL, "global")
 
 enum __attribute__((packed)) mistral_scope {
-#define X(name, str) SCOPE_ ## name,
+    #define X(name, str) SCOPE_ ## name,
     SCOPE(X)
-#undef X
+    #undef X
     SCOPE_MAX
 };
 
-extern const char *const mistral_scope_name[];
+extern const char * const mistral_scope_name[];
 
 #define MEASUREMENT(X)                \
     X(BANDWIDTH,     "bandwidth")     \
@@ -58,16 +58,20 @@ extern const char *const mistral_scope_name[];
     X(MIN_LATENCY,   "min-latency")   \
     X(MAX_LATENCY,   "max-latency")   \
     X(MEAN_LATENCY,  "mean-latency")  \
-    X(TOTAL_LATENCY, "total-latency")
+    X(TOTAL_LATENCY, "total-latency") \
+    X(MEMORY,        "memory")        \
+    X(USER_TIME,     "user-time")     \
+    X(SYSTEM_TIME,   "system-time")   \
+    X(CPU_TIME,      "cpu-time")
 
 enum __attribute__((packed)) mistral_measurement {
-#define X(name, str) MEASUREMENT_ ## name,
+    #define X(name, str) MEASUREMENT_ ## name,
     MEASUREMENT(X)
-#undef X
+    #undef X
     MEASUREMENT_MAX
 };
 
-extern const char *const mistral_measurement_name[];
+extern const char * const mistral_measurement_name[];
 
 #define UNIT_CLASS(X) \
     X(TIME,  "time")  \
@@ -75,13 +79,13 @@ extern const char *const mistral_measurement_name[];
     X(COUNT, "count")
 
 enum __attribute__((packed)) mistral_unit_class {
-#define X(name, str) UNIT_CLASS_ ## name,
+    #define X(name, str) UNIT_CLASS_ ## name,
     UNIT_CLASS(X)
-#undef X
+    #undef X
     UNIT_CLASS_MAX
 };
 
-extern const char *const mistral_unit_class_name[];
+extern const char * const mistral_unit_class_name[];
 
 #define UNIT(X)                               \
     X(MICROSECS, "us", 1,   UNIT_CLASS_TIME)  \
@@ -96,13 +100,13 @@ extern const char *const mistral_unit_class_name[];
     X(COUNT,     "",   1,   UNIT_CLASS_COUNT)
 
 enum __attribute__((packed)) mistral_unit {
-#define X(name, suffix, scale, type) UNIT_ ## name,
+    #define X(name, suffix, scale, type) UNIT_ ## name,
     UNIT(X)
-#undef X
+    #undef X
     UNIT_MAX
 };
 
-extern const char *const mistral_unit_suffix[];
+extern const char * const mistral_unit_suffix[];
 extern const uint32_t mistral_unit_scale[];
 extern const uint32_t mistral_unit_type[];
 
@@ -131,23 +135,23 @@ extern const uint32_t mistral_unit_type[];
 #define BITMASK(type) (1u << type)
 
 enum __attribute__((packed)) mistral_call_type {
-#define X(name, str) CALL_TYPE_ ## name,
+    #define X(name, str) CALL_TYPE_ ## name,
     CALL_TYPE(X)
-#undef X
+    #undef X
     CALL_TYPE_MAX
 };
 
 enum __attribute__((packed)) mistral_bitmask {
-#define X(name, str) CALL_TYPE_MASK_ ## name = BITMASK(CALL_TYPE_ ## name),
+    #define X(name, str) CALL_TYPE_MASK_ ## name = BITMASK(CALL_TYPE_ ## name),
     CALL_TYPE(X)
-#undef X
+    #undef X
     CALL_TYPE_MASK_MAX = BITMASK(CALL_TYPE_MAX)
 };
 
-extern const char *const mistral_call_type_name[];
+extern const char * const mistral_call_type_name[];
 extern const uint32_t mistral_call_type_mask[];
 extern char mistral_call_type_names[CALL_TYPE_MASK_MAX][
-#define X(name, str) + sizeof(str) + 1
+    #define X(name, str) + sizeof(str) + 1
     CALL_TYPE(X)
 #undef X
 ];
@@ -223,20 +227,22 @@ typedef struct mistral_rule {
     enum mistral_unit threshold_unit;
 } mistral_rule;
 
-#define MISTRAL_RULE_INITIALIZER {.size_min_unit = UNIT_MAX, \
-                                  .size_max_unit = UNIT_MAX, \
+#define MISTRAL_RULE_INITIALIZER {.size_min_unit = UNIT_MAX,      \
+                                  .size_max_unit = UNIT_MAX,      \
                                   .measurement = MEASUREMENT_MAX, \
                                   .threshold_unit = MAX_UNIT}
 
-extern const int64_t mistral_max_size;    /* Holds max value of ssize_t as   */
-                                          /* defined in plugin_control.o     */
+extern const int64_t mistral_max_size;    /* Holds max value of ssize_t as
+                                           * defined in plugin_control.o
+                                           */
 
 extern void mistral_destroy_log_entry(mistral_log *log_entry);
 __attribute__((__format__(printf, 1, 2)))
 extern int mistral_err(const char *format, ...);
-extern void mistral_shutdown(void); /* Function that, if called, will cause  */
-                                    /* the plug-in to exit before reading    */
-                                    /* the next line of input.               */
+extern void mistral_shutdown(void); /* Function that, if called, will cause
+                                     * the plug-in to exit before reading
+                                     * the next line of input.
+                                     */
 extern const char *mistral_get_call_type_name(uint32_t mask);
 
 #define UNUSED(param) ((void)(param))
