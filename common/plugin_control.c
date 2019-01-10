@@ -240,30 +240,25 @@ const char *mistral_get_call_type_name(uint32_t mask)
     }
 
     /* If we have got here this is the first time we have seen this call type mask, construct the
-     * normalised call type name string by looping through the list of call types. Although it
-     * would be logical to represent an empty bitmask by an empty string, it is easier if this is
-     * a string such as "none".
+     * normalised call type name string by looping through the list of call types.
      */
-    if (mask == 0) {
-        strcpy(tmp1, "none");
-    } else {
-        tmp1[0] = '\0';
-        for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
-            if (tmp1[0] == '\0' && (mask & BITMASK(j)) == BITMASK(j)) {
-                /* This is the first call type we have seen that is represented in this bitmask */
-                if (snprintf(tmp1, max_string, "%s", mistral_call_type_name[j]) < 0) {
-                    mistral_err("Could not initialise call type name array\n");
-                    mistral_shutdown();
-                }
-            } else if ((mask & BITMASK(j)) == BITMASK(j)) {
-                /* This call type is in the bit mask but we need to append it to the current list */
-                char tmp2[max_string];
-                tmp2[0] = '\0';
-                strncpy(tmp2, tmp1, max_string);
-                if (snprintf(tmp1, max_string, "%s+%s", tmp2, mistral_call_type_name[j]) < 0) {
-                    mistral_err("Could not initialise call type name array\n");
-                    mistral_shutdown();
-                }
+
+    tmp1[0] = '\0';
+    for (size_t j = 0; j < CALL_TYPE_MAX; j++) {
+        if (tmp1[0] == '\0' && (mask & BITMASK(j)) == BITMASK(j)) {
+            /* This is the first call type we have seen that is represented in this bitmask */
+            if (snprintf(tmp1, max_string, "%s", mistral_call_type_name[j]) < 0) {
+                mistral_err("Could not initialise call type name array\n");
+                mistral_shutdown();
+            }
+        } else if ((mask & BITMASK(j)) == BITMASK(j)) {
+            /* This call type is in the bit mask but we need to append it to the current list */
+            char tmp2[max_string];
+            tmp2[0] = '\0';
+            strncpy(tmp2, tmp1, max_string);
+            if (snprintf(tmp1, max_string, "%s+%s", tmp2, mistral_call_type_name[j]) < 0) {
+                mistral_err("Could not initialise call type name array\n");
+                mistral_shutdown();
             }
         }
     }
@@ -425,42 +420,30 @@ fail_asprintf:
  */
 static char **str_split(const char *s, int sep, size_t *field_count)
 {
-    size_t n_sep = 0;           /* Number of separators */
-    size_t n_field;             /* Number of fields */
+    size_t n = 1;               /* One more string than separators. */
     size_t len;                 /* Length of 's' */
 
     assert(s);
     assert(field_count);
-
     /* Count separators. */
     for (len = 0; s[len]; ++len) {
-        n_sep += (sep == s[len]);
+        n += (sep == s[len]);
     }
-
-    /* If the string to be separated is completely empty then there are no fields. Otherwise
-     * the number of fields is one more than the number of separators. This is perhaps not
-     * entirely consistent, but does what we want in this context.
-     */
-    if (len == 0) {
-        n_field = 0;
-    } else {
-        n_field = n_sep + 1;
-    }
-    *field_count = n_field;
+    *field_count = n;
 
     /* Allocate the result array (including space for a NULL at the
      * end), plus space for a copy of 's'.
      */
-    void *alloc = calloc(1, len + 1 + (n_field + 1) * sizeof(char *));
+    void *alloc = calloc(1, len + 1 + (n + 1) * sizeof(char *));
     if (!alloc) {
         return NULL;
     }
     char **result = alloc;
     char *copy = alloc;
-    copy += (n_field + 1) * sizeof(char *);
+    copy += (n + 1) * sizeof(char *);
     memcpy(copy, s, len + 1);
 
-    for (size_t i = 0; i < n_field; ++i) {
+    for (size_t i = 0; i < n; ++i) {
         result[i] = copy;
         while (*copy) {
             if (*copy == sep) {
@@ -470,7 +453,7 @@ static char **str_split(const char *s, int sep, size_t *field_count)
             ++copy;
         }
     }
-    result[n_field] = NULL;
+    result[n] = NULL;
     return result;
 }
 
@@ -840,9 +823,18 @@ static bool parse_log_entry(const char *line)
         mistral_err("Unable to allocate memory for call types: %s\n", comma_split[FIELD_CALL_TYPE]);
         goto fail_log_call_types_split;
     }
+
+    if (!call_type_split[0]) {
+        mistral_err("Unable to find call type: %s\n", comma_split[FIELD_CALL_TYPE]);
+        goto fail_log_call_types;
+    }
+
     for (char **call_type = call_type_split; call_type && *call_type; ++call_type) {
         ssize_t type = find_in_array(*call_type, mistral_call_type_name);
-        if (type != -1) {
+        if (type == -1) {
+            mistral_err("Invalid call type: %s\n", *call_type);
+            goto fail_log_call_type;
+        } else {
             log_entry->call_type_mask = log_entry->call_type_mask | mistral_call_type_mask[type];
             log_entry->call_types[type] = true;
         }
@@ -850,6 +842,10 @@ static bool parse_log_entry(const char *line)
 
     /* Initialise the standardised version of the call type string */
     log_entry->call_type_names = mistral_get_call_type_name(log_entry->call_type_mask);
+    if (!log_entry->call_type_names) {
+        mistral_err("Unable to normalise call type names: %s\n", comma_split[FIELD_CALL_TYPE]);
+        goto fail_log_call_type_names;
+    }
 
     /* Record the rule size range, default/missing values are 0 for min, SSIZE_MAX for max */
     char **size_range_split = str_split(comma_split[FIELD_SIZE_RANGE], '-', &field_count);
@@ -894,7 +890,7 @@ static bool parse_log_entry(const char *line)
                 goto fail_log_size_range;
             }
         }
-    } else if ((field_count == 1 && strcmp(size_range_split[0], "all")) || field_count > 1) {
+    } else if (strcmp(size_range_split[0], "all") || field_count > 1) {
         /* Size range was not "all" which is the only other valid value */
         mistral_err("Unable to parse size range: %s\n", comma_split[FIELD_SIZE_RANGE]);
         goto fail_log_size_range;
@@ -970,20 +966,14 @@ static bool parse_log_entry(const char *line)
         goto fail_log_pid;
     }
 
-    /* Record the CPU ID - this is unlikely to be large but use a uint32_t to future
-     * proof. Some log entries won't specify a cpu, in which case we substitue cpu zero.
-     */
-    if (strlen(comma_split[FIELD_CPU]) == 0) {
-        log_entry->cpu = 0;
-    } else {
-        end = NULL;
-        errno = 0;
-        log_entry->cpu = (uint32_t)strtoul(comma_split[FIELD_CPU], &end, 10);
+    /* Record the CPU ID - this is unlikely to be large but use a uint32_t to future proof */
+    end = NULL;
+    errno = 0;
+    log_entry->cpu = (uint32_t)strtoul(comma_split[FIELD_CPU], &end, 10);
 
-        if (!end || *end != '\0' || end == comma_split[FIELD_CPU] || errno) {
-            mistral_err("Invalid CPU ID seen: [%s].\n", comma_split[FIELD_CPU]);
-            goto fail_log_cpu;
-        }
+    if (!end || *end != '\0' || end == comma_split[FIELD_CPU] || errno) {
+        mistral_err("Invalid CPU ID seen: [%s].\n", comma_split[FIELD_CPU]);
+        goto fail_log_cpu;
     }
 
     /* Record the command
@@ -1112,6 +1102,9 @@ fail_log_measurement:
 fail_log_size_range:
     free(size_range_split);
 fail_log_size_range_split:
+fail_log_call_type_names:
+fail_log_call_type:
+fail_log_call_types:
     free(call_type_split);
 fail_log_call_types_split:
 fail_log_label:

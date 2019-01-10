@@ -127,6 +127,7 @@ extern const uint32_t mistral_unit_type[];
     X(MPI_SEEK,     "mpi_seek")     \
     X(MPI_SYNC,     "mpi_sync")     \
     X(MPI_WRITE,    "mpi_write")    \
+    X(NONE,         "none")         \
     X(OPEN,         "open")         \
     X(READ,         "read")         \
     X(SEEK,         "seek")         \
