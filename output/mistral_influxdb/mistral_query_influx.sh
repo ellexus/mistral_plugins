@@ -337,15 +337,15 @@ function main() {
     if [[ "$job_id" != "" ]]; then
         # Mistral logging currently has a bug where UGE job id's always have an
         # array index appended so we need to explicitly check for ".undefined"
-        where="$where $and (\"job-id\" = '${job_id//\'/\\\'}' \
-               OR \"job-id\" = '${job_id//\'/\\\'}.undefined')"
+        where="$where $and (\"jobid\" = '${job_id//\'/\\\'}' \
+               OR \"jobid\" = '${job_id//\'/\\\'}.undefined')"
         and="AND"
     fi
 
     if [[ "$group_id" != "" ]]; then
         # As above we need to work around the logging bug
-        where="$where $and (\"job-group\" = '${group_id//\'/\\\'}' \
-               OR \"job-group\" = '${group_id//\'/\\\'}.undefined')"
+        where="$where $and (\"jobgroup\" = '${group_id//\'/\\\'}' \
+               OR \"jobgroup\" = '${group_id//\'/\\\'}.undefined')"
         and="AND"
     fi
 
@@ -382,7 +382,7 @@ function main() {
     # have to select everything and run the output through "sort -u".
     outval=$(curl -s $auth --get $protocol://$host:$port/query --data-urlencode \
         "db=${database//\"/\\\"}" --data-urlencode \
-        "q=SELECT \"job-id\", \"label\", \"value\" \
+        "q=SELECT \"jobid\", \"label\", \"value\" \
         FROM \"$measurement\" \
         WHERE $where")
     retval=$?

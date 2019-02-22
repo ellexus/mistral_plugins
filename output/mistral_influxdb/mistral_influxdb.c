@@ -603,10 +603,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          * returns 9223372036854776000.
          */
         if (asprintf(&new_data,
-                     "%s%s%s,calltype=%s,job-group=%s,job-id=%s,label=%s,host=%s%s"
+                     "%s%s%s,calltype=%s,jobgroup=%s,jobid=%s,label=%s,path=%s,host=%s%s"
                      " command=\"%s\",cpu=%" PRIu32 "i,file=\"%s\",logtype=\"%s\""
-                     ",mpirank=%" PRId32 "i,path=\"%s\",pid=%" PRId64 "i,scope=\"%s\""
-                     ",size-min=%" PRIu64 "i,size-max=%" PRIu64 "i,threshold=%" PRIu64
+                     ",mpirank=%" PRId32 "i,pid=%" PRId64 "i,scope=\"%s\""
+                     ",sizemin=%" PRIu64 "i,sizemax=%" PRIu64 "i,threshold=%" PRIu64
                      "i,timeframe=%" PRIu64 "i,value=%"
                      PRIu64 " %ld%06" PRIu32,
                      (data) ? data : "", (data) ? "\n" : "",
@@ -615,6 +615,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      job_gid,
                      job_id,
                      log_entry->label,
+                     log_entry->path,
                      log_entry->hostname,
                      (custom_variables)? custom_variables : "",
                      command,
@@ -622,7 +623,6 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      file,
                      mistral_contract_name[log_entry->contract_type],
                      log_entry->mpi_rank,
-                     log_entry->path,
                      log_entry->pid,
                      mistral_scope_name[log_entry->scope],
                      log_entry->size_min,
