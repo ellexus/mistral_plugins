@@ -189,6 +189,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"error", required_argument, NULL, 'e'},
         {"host", required_argument, NULL, 'h'},
         {"port", required_argument, NULL, 'p'},
+        {"mode", required_argument, NULL, 'm'},
         {"var", required_argument, NULL, 'v'},
         {0, 0, 0, 0},
     };
@@ -222,6 +223,27 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             port = (uint16_t)tmp_port;
             break;
+        case 'm': {
+            char *end = NULL;
+            unsigned long tmp_mode = strtoul(optarg, &end, 8);
+            if (!end || *end) {
+                tmp_mode = 0;
+            }
+            new_mode = (mode_t)tmp_mode;
+
+            if (new_mode <= 0 || new_mode > 0777) {
+                mistral_err("Invalid mode '%s' specified, using default\n", optarg);
+                new_mode = 0;
+            }
+
+            if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
+                mistral_err(
+                    "Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n",
+                    optarg);
+                new_mode = 0;
+            }
+            break;
+        }
         case 'v': {
             char *var_val = NULL;
             char *new_var = NULL;
