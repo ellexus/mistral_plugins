@@ -199,6 +199,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     uint16_t port = 5170; /* This is the default TCP server port for Fluent Bit TCP connectivity */
     int opt;
     mode_t new_mode = 0;
+    char *end = NULL;
 
     /* This is thread safe because the receiving thread hasn't started at this point */
     gettimeofday(&mistral_plugin_start, NULL);
@@ -215,7 +216,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             host = optarg;
             break;
         case 'p': {
-            char *end = NULL;
+            end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port == 0 || tmp_port > UINT16_MAX || !end || *end) {
                 mistral_err("Invalid port specified %s\n", optarg);
@@ -224,7 +225,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             port = (uint16_t)tmp_port;
             break;
         case 'm': {
-            char *end = NULL;
+            end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
             if (!end || *end) {
                 tmp_mode = 0;
