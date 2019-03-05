@@ -2,10 +2,10 @@
  * mistral_fluentbit_tcp.h
  *
  * Created on: March 1, 2019
- * 
- * This file is the header file for the module which provides TCP connectivity 
+ *
+ * This file is the header file for the module which provides TCP connectivity
  * to the Fluent Bit
- * 
+ *
  */
 
 #ifndef MISTRAL_FLUENTBIT_TCP_H
@@ -31,9 +31,9 @@ typedef struct {
 typedef int (*mistral_fluentbit_tcp_f)(void *);
 
 void mistral_fluentbit_init(mistral_fluentbit_tcp_ctx_s *ctx);
-int mistral_fluentbit_connect(mistral_fluentbit_tcp_ctx_s *ctx, 
-                      const char *servername, int port, mistral_fluentbit_tcp_f func,void *args);
+int mistral_fluentbit_connect(mistral_fluentbit_tcp_ctx_s *ctx,
+                              const char *servername, int port, mistral_fluentbit_tcp_f func,
+                              void *args);
 int mistral_fluentbit_send(mistral_fluentbit_tcp_ctx_s *cli, const char *buff, int len);
-
 
 #endif /* MISTRAL_FLUENTBIT_TCP_H */

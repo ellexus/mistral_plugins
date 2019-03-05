@@ -1,4 +1,3 @@
-
 #include <errno.h>              /* errno */
 #include <fcntl.h>              /* open */
 #include <getopt.h>             /* getopt_long */
@@ -36,7 +35,6 @@ struct saved_resp {
     size_t size;
     char *body;
 };
-
 
 /*
  * usage
@@ -247,12 +245,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
-
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 
     mistral_fluentbit_connect(&fluentbit_tcp_ctx, host, port, NULL, NULL);
-
 }
 
 /*
@@ -312,8 +308,6 @@ void mistral_received_log(mistral_log *log_entry)
     }
 }
 
-
-
 /*
  * mistral_simplify_command
  *
@@ -321,7 +315,7 @@ void mistral_received_log(mistral_log *log_entry)
  * offender of the rule. For instance '/bin/ls -l -a' would be simpliefied to
  * 'ls'.
  * If the command is badly formed, then NULL is returned.
- *    
+ *
  *
  * Parameters:
  *   command - A command that the called wants simplified.
@@ -330,19 +324,24 @@ void mistral_received_log(mistral_log *log_entry)
  *   A pointer to a global buffer which stores the the simpliefied command
  *   NULL on error
  */
-const char* mistral_simplify_command(const char* command) 
-{   
+const char *mistral_simplify_command(const char *command)
+{
     static char buffer[MISTRAL_MAX_BUFFER_SIZE];
     char tmp_buffer[MISTRAL_MAX_BUFFER_SIZE];
-    
 
-    if (!command) return NULL;
+    if (!command) {
+        return NULL;
+    }
 
     int len = strlen(command);
 
-    if (!len) return NULL;
-    
-    if (len > MISTRAL_MAX_BUFFER_SIZE - 1) return NULL;
+    if (!len) {
+        return NULL;
+    }
+
+    if (len > MISTRAL_MAX_BUFFER_SIZE - 1) {
+        return NULL;
+    }
 
     strcpy(tmp_buffer, command);
 
@@ -351,32 +350,28 @@ const char* mistral_simplify_command(const char* command)
     char *result = NULL;
 
     result = strchr(tmp_buffer, ' ');
-    if (result) 
-    { 
+    if (result) {
         end = result;
         *end = '\0';
     }
-        
+
     len = strlen(tmp_buffer);
 
     result = strrchr(tmp_buffer, '/');
-    if (result) 
-    { 
-
+    if (result) {
         /* start points to the last '/' character in the command */
 
-        if (result == &tmp_buffer[len - 1]) return NULL;
-        start = ++result; 
-
+        if (result == &tmp_buffer[len - 1]) {
+            return NULL;
+        }
+        start = ++result;
     }
-    
-   strcpy(buffer, start);
 
+    strcpy(buffer, start);
 
     return buffer;
 }
-   
-     
+
 /*
  * mistral_received_data_end
  *
@@ -412,12 +407,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
     size_t date_len = sizeof("YYYY-MM-DD"); /* strftime format = %F */
     size_t ts_len = sizeof("YYYY-MM-DDTHH:MI:SS"); /* = %FT%T */
-    //size_t type_len = sizeof(",\"_type\":\"throttle\""); /* Max possible len */
+    /*size_t type_len = sizeof(",\"_type\":\"throttle\""); / * Max possible len * / */
     char strdate[date_len];
     char strts[ts_len];
     struct tm utc_time;
-
-  
 
     while (log_entry) {
         /* Calculate local time */
@@ -429,19 +422,16 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
 
+        /* This is thread-safe because we access and modify mistral_plugin_start and
+         * mistral_plugin_end
+         * only in this thread. */
 
-      /* This is thread-safe because we access and modify mistral_plugin_start and mistral_plugin_end
-       * only in this thread. */
-    
-      if (!timerisset(&mistral_plugin_end)) {
-           gettimeofday(&mistral_plugin_end, NULL);
+        if (!timerisset(&mistral_plugin_end)) {
+            gettimeofday(&mistral_plugin_end, NULL);
         }
 
         timersub(&mistral_plugin_end, &mistral_plugin_start, &time_elapsed);
         calculated_timeframe = 1000000 * time_elapsed.tv_sec + time_elapsed.tv_usec;
-
-    mistral_err("time taken: %ld.%06ld\n", time_elapsed.tv_sec, time_elapsed.tv_usec);
-
 
         strftime(strdate, date_len, "%F", &utc_time);
         strftime(strts, ts_len, "%FT%T", &utc_time);
@@ -455,20 +445,23 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char generic_id[MISTRAL_MAX_BUFFER_SIZE];
         char *new_data = NULL;
 
-
-        /* We create the content for the genereric_id. The generic_id is used for queries when the 
-         * there is no job id present. The requirement for the generic_id came from Arm. 
+        /* We create the content for the genereric_id. The generic_id is used for queries when the
+         * there is no job id present. The requirement for the generic_id came from Arm.
          */
         char *user_name = getenv("USER");
-        if (!user_name) user_name = "";
+        if (!user_name) {
+            user_name = "";
+        }
         const char *simplified_command = mistral_simplify_command(command);
-        if (!simplified_command) simplified_command = "unknown";
+        if (!simplified_command) {
+            simplified_command = "unknown";
+        }
 
-        if (snprintf(generic_id, MISTRAL_MAX_BUFFER_SIZE, "%s@%s_%s", getenv("USER"), log_entry->hostname, simplified_command) > MISTRAL_MAX_BUFFER_SIZE) 
-        {   
+        if (snprintf(generic_id, MISTRAL_MAX_BUFFER_SIZE, "%s@%s_%s", getenv("USER"),
+                     log_entry->hostname, simplified_command) > MISTRAL_MAX_BUFFER_SIZE)
+        {
             mistral_err("The generic_id has been truncated\n");
         }
-        
 
         if (asprintf(&new_data,
                      "{\"timestamp\": \"%s.%03" PRIu32 "Z\","
@@ -489,7 +482,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"job-group-id\":\"%s\","
                      "\"job-id\":\"%s\","
                      "\"generic-id\":\"%s\""
-                    "}}\n",
+                     "}}\n",
                      strts,
                      (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
                      mistral_scope_name[log_entry->scope],
@@ -507,7 +500,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      job_id,
                      generic_id) < 0)
 
-       {
+        {
             mistral_err("Could not allocate memory for log entry\n");
             free(data);
             free(path);
