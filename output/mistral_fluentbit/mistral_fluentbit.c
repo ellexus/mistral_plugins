@@ -65,7 +65,7 @@ static void usage(const char *name)
                 "\n"
                 "  --host=hostname\n"
                 "  -h hostname\n"
-                "     The hostname of the Elasticsearch server with which to establish a\n"
+                "     The hostname of the Fluet Bit server with which to establish a\n"
                 "     connection. If not specified the plug-in will default to \"localhost\".\n"
                 "\n"
                 "  --mode=octal-mode\n"
@@ -75,8 +75,13 @@ static void usage(const char *name)
                 "\n"
                 "  --port=number\n"
                 "  -p number\n"
-                "     Specifies the port to connect to on the Elasticsearch server host.\n"
-                "     If not specified the plug-in will default to \"9200\".\n"
+                "     Specifies the port to connect to on the Fluent Bit server host.\n"
+                "     If not specified the plug-in will default to \"5170\".\n"
+                "\n"
+                "  --var=var-name\n"
+                "  -v var-name\n"
+                "     The name of an environment variable, the value of which should be\n"
+                "     stored by the plug-in. This option can be specified multiple times.\n"
                 "\n");
 }
 
@@ -184,6 +189,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"error", required_argument, NULL, 'e'},
         {"host", required_argument, NULL, 'h'},
         {"port", required_argument, NULL, 'p'},
+        {"var", required_argument, NULL, 'v'},
         {0, 0, 0, 0},
     };
 
@@ -216,6 +222,38 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             port = (uint16_t)tmp_port;
             break;
+        case 'v': {
+            char *var_val = NULL;
+            char *new_var = NULL;
+
+            if (optarg[0] != '\0' && strspn(optarg, VALID_NAME_CHARS) == strlen(optarg)) {
+                var_val = fluentbit_escape(getenv(optarg));
+                if (var_val == NULL || var_val[0] == '\0') {
+                    var_val = strdup("N/A");
+                }
+                if (var_val == NULL) {
+                    mistral_err("Could not allocate memory for environment variable value %s\n",
+                                optarg);
+                    return;
+                }
+            } else {
+                mistral_err("Invalid environment variable name %s\n", optarg);
+            }
+            if (asprintf(&new_var, "%s%s\"%s\":\"%s\"",
+                         (custom_variables) ? custom_variables : "",
+                         (custom_variables) ? "," : "",
+                         optarg,
+                         var_val) < 0)
+            {
+                mistral_err("Could not allocate memory for environment variable %s\n", optarg);
+                free(var_val);
+                return;
+            }
+            free(var_val);
+            free(custom_variables);
+            custom_variables = new_var;
+            break;
+        }
         }
         default:
             usage(argv[0]);
@@ -248,6 +286,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 
+    /* We connect to the Fluent Bit TCP plug-in in detached thread */
     mistral_fluentbit_connect(&fluentbit_tcp_ctx, host, port, NULL, NULL);
 }
 
@@ -446,18 +485,19 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *new_data = NULL;
 
         /* We create the content for the genereric_id. The generic_id is used for queries when the
-         * there is no job id present. The requirement for the generic_id came from Arm.
+         * there is no job id present. The requirement for the content of the generic_id came from Arm.
          */
         char *user_name = getenv("USER");
         if (!user_name) {
             user_name = "";
         }
+
         const char *simplified_command = mistral_simplify_command(command);
         if (!simplified_command) {
             simplified_command = "unknown";
         }
 
-        if (snprintf(generic_id, MISTRAL_MAX_BUFFER_SIZE, "%s@%s_%s", getenv("USER"),
+        if (snprintf(generic_id, MISTRAL_MAX_BUFFER_SIZE, "%s@%s_%s", user_name,
                      log_entry->hostname, simplified_command) > MISTRAL_MAX_BUFFER_SIZE)
         {
             mistral_err("The generic_id has been truncated\n");
@@ -482,7 +522,12 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"job-group-id\":\"%s\","
                      "\"job-id\":\"%s\","
                      "\"generic-id\":\"%s\""
-                     "}}\n",
+                     "}"
+                     "%s"
+                     "%s"
+                     "%s"
+
+                     "}\n",
                      strts,
                      (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
                      mistral_scope_name[log_entry->scope],
@@ -498,7 +543,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->hostname,
                      job_gid,
                      job_id,
-                     generic_id) < 0)
+                     generic_id,
+                     (custom_variables) ? ",\"environment\":{" : "",
+                     (custom_variables) ? custom_variables : "",
+                     (custom_variables) ? "}" : "") < 0)
 
         {
             mistral_err("Could not allocate memory for log entry\n");
