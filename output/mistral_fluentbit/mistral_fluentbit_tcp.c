@@ -218,10 +218,9 @@ static void *mistral_tcp_connection_thread(void *arg)
         }
 
         if (ev.data.fd == sockfd) {
-            ssize_t len = read(sockfd, buff, 1024);
-            mistral_err("XXXClient receives: %zu\n", len);
+            ssize_t len = read(sockfd, buff, MISTRAL_TCP_BUFFER_SIZE);
             if (len == 0) {
-                mistral_err("Client receives: %zu\n", len);
+                mistral_err("Client receives: %zu bytes -> disconnected\n", len);
                 goto failed;
             }
         }
