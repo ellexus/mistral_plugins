@@ -1,10 +1,8 @@
 /*
  * mistral_fluentbit_tcp.h
  *
- * Created on: March 1, 2019
- *
  * This file is the header file for the module which provides TCP connectivity
- * to the Fluent Bit
+ * towards the Fluent Bit
  *
  */
 

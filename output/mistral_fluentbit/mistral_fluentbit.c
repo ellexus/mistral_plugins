@@ -435,6 +435,40 @@ const char *mistral_simplify_command(const char *command)
 }
 
 /*
+ * mistral_user_name
+ *
+ * This function returns the value for the $USER environment variable.
+ *
+ * Parameters:
+ *   None.
+ *
+ * Returns:
+ *   A pointer a static buffer which contains the value of the variable.
+ *   If $USER is not defined, then this functions returns an empty string.
+ */
+static const char *mistral_user_name()
+{
+    # define MISTRA_USER_SIZE 16
+
+    static bool initialised = false;
+    static char buffer[MISTRA_USER_SIZE];
+
+    if (initialised) {
+        return buffer;
+    }
+
+    char *user_name = getenv("USER");
+    if (!user_name) {
+        buffer[0] = '\0';
+    } else {
+        snprintf(buffer, MISTRA_USER_SIZE, "%s", user_name);
+    }
+
+    initialised = true;
+    return buffer;
+}
+
+/*
  * mistral_received_data_end
  *
  * Function called whenever an end of data block message is received. At this
@@ -508,12 +542,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *new_data = NULL;
 
         /* We create the content for the genereric_id. The generic_id is used for queries when the
-         * there is no job id present. The requirement for the content of the generic_id came from Arm.
+         * there is no job id present. The requirement for the content of the generic_id came from
+         *Arm.
          */
-        char *user_name = getenv("USER");
-        if (!user_name) {
-            user_name = "";
-        }
+        const char *user_name = mistral_user_name();
 
         const char *simplified_command = mistral_simplify_command(command);
         if (!simplified_command) {
@@ -528,28 +560,23 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
         if (asprintf(&new_data,
                      "{\"timestamp\": \"%s.%03" PRIu32 "Z\","
-                     "\"rule\":{"
-                     "\"scope\":\"%s\","
-                     "\"type\":\"%s\","
-                     "\"label\":\"%s\","
-                     "\"measurement\":\"%s\","
-                     "\"calltype\":\"%s\","
-                     "\"path\":\"%s\","
-                     "\"threshold\":%" PRIu64 ","
-                     "\"timeframe\":%" PRIu64 ","
-                     "\"size-min\":%" PRIu64 ","
-                     "\"size-max\":%" PRIu64
-                     "},"
-                     "\"job\":{"
-                     "\"host\":\"%s\","
-                     "\"job-group-id\":\"%s\","
-                     "\"job-id\":\"%s\","
-                     "\"generic-id\":\"%s\""
-                     "}"
+                     "\"rulescope\":\"%s\","
+                     "\"ruletype\":\"%s\","
+                     "\"rulelabel\":\"%s\","
+                     "\"rulemeasurement\":\"%s\","
+                     "\"rulecalltype\":\"%s\","
+                     "\"rulepath\":\"%s\","
+                     "\"rulethreshold\":%" PRIu64 ","
+                     "\"ruletimeframe\":%" PRIu64 ","
+                     "\"rulesizemin\":%" PRIu64 ","
+                     "\"rulesizemax\":%" PRIu64
+                     ","
+                     "\"jobhost\":\"%s\","
+                     "\"jobgroupid\":\"%s\","
+                     "\"jobid\":\"%s\","
+                     "\"jobgenericid\":\"%s\""
                      "%s"
                      "%s"
-                     "%s"
-
                      "}\n",
                      strts,
                      (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
@@ -567,9 +594,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      job_gid,
                      job_id,
                      generic_id,
-                     (custom_variables) ? ",\"environment\":{" : "",
-                     (custom_variables) ? custom_variables : "",
-                     (custom_variables) ? "}" : "") < 0)
+                     (custom_variables) ? ", " : "",
+                     (custom_variables) ? custom_variables : "") < 0)
 
         {
             mistral_err("Could not allocate memory for log entry\n");
