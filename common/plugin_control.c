@@ -63,6 +63,11 @@ static void *mask_root = NULL;              /* Root node of tsearch call type ma
  */
 const int64_t mistral_max_size = SSIZE_MAX;
 
+/* This is a temporar implementation until Mistral is able to report the running time for a job
+ * in the last record instead of the timeframe size.
+ */
+struct timeval mistral_plugin_end;
+
 /*
  * mistral_err
  *
@@ -1420,6 +1425,13 @@ static enum mistral_message parse_message(char *line)
     case PLUGIN_MESSAGE_DATA_LINE:
         this_message->block_num = data_count;
         this_message->data = strdup(line);
+        /* Used by the Fluent Bit plug-in to calculate the running time of a job.
+         * This is a temporar implementation. To be removed for the next version of
+         * Mistral.
+         */
+        if (!timerisset(&mistral_plugin_end)) {
+            gettimeofday(&mistral_plugin_end, NULL);
+        }     
         break;
     default:
         mistral_err("Unknown message type [%d]\n", message);
