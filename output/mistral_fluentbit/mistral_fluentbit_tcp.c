@@ -19,13 +19,13 @@
 #define MISTRAL_EPOL_TIMEOUT_INTERVAL 500 /* Timeout for epol in milliseconds */
 
 /* MISTRAL_TCP_RECONNECT_TRYOUTS indicates how many time the client tries
- * to connect / reconnect before quitting 
+ * to connect / reconnect before quitting
  */
-#define MISTRAL_TCP_RECONNECT_TRYOUTS 10          
+#define MISTRAL_TCP_RECONNECT_TRYOUTS 10
 /* MISTRAL_TIMEOUT_BETWEEN_RECONNECTS indicates the time before issueing
- * a new reconnect. The period is in microseconds, i.e.200 milliseconds. 
+ * a new reconnect. The period is in microseconds, i.e.200 milliseconds.
  */
-#define MISTRAL_TIMEOUT_BETWEEN_RECONNECTS 200000 
+#define MISTRAL_TIMEOUT_BETWEEN_RECONNECTS 200000
 #define MISTRAL_TCP_BUFFER_SIZE 1024
 #define MISTRAL_FLUENT_BIT_SERVER_NAME_SIZE 128
 
@@ -362,10 +362,13 @@ static void *mistral_tcp_connection_thread(void *arg)
 
 failed:
     mistral_err("Fluent Bit TCP connectivity thread failed. Terminating the thread.\n");
+
     pthread_mutex_lock(&tcp_ctx->mutex);
     tcp_ctx->state = failed;
     tcp_ctx->fd = -1;
     pthread_mutex_unlock(&tcp_ctx->mutex);
+
+    mistral_shutdown();
 
     return (NULL);
 }
