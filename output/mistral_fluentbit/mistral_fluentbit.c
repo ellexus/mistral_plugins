@@ -18,11 +18,9 @@
 #define MISTRAL_MAX_BUFFER_SIZE 512
 
 static FILE **log_file_ptr = NULL;
-static char *url = NULL;
-static char *auth = NULL;
 
 static struct timeval mistral_plugin_start;
-static struct timeval mistral_plugin_end;
+extern struct timeval mistral_plugin_end;
 
 static mistral_fluentbit_tcp_ctx_s fluentbit_tcp_ctx;
 
@@ -306,11 +304,15 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
+    /* We connect to the Fluent Bit TCP plug-in in a detached thread */
+    if (mistral_fluentbit_connect(&fluentbit_tcp_ctx, host, port, NULL, NULL) < 0) {
+        mistral_err("Could not start the TCP connectivity thread\n");
+        return;
+    }
+
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 
-    /* We connect to the Fluent Bit TCP plug-in in detached thread */
-    mistral_fluentbit_connect(&fluentbit_tcp_ctx, host, port, NULL, NULL);
 }
 
 /*
@@ -318,7 +320,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
  *
  * Function called immediately before the plug-in exits. Check for any unhandled
  * log entries and call mistral_received_data_end to process them if any are
- * found. Clean up any open error log and the libcurl connection.
+ * found. Clean up any open error log.
  *
  * Parameters:
  *   None
@@ -333,8 +335,6 @@ void mistral_exit(void)
     }
 
     free(custom_variables);
-    free(auth);
-    free(url);
 
     if (log_file_ptr && *log_file_ptr != stderr) {
         fclose(*log_file_ptr);
@@ -518,14 +518,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
 
-        /* This is thread-safe because we access and modify mistral_plugin_start and
-         * mistral_plugin_end
-         * only in this thread. */
-
-        if (!timerisset(&mistral_plugin_end)) {
-            gettimeofday(&mistral_plugin_end, NULL);
-        }
-
+        /* This is not thread-safe because we access and modify mistral_plugin_end in
+         * another thread as well. This is a temporary implementation until Mistral
+         * implementation is ready.
+         */
         timersub(&mistral_plugin_end, &mistral_plugin_start, &time_elapsed);
         calculated_timeframe = 1000000 * time_elapsed.tv_sec + time_elapsed.tv_usec;
 
@@ -543,7 +539,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
         /* We create the content for the genereric_id. The generic_id is used for queries when the
          * there is no job id present. The requirement for the content of the generic_id came from
-         *Arm.
+         * Arm.
          */
         const char *user_name = mistral_user_name();
 
