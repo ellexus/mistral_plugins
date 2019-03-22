@@ -565,14 +565,15 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"rulethreshold\":%" PRIu64 ","
                      "\"ruletimeframe\":%" PRIu64 ","
                      "\"rulesizemin\":%" PRIu64 ","
-                     "\"rulesizemax\":%" PRIu64
-                     ","
+                     "\"rulesizemax\":%" PRIu64 ","
                      "\"jobhost\":\"%s\","
                      "\"jobgroupid\":\"%s\","
                      "\"jobid\":\"%s\","
                      "\"jobgenericid\":\"%s\""
                      "%s"
                      "%s"
+                     ","
+                     "\"value\":%" PRIu64
                      "}\n",
                      strts,
                      (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
@@ -591,7 +592,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      job_id,
                      generic_id,
                      (custom_variables) ? ", " : "",
-                     (custom_variables) ? custom_variables : "") < 0)
+                     (custom_variables) ? custom_variables : "",
+                     log_entry->measured) < 0)
 
         {
             mistral_err("Could not allocate memory for log entry\n");
