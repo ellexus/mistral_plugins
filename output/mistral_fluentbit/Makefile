@@ -10,8 +10,7 @@ PLUGIN_NAME = mistral_fluentbit
 HOST_ARCH := $(patsubst i%86,i386,$(shell uname -m))
 $(eval $(call check_arch,$(HOST_ARCH)))
 
-LDLIBS = \
-	$(shell curl-config --libs)
+LDLIBS =
 
 TARGETS = \
 	$(PLUGIN_NAME)
