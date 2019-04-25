@@ -1716,14 +1716,6 @@ int main(int argc, char **argv)
     mistral_plugin_info.type = MAX_PLUGIN;
     mistral_plugin_info.error_log = stderr;
 
-    /* Set stdin to be unbuffered - needed if we want to timeout on every read of stdin. */
-    if (setvbuf(stdin, NULL, _IONBF, 0) != 0) {
-        char buf[256];
-        mistral_err("Error making stdin non-buffered: (%s)\n", strerror_r(errno, buf, sizeof buf));
-        send_message_to_mistral(PLUGIN_MESSAGE_SHUTDOWN);
-        return EXIT_FAILURE;
-    }
-
     /* used to set the type of plug-in we should run as */
     mistral_startup(&mistral_plugin_info, argc, argv);
 
