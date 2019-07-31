@@ -60,7 +60,7 @@ $(DIRECTORIES):
 # ------------------------------------------------------------------------------
 # GCC -- If possible then use the same compiler as used to compile Mistral
 
-GCC ?= /usr/local/install/gcc-5.3.0/bin/gcc
+GCC ?= gcc
 CC = $(GCC)
 
 # ------------------------------------------------------------------------------
