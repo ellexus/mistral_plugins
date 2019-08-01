@@ -13,6 +13,8 @@ $(eval $(call check_arch,$(HOST_ARCH)))
 LDLIBS = \
 	$(shell curl-config --libs)
 
+LDLIBS += -lkrb5support -lkeyutils
+
 TARGETS = \
 	$(PLUGIN_NAME)
 
