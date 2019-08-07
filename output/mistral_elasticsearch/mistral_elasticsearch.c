@@ -599,7 +599,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     char doc_type[type_len];
     struct tm utc_time;
 
-    if (es_version == 6) {
+    if (es_version >= 6) {
         strcpy(doc_type, ",\"_type\":\"_doc\"");
     }
 
