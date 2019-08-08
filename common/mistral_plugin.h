@@ -60,6 +60,8 @@ extern const char * const mistral_scope_name[];
     X(MEAN_LATENCY,  "mean-latency")  \
     X(TOTAL_LATENCY, "total-latency") \
     X(MEMORY,        "memory")        \
+    X(MEMORY_RSS,    "memory-rss")    \
+    X(MEMORY_VSIZE,  "memory-vsize")  \
     X(USER_TIME,     "user-time")     \
     X(SYSTEM_TIME,   "system-time")   \
     X(CPU_TIME,      "cpu-time")
