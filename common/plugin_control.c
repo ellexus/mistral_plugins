@@ -6,7 +6,6 @@
  * plug-ins. This alias, combined with our naming convention produces nice function names for the
  * external interface.
  */
-#include <assert.h>             /* assert */
 #include <errno.h>              /* errno */
 #include <inttypes.h>           /* uint32_t, uint64_t */
 #include <limits.h>             /* SSIZE_MAX */
@@ -425,41 +424,44 @@ fail_asprintf:
  */
 static char **str_split(const char *s, int sep, size_t *field_count)
 {
-    size_t n = 1;               /* One more string than separators. */
-    size_t len;                 /* Length of 's' */
+    if (s == NULL || *s == '\0') {
+        *field_count = 0;
+        return (char **)calloc(1, sizeof(char *));
+    } else {
+        size_t n = 1;           /* One more string than separators. */
+        size_t len;             /* Length of 's' */
 
-    assert(s);
-    assert(field_count);
-    /* Count separators. */
-    for (len = 0; s[len]; ++len) {
-        n += (sep == s[len]);
-    }
-    *field_count = n;
-
-    /* Allocate the result array (including space for a NULL at the
-     * end), plus space for a copy of 's'.
-     */
-    void *alloc = calloc(1, len + 1 + (n + 1) * sizeof(char *));
-    if (!alloc) {
-        return NULL;
-    }
-    char **result = alloc;
-    char *copy = alloc;
-    copy += (n + 1) * sizeof(char *);
-    memcpy(copy, s, len + 1);
-
-    for (size_t i = 0; i < n; ++i) {
-        result[i] = copy;
-        while (*copy) {
-            if (*copy == sep) {
-                *copy++ = '\0';
-                break;
-            }
-            ++copy;
+        /* Count separators. */
+        for (len = 0; s[len]; ++len) {
+            n += (sep == s[len]);
         }
+        *field_count = n;
+
+        /* Allocate the result array (including space for a NULL at the
+         * end), plus space for a copy of 's'.
+         */
+        void *alloc = calloc(1, len + 1 + (n + 1) * sizeof(char *));
+        if (!alloc) {
+            return NULL;
+        }
+        char **result = alloc;
+        char *copy = alloc;
+        copy += (n + 1) * sizeof(char *);
+        memcpy(copy, s, len + 1);
+
+        for (size_t i = 0; i < n; ++i) {
+            result[i] = copy;
+            while (*copy) {
+                if (*copy == sep) {
+                    *copy++ = '\0';
+                    break;
+                }
+                ++copy;
+            }
+        }
+        result[n] = NULL;
+        return result;
     }
-    result[n] = NULL;
-    return result;
 }
 
 /*
@@ -487,60 +489,64 @@ static char **csv_split(const char *s, size_t *field_count)
     size_t len;                 /* Length of 's' */
     bool in_string = false;
 
-    assert(s);
-    assert(field_count);
-    /* Count separators. */
-    for (len = 0; s[len]; ++len) {
-        if (s[len] == ',' && !in_string) {
-            n++;
-        } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
-            /* Leading quote */
-            in_string = true;
-        } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
-            /* Trailing quote */
-            in_string = false;
-        }
-    }
-    *field_count = n;
-
-    /* Allocate the result array (including space for a NULL at the end), plus space for a copy of
-     * 's' (this may be up to twice the length required if the entire string is escaped quotes).
-     */
-    void *alloc = calloc(1, len + 1 + (n + 1) * sizeof(char *));
-    if (!alloc) {
-        return NULL;
-    }
-    char **result = alloc;
-    char *copy = alloc;
-    copy += (n + 1) * sizeof(char *);
-
-    size_t i = 0;
-    result[i] = copy;
-    size_t qcount = 0;
-    for (len = 0; s[len]; ++len) {
-        if (s[len] == ',' && !in_string) {
-            copy++;
-            result[++i] = copy;
-            qcount = 0;
-        } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
-            /* Leading quote */
-            in_string = true;
-        } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
-            /* Trailing quote */
-            in_string = false;
-        } else if (s[len] == '"' && in_string) {
-            /* ignore the first double quote we see in a string */
-            if (++qcount % 2 == 0) {
-                *copy++ = s[len];
+    if (s == NULL || *s == '\0') {
+        *field_count = 0;
+        return (char **)calloc(1, sizeof(char *));
+    } else {
+        /* Count separators. */
+        for (len = 0; s[len]; ++len) {
+            if (s[len] == ',' && !in_string) {
+                n++;
+            } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
+                /* Leading quote */
+                in_string = true;
+            } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
+                /* Trailing quote */
+                in_string = false;
             }
-        } else {
-            *copy++ = s[len];
-            qcount = 0;
         }
+        *field_count = n;
+
+        /* Allocate the result array (including space for a NULL at the end), plus space for a copy
+         * of
+         * 's' (this may be up to twice the length required if the entire string is escaped quotes).
+         */
+        void *alloc = calloc(1, len + 1 + (n + 1) * sizeof(char *));
+        if (!alloc) {
+            return NULL;
+        }
+        char **result = alloc;
+        char *copy = alloc;
+        copy += (n + 1) * sizeof(char *);
+
+        size_t i = 0;
+        result[i] = copy;
+        size_t qcount = 0;
+        for (len = 0; s[len]; ++len) {
+            if (s[len] == ',' && !in_string) {
+                copy++;
+                result[++i] = copy;
+                qcount = 0;
+            } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
+                /* Leading quote */
+                in_string = true;
+            } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
+                /* Trailing quote */
+                in_string = false;
+            } else if (s[len] == '"' && in_string) {
+                /* ignore the first double quote we see in a string */
+                if (++qcount % 2 == 0) {
+                    *copy++ = s[len];
+                }
+            } else {
+                *copy++ = s[len];
+                qcount = 0;
+            }
+        }
+        *copy = '\0';
+        result[n] = NULL;
+        return result;
     }
-    *copy = '\0';
-    result[n] = NULL;
-    return result;
 }
 
 /*
@@ -558,10 +564,11 @@ static char **csv_split(const char *s, size_t *field_count)
  */
 static ssize_t find_in_array(const char *s, const char * const *array)
 {
-    assert(array);
-    for (size_t i = 0; array[i]; ++i) {
-        if (0 == strcmp(s, array[i])) {
-            return i;
+    if (array != NULL) {
+        for (size_t i = 0; array[i]; ++i) {
+            if (0 == strcmp(s, array[i])) {
+                return i;
+            }
         }
     }
     return -1;
@@ -585,9 +592,9 @@ static ssize_t find_in_array(const char *s, const char * const *array)
  */
 static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
 {
-    assert(s);
-    assert(size);
-    assert(unit);
+    if (s == NULL) {
+        return false;
+    }
 
     char *end = NULL;
     errno = 0;
@@ -655,11 +662,10 @@ static bool parse_size(const char *s, uint64_t *size, enum mistral_unit *unit)
 static bool parse_rate(const char *s, uint64_t *size, enum mistral_unit *unit, uint64_t *length,
                        enum mistral_unit *lengthunit)
 {
-    assert(s);
-    assert(size);
-    assert(unit);
-    assert(length);
-    assert(lengthunit);
+    if (s == NULL) {
+        return false;
+    }
+
     size_t field_count;
 
     char **rate_split = str_split(s, '/', &field_count);
@@ -1197,8 +1203,6 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
  */
 static enum mistral_message parse_message(char *line)
 {
-    assert(line);
-
     /* number of data blocks received */
     uint64_t block_count;
     enum mistral_message message = PLUGIN_MESSAGE_DATA_LINE;
@@ -1316,8 +1320,6 @@ static enum mistral_message parse_message(char *line)
          * message.
          */
         if (sscanf(line, ":PGNSUPVRSN:%u:%u:\n", &min_ver, &cur_ver) != 2) {
-            /* The assert should identify if we've modified the message literal */
-            assert(strncmp(mistral_log_message[PLUGIN_MESSAGE_SUP_VERSION], ":PGNSUPVRSN:", 12));
             free(this_message);
             mistral_err("Invalid supported versions format received: [%s].\n", line);
             return PLUGIN_DATA_ERR;
@@ -1431,7 +1433,7 @@ static enum mistral_message parse_message(char *line)
          */
         if (!timerisset(&mistral_plugin_end)) {
             gettimeofday(&mistral_plugin_end, NULL);
-        }     
+        }
         break;
     default:
         mistral_err("Unknown message type [%d]\n", message);
@@ -1523,18 +1525,20 @@ static bool read_data_from_mistral(void)
         while (!__atomic_load_n(&shutdown, __ATOMIC_RELAXED) &&
                (gl_res = getline(&line, &line_length, stdin)) > 0)
         {
-            enum mistral_message message = parse_message(line);
+            if (line != NULL) {
+                enum mistral_message message = parse_message(line);
 
-            if (message == PLUGIN_MESSAGE_SHUTDOWN) {
-                /* Stop processing */
-                goto read_shutdown;
-            } else if (message == PLUGIN_DATA_ERR) {
-                /* Ignore bad data */
-                continue;
-            } else if (message == PLUGIN_FATAL_ERR) {
-                /* But do not continue if a serious error was seen. */
-                retval = false;
-                goto read_error;
+                if (message == PLUGIN_MESSAGE_SHUTDOWN) {
+                    /* Stop processing */
+                    goto read_shutdown;
+                } else if (message == PLUGIN_DATA_ERR) {
+                    /* Ignore bad data */
+                    continue;
+                } else if (message == PLUGIN_FATAL_ERR) {
+                    /* But do not continue if a serious error was seen. */
+                    retval = false;
+                    goto read_error;
+                }
             }
         }
         /* If we've got here one of the while conditions failed, if we are shutting down an error
