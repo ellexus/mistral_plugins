@@ -1,310 +1,246 @@
 --
--- create_mistral.sql
---
--- This text file should be imported using the command
---      "mysql -u root -p < create_multiple_tables.sql"
--- This will set up the MySQL databases and tables needed for the mistral_mysql
--- plugin.
---
--- In summary this will :
---  ~ Create a new database called 'mistral_log'
---  ~ Create 32 tables within 'mistral_log' called 'log_01 .. log_32'
---  ~ Create 32 tables within 'mistral_log' called 'env_01 .. env_32'
---  ~ Create a user called 'mistral' and give it :
---      All permissions on mistral_log.*
---     TODO : Change to grant specific permissions [ ALTER, CREATE, DROP,
---            EXECUTE, INSERT, UPDATE ] permissions on these tables
---
+-- PostgreSQL database dump
 --
 
--- Drop any existing database schema
-DROP DATABASE IF EXISTS mistral_log;
+-- Dumped from database version 11.4
+-- Dumped by pg_dump version 11.4
 
--- Create Database
-CREATE DATABASE mistral_log;
+-- Started on 2019-08-22 15:03:44
 
--- Create User mistral and give it permissions
-GRANT ALL PRIVILEGES ON mistral_log.* TO 'mistral'@'%' IDENTIFIED BY 'mistral';
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
--- Create Tables for date_table_map and rule_details
-USE mistral_log;
-CREATE TABLE rule_details (
-    rule_id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    label           VARCHAR(256)    NOT NULL,
-    violation_path  VARCHAR(256)    NOT NULL,
-    call_type       VARCHAR(45)     NOT NULL,
-    measurement     VARCHAR(13)     NOT NULL,
-    size_range      VARCHAR(64)     NOT NULL,
-    threshold       VARCHAR(64)     NOT NULL,
-    PRIMARY KEY (rule_id),
-    UNIQUE KEY (
-        label,
-        violation_path,
-        call_type,
-        measurement,
-        size_range,
-        threshold
-    )
-)
-ENGINE=InnoDB;
+DROP DATABASE mistral_log;
+--
+-- TOC entry 2837 (class 1262 OID 24577)
+-- Name: mistral_log; Type: DATABASE; Schema: -; Owner: mistral
+--
 
-CREATE TABLE date_table_map (
-    table_date      DATE            NOT NULL,
-    table_num       TINYINT         NOT NULL,
-    PRIMARY KEY (table_date),
-    UNIQUE KEY (table_num)
-)
-ENGINE=InnoDB;
-
--- --------------------------create_log_tables()--------------------------------
--- Procedure which creates 32 tables starting on 01-01-2016
-DELIMITER $$
-CREATE PROCEDURE create_log_tables()
-    BEGIN
-
-    DECLARE log_max INT UNSIGNED DEFAULT 32;
-    DECLARE log_counter INT UNSIGNED DEFAULT 1;
-
-    START TRANSACTION;
-    WHILE log_counter < (log_max + 1) DO
-        SET @dynamic_env = CONCAT('CREATE TABLE env_', LPAD(log_counter, 2, '0'), ' (
-                                       plugin_run_id VARCHAR(36) NOT NULL,
-                                       env_name VARCHAR(256) NOT NULL,
-                                       env_value VARCHAR(256),
-                                       env_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
-                                   ) ENGINE=InnoDB;');
-        PREPARE cl from @dynamic_env;
-        EXECUTE cl;
-        DEALLOCATE PREPARE cl;
-
-        SET @dynamic_log = CONCAT('CREATE TABLE log_', LPAD(log_counter, 2, '0'), ' (
-                                       scope VARCHAR(6) NOT NULL,
-                                       type VARCHAR(8) NOT NULL,
-                                       time_stamp DATETIME(6) NOT NULL,
-                                       rule_id INT NOT NULL,
-                                       observed VARCHAR(64) NOT NULL,
-                                       host VARCHAR(256),
-                                       pid INT,
-                                       cpu INT,
-                                       command VARCHAR(1405),
-                                       file_name VARCHAR(1405),
-                                       group_id VARCHAR(256),
-                                       id VARCHAR(256),
-                                       mpi_rank INT,
-                                       plugin_run_id VARCHAR(36) NOT NULL,
-                                       log_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY
-                                   ) ENGINE=InnoDB;');
-        PREPARE cl from @dynamic_log;
-        EXECUTE cl;
-        DEALLOCATE PREPARE cl;
-
-        SET log_counter = log_counter + 1;
-    END WHILE;
-    COMMIT;
-END $$
-
-DELIMITER ;
--- -----------------------------------------------------------------------------
-
-CALL create_log_tables();
-
--- --------------------------populate_date_table_map()---------------------------
--- Procedure which populates the date_table_map table
-DELIMITER $$
-CREATE PROCEDURE populate_date_table_map()
-    BEGIN
-
-    DECLARE table_max INT UNSIGNED DEFAULT 32;
-    SET @counter = 1;
-    SET @enter_date = CURRENT_DATE() - INTERVAL 32 DAY;
-
-    START TRANSACTION;
-    WHILE @counter < (table_max + 1) DO
-        INSERT INTO date_table_map (table_date, table_num) VALUES
-            (STR_TO_DATE(@enter_date, '%Y-%m-%e'), @counter);
-        SET @counter = @counter + 1;
-        SET @enter_date = @enter_date + INTERVAL 1 DAY;
-    END WHILE;
-    COMMIT;
-END $$
-DELIMITER ;
-
-CALL populate_date_table_map();
+CREATE DATABASE mistral_log WITH TEMPLATE = template0 ENCODING = 'UTF8';
 
 
-DROP PROCEDURE create_log_tables;
-DROP PROCEDURE populate_date_table_map;
+ALTER DATABASE mistral_log OWNER TO mistral;
 
--- --------------------------------check_exist()--------------------------------
-DELIMITER $$
-CREATE PROCEDURE check_exist()
-    BEGIN
-    -- If date is not in control table, set it to be updated
-    IF (SELECT NOT EXISTS (SELECT 1
-                           FROM date_table_map
-                           WHERE table_date = @to_check)) THEN
-        SET @date_to_update = @to_check;
-        -- Get name of oldest table
-        SET @oldest_table_num = (SELECT LPAD(table_num, 2, '0')
-                                 FROM date_table_map
-                                 ORDER BY table_date
-                                 LIMIT 0,1
-                                 FOR UPDATE);
-        SET @to_truncate_log = CONCAT('TRUNCATE log_', @oldest_table_num,';');
-        CALL exec_qry(@to_truncate_log);
-        SET @to_truncate_env = CONCAT('TRUNCATE env_', @oldest_table_num,';');
-        CALL exec_qry(@to_truncate_env);
-        UPDATE date_table_map
-            SET table_date = @date_to_update
-            WHERE table_num = @oldest_table_num;
-        CALL update_eod_tables();
-    END IF;
+\connect mistral_log
 
-    COMMIT;
-END $$
-DELIMITER ;
--- -------------------------update_eod_tables()---------------------------------
--- This procedure truncates and then drops the indexes
-DELIMITER $$
-CREATE PROCEDURE update_eod_tables()
-    BEGIN
-    -- Check that at least one index exists on the log_nn table
-    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num ',
-                              'FROM information_schema.statistics ',
-                              'WHERE table_name= \'log_', @oldest_table_num,
-                              '\' AND table_schema = \'mistral_log\'');
-    CALL exec_qry(@index_count);
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
 
-    IF @index_num > 1 THEN
-        SET @drop = CONCAT('DROP INDEX ScopeIndex ON log_', @oldest_table_num, ';');
-        CALL exec_qry(@drop);
-        SET @drop = CONCAT('DROP INDEX TypeIndex ON log_', @oldest_table_num, ';');
-        CALL exec_qry(@drop);
-        SET @drop = CONCAT('DROP INDEX TimeStampIndex ON log_', @oldest_table_num, ';');
-        CALL exec_qry(@drop);
-        SET @drop = CONCAT('DROP INDEX IDsIndex ON log_', @oldest_table_num, ';');
-        CALL exec_qry(@drop);
-        SET @drop = CONCAT('DROP INDEX RunIDIndex ON log_', @oldest_table_num, ';');
-        CALL exec_qry(@drop);
-    END IF;
-    -- Check that at least one index exists on the env_nn table
-    SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num ',
-                              'FROM information_schema.statistics ',
-                              'WHERE table_name= \'env_', @oldest_table_num,
-                              '\' AND table_schema = \'mistral_log\'');
-    CALL exec_qry(@index_count);
+SET default_with_oids = false;
 
-    IF @index_num > 1 THEN
-        SET @drop = CONCAT('DROP INDEX RunIndex ON env_', @oldest_table_num, ';');
-        CALL exec_qry(@drop);
-    END IF;
-    COMMIT;
-END $$
-DELIMITER ;
+--
+-- TOC entry 201 (class 1259 OID 24609)
+-- Name: env; Type: TABLE; Schema: public; Owner: mistral
+--
+
+CREATE TABLE public.env (
+    env_id integer NOT NULL,
+    plugin_run_id character varying(36) NOT NULL,
+    env_name character varying(256) NOT NULL,
+    env_value character varying(256)
+);
 
 
--- -------------------------update_index()--------------------------------------
--- This procedure tries to add indexes to all older tables
-DELIMITER $$
-CREATE PROCEDURE update_index()
-    BEGIN
+ALTER TABLE public.env OWNER TO mistral;
 
-    DECLARE counter INT UNSIGNED DEFAULT 0;
-    -- Finds the number of tables older than today
-    SELECT COUNT(*) INTO @old_table_count FROM date_table_map WHERE (table_date < @date_today);
+--
+-- TOC entry 200 (class 1259 OID 24607)
+-- Name: env_env_id_seq; Type: SEQUENCE; Schema: public; Owner: mistral
+--
 
-    WHILE counter < @old_table_count DO
-        SET @counter = counter;
-        -- Retrieves the name of the old table corresponding to the counter
-        SET @to_run = CONCAT('SET @older_table_num = (SELECT LPAD(table_num, 2, \'0\') ',
-                                                      'FROM date_table_map ',
-                                                      'ORDER BY table_date ',
-                                                      'LIMIT ', @counter,',1);');
-        CALL exec_qry(@to_run);
+CREATE SEQUENCE public.env_env_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
-        -- Check that at least one index exists on the log_nn table
-        SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num ',
-                                  'FROM information_schema.statistics ',
-                                  'WHERE table_name= \'log_', @older_table_num,
-                                  '\' AND table_schema = \'mistral_log\'');
-        CALL exec_qry(@index_count);
 
-        IF @index_num = 1 THEN
-            -- Adds Indexes back into older tables
-            SET @index_scope = CONCAT('ALTER TABLE log_', @older_table_num,
-                                      ' ADD INDEX ScopeIndex (Scope);');
-            CALL exec_qry(@index_scope);
-            SET @index_type = CONCAT('ALTER TABLE log_', @older_table_num,
-                                     ' ADD INDEX TypeIndex (Type);');
-            CALL exec_qry(@index_type);
-            SET @index_Time_Stamp = CONCAT('ALTER TABLE log_', @older_table_num,
-                                           ' ADD INDEX TimeStampIndex(Time_Stamp);');
-            CALL exec_qry(@index_Time_Stamp);
-            SET @index_ids = CONCAT('ALTER TABLE log_', @older_table_num,
-                                    ' ADD INDEX IDsIndex(Group_ID, ID);');
-            CALL exec_qry(@index_ids);
-            SET @index_runid = CONCAT('ALTER TABLE log_', @older_table_num,
-                                    ' ADD INDEX RunIDIndex(plugin_run_id);');
-            CALL exec_qry(@index_runid);
-        END IF;
-        -- Check that at least one index exists on the env_nn table
-        SET @index_count = CONCAT('SELECT COUNT(*) INTO @index_num '
-                                  'FROM information_schema.statistics '
-                                  'WHERE table_name= \'env_', @older_table_num,
-                                  '\' AND table_schema = \'mistral_log\'');
-        CALL exec_qry(@index_count);
+ALTER TABLE public.env_env_id_seq OWNER TO mistral;
 
-        IF @index_num = 1 THEN
-            -- Adds Indexes back into older tables
-            SET @index_ids = CONCAT('ALTER TABLE env_', @older_table_num,
-                                    ' ADD INDEX RunIndex(plugin_run_id, env_name);');
-            CALL exec_qry(@index_ids);
-        END IF;
-        SET counter = counter + 1;
-    END WHILE;
-    COMMIT;
-END $$
-DELIMITER ;
--- -----------------------------------------------------------------------------
+--
+-- TOC entry 2838 (class 0 OID 0)
+-- Dependencies: 200
+-- Name: env_env_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: mistral
+--
 
--- ---------------------exec_qry( p_sql VARCHAR(100))---------------------------
-DELIMITER $$
-CREATE PROCEDURE exec_qry( p_sql VARCHAR(255))
-    BEGIN
-    SET @equery = p_sql;
-    PREPARE stmt from @equery;
-    EXECUTE stmt;
-    DEALLOCATE PREPARE stmt;
-END $$
-DELIMITER ;
+ALTER SEQUENCE public.env_env_id_seq OWNED BY public.env.env_id;
 
--- -----------------------------end_of_day()----------------------------------
--- Checks that today's date is not older than any in table and runs
 
-DELIMITER $$
-CREATE PROCEDURE end_of_day()
-BEGIN
+--
+-- TOC entry 199 (class 1259 OID 24598)
+-- Name: mistral_log; Type: TABLE; Schema: public; Owner: mistral
+--
 
-    SET @date_today = CURRENT_DATE();
-    SET @date_tomorrow = @date_today + INTERVAL 1 DAY;
-    SET @oldest_date = (SELECT MIN(table_date) FROM date_table_map);
+CREATE TABLE public.mistral_log (
+    log_id integer NOT NULL,
+    scope character varying(6) NOT NULL,
+    type character varying(8) NOT NULL,
+    time_stamp time with time zone NOT NULL,
+    rule_id integer NOT NULL,
+    observed character varying(64) NOT NULL,
+    host character varying(256),
+    pid integer,
+    cpu integer,
+    command character varying(1405),
+    file_name character varying(1405),
+    group_id character varying(256),
+    id character varying(256),
+    mpi_rank integer,
+    plugin_run_id character varying(36) NOT NULL
+);
 
-    IF @oldest_date < @date_today THEN
-        -- Enters loop if today's table does not exist
-        SET @to_check = @date_today;
-        CALL check_exist();
 
-        -- Enters loop if tomorrow's table does not exist
-        SET @to_check = @date_tomorrow;
-        CALL check_exist();
+ALTER TABLE public.mistral_log OWNER TO mistral;
 
-        CALL update_index();
-    END IF;
+--
+-- TOC entry 198 (class 1259 OID 24596)
+-- Name: mistral_log_log_id_seq; Type: SEQUENCE; Schema: public; Owner: mistral
+--
 
-END $$
-DELIMITER ;
+CREATE SEQUENCE public.mistral_log_log_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
 
--- -----------------------------------------------------------------------------
 
--- Runs the end of day procedure to set up today and tomorrow
-CALL end_of_day();
+ALTER TABLE public.mistral_log_log_id_seq OWNER TO mistral;
+
+--
+-- TOC entry 2839 (class 0 OID 0)
+-- Dependencies: 198
+-- Name: mistral_log_log_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: mistral
+--
+
+ALTER SEQUENCE public.mistral_log_log_id_seq OWNED BY public.mistral_log.log_id;
+
+
+--
+-- TOC entry 197 (class 1259 OID 24580)
+-- Name: rule_details; Type: TABLE; Schema: public; Owner: mistral
+--
+
+CREATE TABLE public.rule_details (
+    rule_id integer NOT NULL,
+    rule_label character varying(256) NOT NULL,
+    violation_path character varying(256) NOT NULL,
+    call_type character varying(45) NOT NULL,
+    measurement character varying(13) NOT NULL,
+    size_range character varying(64) NOT NULL,
+    threshold character varying(64) NOT NULL
+);
+
+
+ALTER TABLE public.rule_details OWNER TO mistral;
+
+--
+-- TOC entry 196 (class 1259 OID 24578)
+-- Name: rule_details_rule_id_seq; Type: SEQUENCE; Schema: public; Owner: mistral
+--
+
+CREATE SEQUENCE public.rule_details_rule_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER TABLE public.rule_details_rule_id_seq OWNER TO mistral;
+
+--
+-- TOC entry 2840 (class 0 OID 0)
+-- Dependencies: 196
+-- Name: rule_details_rule_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: mistral
+--
+
+ALTER SEQUENCE public.rule_details_rule_id_seq OWNED BY public.rule_details.rule_id;
+
+
+--
+-- TOC entry 2702 (class 2604 OID 24612)
+-- Name: env env_id; Type: DEFAULT; Schema: public; Owner: mistral
+--
+
+ALTER TABLE ONLY public.env ALTER COLUMN env_id SET DEFAULT nextval('public.env_env_id_seq'::regclass);
+
+
+--
+-- TOC entry 2701 (class 2604 OID 24601)
+-- Name: mistral_log log_id; Type: DEFAULT; Schema: public; Owner: mistral
+--
+
+ALTER TABLE ONLY public.mistral_log ALTER COLUMN log_id SET DEFAULT nextval('public.mistral_log_log_id_seq'::regclass);
+
+
+--
+-- TOC entry 2700 (class 2604 OID 24583)
+-- Name: rule_details rule_id; Type: DEFAULT; Schema: public; Owner: mistral
+--
+
+ALTER TABLE ONLY public.rule_details ALTER COLUMN rule_id SET DEFAULT nextval('public.rule_details_rule_id_seq'::regclass);
+
+
+--
+-- TOC entry 2710 (class 2606 OID 24617)
+-- Name: env env_pkey; Type: CONSTRAINT; Schema: public; Owner: mistral
+--
+
+ALTER TABLE ONLY public.env
+    ADD CONSTRAINT env_pkey PRIMARY KEY (env_id);
+
+
+--
+-- TOC entry 2708 (class 2606 OID 24606)
+-- Name: mistral_log mistral_log_pkey; Type: CONSTRAINT; Schema: public; Owner: mistral
+--
+
+ALTER TABLE ONLY public.mistral_log
+    ADD CONSTRAINT mistral_log_pkey PRIMARY KEY (log_id);
+
+
+--
+-- TOC entry 2704 (class 2606 OID 24590)
+-- Name: rule_details rule_definition; Type: CONSTRAINT; Schema: public; Owner: mistral
+--
+
+ALTER TABLE ONLY public.rule_details
+    ADD CONSTRAINT rule_definition UNIQUE (rule_label, violation_path, call_type, measurement, size_range, threshold);
+
+
+--
+-- TOC entry 2706 (class 2606 OID 24588)
+-- Name: rule_details rule_details_pkey; Type: CONSTRAINT; Schema: public; Owner: mistral
+--
+
+ALTER TABLE ONLY public.rule_details
+    ADD CONSTRAINT rule_details_pkey PRIMARY KEY (rule_id);
+
+
+-- Completed on 2019-08-22 15:03:44
+
+--
+-- PostgreSQL database dump complete
+--
+
