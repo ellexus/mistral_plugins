@@ -123,48 +123,46 @@ const char *insert_measure_stmt_name = "PUT_MEASURE";
 static void setup_prepared_statements()
 {
     if (!statements_prepared) {
-        char *get_rule_params_id_sql = "SELECT rule_id FROM rule_details "      \
-                                       "WHERE label=? AND violation_path=? "    \
-                                       "AND call_type=? AND measurement=? AND " \
-                                       "size_range=? AND threshold=?";
-        PGResult *res = PQPrepare(con, get_rule_stmt_name, get_rule_params_id_sql, 6, NULL);
+        char *get_rule_params_id_sql = "SELECT rule_id FROM rule_details "              \
+                                       "WHERE rule_label = $1 AND violation_path = $2 " \
+                                       "AND call_type = $3 AND measurement = $4 AND "   \
+                                       "size_range = $5 AND threshold = $6";
+        PGresult *res = PQprepare(con, get_rule_stmt_name, get_rule_params_id_sql, 6, NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            PQclear(res);
             mistral_err("Get rule prepared statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
             goto fail_prepared_statements;
         }
         PQclear(res);
 
         char *insert_rule_details_sql = "INSERT INTO rule_details"
-                                        "(label, violation_path, call_type, measurement, " \
-                                        "size_range, threshold)"
-                                        "VALUES (?,?,?,?,?,?)";
-        PGResult *res = PQPrepare(con, insert_rule_details_stmt_name, insert_rule_details_sql, 6,
-                                  NULL);
+                                        "(rule_label, violation_path, call_type, measurement, " \
+                                        "size_range, threshold)"                                \
+                                        "VALUES ($1,$2,$3,$4,$5,$6)";
+        res = PQprepare(con, insert_rule_details_stmt_name, insert_rule_details_sql, 6,
+                        NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            PQclear(res);
             mistral_err("Insert rule prepared statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
             goto fail_prepared_statements;
         }
         PQclear(res);
 
-        char *insert_rec_sql = "INSERT INTO mistral_log (scope, type, time_stamp, host,"     \
-                               "rule_id, observed, pid, cpu, command,"              \
-                               "file_name, group_id, id, mpi_rank, plugin_run_id" \
-                               ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-        PGResult *res = PQPrepare(con, insert_measure_stmt_name, insert_rec_sql, 14,
-                                  NULL);
+        char *insert_rec_sql = "INSERT INTO mistral_log (scope, type, time_stamp, host," \
+                               "rule_id, observed, pid, cpu, command,"                   \
+                               "file_name, group_id, id, mpi_rank, plugin_run_id"        \
+                               ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)";
+        res = PQprepare(con, insert_measure_stmt_name, insert_rec_sql, 14,
+                        NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            PQclear(res);
             mistral_err("Insert measurement prepared statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
             goto fail_prepared_statements;
         }
         PQclear(res);
-
-
         statements_prepared = true;
     }
     return;
@@ -490,7 +488,7 @@ static bool insert_env_records(int table_number, char *table_date)
     env_var *variable = env_head;
     while (variable) {
         #define ENV_INSERT "INSERT INTO %s (plugin_run_id, env_name," \
-                           "env_value, env_id) VALUES (?,?,?,NULL)"
+        "env_value, env_id) VALUES (?,?,?,NULL)"
         MYSQL_STMT *insert_env;
         MYSQL_BIND input_bind[3];
         unsigned long str_length_run_id;
@@ -808,8 +806,8 @@ static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_i
     strftime(timestamp, sizeof(timestamp), "%F %T", &log_entry->time);
 
     #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', %llu, '%s', %" PRIu64 \
-                       ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32             \
-                       ",'%s', NULL)"
+    ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32                                \
+    ",'%s', NULL)"
 
     if (asprintf(&values_string,
                  LOG_VALUES,

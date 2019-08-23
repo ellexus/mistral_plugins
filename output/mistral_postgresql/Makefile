@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Set up targets and default required PHONY rules
 
-PLUGIN_NAME = mistral_mysql
+PLUGIN_NAME = mistral_postgresql
 
 # ------------------------------------------------------------------------------
 # HOST_ARCH -- Native architecture, normalized to elide i386/i686
