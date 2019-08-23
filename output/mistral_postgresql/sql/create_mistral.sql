@@ -91,10 +91,11 @@ ALTER SEQUENCE public.env_env_id_seq OWNED BY public.env.env_id;
 
 CREATE TABLE public.mistral_log (
     log_id integer NOT NULL,
+    plugin_run_id character varying(36) NOT NULL,
+    rule_id integer NOT NULL,
     time_stamp TIMESTAMPTZ NOT NULL,
     scope character varying(6) NOT NULL,
     type character varying(8) NOT NULL,
-    rule_id integer NOT NULL,
     observed character varying(64) NOT NULL,
     host character varying(256),
     pid integer,
@@ -103,8 +104,7 @@ CREATE TABLE public.mistral_log (
     file_name character varying(1405),
     group_id character varying(256),
     id character varying(256),
-    mpi_rank integer,
-    plugin_run_id character varying(36) NOT NULL
+    mpi_rank integer
 );
 
 
