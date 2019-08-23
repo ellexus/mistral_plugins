@@ -21,34 +21,13 @@
 #define LONG_STRING_SIZE 1405
 #define MEASUREMENT_SIZE 13
 #define UUID_SIZE 36
-/* The default maximum MySQL communication buffer size is 1MB (see
- * https://dev.mysql.com/doc/refman/5.7/en/c-api.html.)
- */
-#define BUFFER_SIZE 1000000
 
 #define DATE_FORMAT "YYYY-MM-DD"
 #define DATETIME_FORMAT "YYYY-MM-DD HH-mm-SS"
 #define DATE_LENGTH sizeof(DATE_FORMAT)
 #define DATETIME_LENGTH sizeof(DATETIME_FORMAT)
-#define LOG_TABLE_FMT "log_%02d"
-#define LOG_TABLE_SIZE sizeof("log_nn")
-#define ENV_TABLE_FMT "env_%02d"
-#define ENV_TABLE_SIZE sizeof("env_nn")
 
 #define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
-
-#define BIND_STRING(b, i, str, null_is, str_len) \
-    b[i].buffer_type = MYSQL_TYPE_STRING;        \
-    b[i].buffer = (char *)str;                   \
-    b[i].buffer_length = STRING_SIZE;            \
-    b[i].is_null = null_is;                      \
-    b[i].length = &str_len;
-
-#define BIND_INT(b, i, integer, null_is) \
-    b[i].buffer_type = MYSQL_TYPE_LONG;  \
-    b[i].buffer = (char *)integer;       \
-    b[i].is_null = null_is;              \
-    b[i].length = 0;
 
 static char run_id[UUID_SIZE + 1];
 
@@ -70,7 +49,7 @@ typedef struct rule_param {
     enum mistral_measurement measurement;
     char size_range[RATE_SIZE + 1];
     char threshold[RATE_SIZE + 1];
-    my_ulonglong rule_id;
+    long rule_id;
 } rule_param;
 
 typedef struct env_table {
@@ -95,7 +74,7 @@ static void usage(const char *name)
     mistral_err("\n"
                 "  --defaults-file=config\n"
                 "  -c config\n"
-                "     Location of a MySQL formatted options file \"config\" that\n"
+                "     Location of a PostgreSQL formatted options file \"config\" that\n"
                 "     contains database connection configuration.\n"
                 "\n"
                 "  --mode=octal-mode\n"
@@ -119,6 +98,7 @@ static bool statements_prepared = false;
 const char *get_rule_stmt_name = "GET_RULE_ID_FROM_PARAMS";
 const char *insert_rule_details_stmt_name = "PUT_RULE_DETAILS";
 const char *insert_measure_stmt_name = "PUT_MEASURE";
+const char *insert_env_stmt_name = "PUT_ENV";
 
 static void setup_prepared_statements()
 {
@@ -139,7 +119,7 @@ static void setup_prepared_statements()
         char *insert_rule_details_sql = "INSERT INTO rule_details"
                                         "(rule_label, violation_path, call_type, measurement, " \
                                         "size_range, threshold)"                                \
-                                        "VALUES ($1,$2,$3,$4,$5,$6)";
+                                        "VALUES ($1,$2,$3,$4,$5,$6) RETURNING rule_id";
         res = PQprepare(con, insert_rule_details_stmt_name, insert_rule_details_sql, 6,
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -153,7 +133,7 @@ static void setup_prepared_statements()
         char *insert_rec_sql = "INSERT INTO mistral_log (scope, type, time_stamp, host," \
                                "rule_id, observed, pid, cpu, command,"                   \
                                "file_name, group_id, id, mpi_rank, plugin_run_id"        \
-                               ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)";
+                               ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETRUNING log_id";
         res = PQprepare(con, insert_measure_stmt_name, insert_rec_sql, 14,
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -163,117 +143,24 @@ static void setup_prepared_statements()
             goto fail_prepared_statements;
         }
         PQclear(res);
+
+        char *insert_env_sql =
+            "INSERT INTO env (plugin_run_id, env_name, env_value) VALUES ($1,$2,$3)";
+        res = PQprepare(con, insert_env_stmt_name, insert_env_sql, 6, NULL);
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Get rule prepared statement creation failed\n");
+            mistral_err("%s\n",  PQresultErrorMessage(res));
+            fprintf(stderr, "%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            goto fail_prepared_statements;
+        }
+        PQclear(res);
+
         statements_prepared = true;
     }
     return;
 fail_prepared_statements:
     mistral_err("setup_prepared_statements failed!\n");
-}
-
-/*
- * get_table_number
- *
- * This function retrieves the number suffix used for the log and environment
- * variable tables for this date.
- *
- * Parameters:
- *   log_entry      - A Mistral log record data structure containing the
- *                    received log information.
- *
- * Returns:
- *   Integer value of table suffix if successful
- *   -1 otherwise
- */
-static bool get_table_number(const mistral_log *log_entry)
-{
-    /* Allocates memory for a MYSQL_STMT and initializes it */
-    MYSQL_STMT      *get_table_num;
-    MYSQL_BIND input_bind[1];
-    MYSQL_BIND output_bind[1];
-    unsigned long str_length;
-    char log_date[STRING_SIZE];
-    int table_num;
-
-    get_table_num = mysql_stmt_init(con);
-    if (!get_table_num) {
-        mistral_err("mysql_stmt_init() out of memory for get_table_num\n");
-        mistral_err("%s\n", mysql_stmt_error(get_table_num));
-        goto fail_get_table_number;
-    }
-
-    /* Prepares the statement for use */
-    char *get_table_number_str = "SELECT table_num FROM date_table_map WHERE " \
-                                 "table_date = DATE_FORMAT(?,'%Y-%m-%d')";
-    if (mysql_stmt_prepare(get_table_num, get_table_number_str,
-                           strlen(get_table_number_str)))
-    {
-        mistral_err("mysql_stmt_prepare(get_table_num) failed\n");
-        mistral_err("%s\n", mysql_stmt_error(get_table_num));
-        goto fail_get_table_number;
-    }
-
-    /* Initialise the bind data structures */
-    memset(input_bind, 0, sizeof(input_bind));
-    memset(output_bind, 0, sizeof(output_bind));
-
-    /* Set the variables to use for input parameters in the SELECT query */
-    BIND_STRING(input_bind, 0, log_date, 0, str_length);
-
-    /* Set the variables to use to store the values returned by the SELECT query */
-    BIND_INT(output_bind, 0, &table_num, 0);
-
-    /* Connect the input variables to the prepared query */
-    if (mysql_stmt_bind_param(get_table_num, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(get_table_num) failed\n");
-        mistral_err("%s\n", mysql_stmt_error(get_table_num));
-        goto fail_get_table_number;
-    }
-
-    /* Set the date to look up */
-    strftime(log_date, sizeof(log_date), "%F", &log_entry->time);
-    str_length = strlen(log_date);
-
-    /* Execute the query */
-    if (mysql_stmt_execute(get_table_num)) {
-        mistral_err("mysql_stmt_execute(get_table_num), failed\n");
-        mistral_err("%s\n", mysql_stmt_error(get_table_num));
-        goto fail_get_table_number;
-    }
-
-    /* Connect the output variables to the results of the query */
-    if (mysql_stmt_bind_result(get_table_num, output_bind)) {
-        mistral_err("mysql_stmt_bind_result(get_table_num), failed\n");
-        mistral_err("%s\n", mysql_stmt_error(get_table_num));
-    }
-
-    /* Get all returned rows locally */
-    mysql_stmt_store_result(get_table_num);
-    my_ulonglong received = mysql_stmt_num_rows(get_table_num);
-
-    if (received != 1) {
-        mistral_err("Expected 1 returned row but received %llu\n", received);
-        goto fail_get_table_number;
-    }
-
-    /* Populate the output variables with the returned data */
-    if (mysql_stmt_fetch(get_table_num)) {
-        mistral_err("mysql_stmt_fetch(get_table_num), failed\n");
-        mistral_err("%s\n", mysql_stmt_error(get_table_num));
-        goto fail_get_table_number;
-    }
-
-    /* Close the statement */
-    if (mysql_stmt_close(get_table_num)) {
-        mistral_err("Failed while closing the statement get_table_num\n");
-        mistral_err("%s\n", mysql_stmt_error(get_table_num));
-        goto fail_get_table_number;
-    }
-
-    return table_num;
-
-fail_get_table_number:
-    mistral_err("get_table_number failed!\n");
-    return -1;
 }
 
 /*
@@ -292,91 +179,43 @@ fail_get_table_number:
  *   true if the record was inserted successfully
  *   false otherwise
  */
-static bool insert_rule_details(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
+static bool insert_rule_details(mistral_log *log_entry, long *ptr_rule_id)
 {
-    MYSQL_STMT   *insert_rule;
-    MYSQL_BIND input_bind[6];
-    unsigned long str_length_vio;
-    unsigned long str_length_label;
-    unsigned long str_length_call;
-    unsigned long str_length_measure;
-    unsigned long str_length_size_range;
-    unsigned long str_length_threshold;
-    char         *insert_rule_details_str;
+    PGresult *res;
+    const char *values[6];
 
-    insert_rule = mysql_stmt_init(con);
-    if (!insert_rule) {
-        mistral_err("mysql_stmt_init() out of memory for insert_rule\n");
+    values[0] = log_entry->label;
+    values[1] = log_entry->path;
+    values[2] = log_entry->call_type_names;
+    values[3] = mistral_measurement_name[log_entry->measurement];
+    values[4] = log_entry->size_range;
+    values[5] = log_entry->threshold_str;
+
+    res = PQexecPrepared(con, insert_rule_details_stmt_name, 6, values, NULL, NULL, 0);
+
+    /* Has the query returned results */
+    if (NULL == res || PGRES_TUPLES_OK != PQresultStatus(res)) {
+        mistral_err("PQexecParams(insert rule) failed\n");
+        mistral_err("%s\n", PQresultErrorMessage(res));
+        fprintf(stderr, "%s\n", PQresultErrorMessage(res));
+        if (res != NULL) {
+            PQclear(res);
+        }
         goto fail_insert_rule_details;
     }
 
-    /* Prepares the statement for use */
-    insert_rule_details_str = "INSERT INTO rule_details"
-                              "(rule_id, label, violation_path, call_type,"
-                              "measurement, size_range, threshold)"
-                              "VALUES (NULL,?,?,?,?,?,?)";
-    if (mysql_stmt_prepare(insert_rule, insert_rule_details_str,
-                           strlen(insert_rule_details_str)))
-    {
-        mistral_err("mysql_stmt_prepare(insert_rule), failed\n");
-        mistral_err("%s\n", mysql_stmt_error(insert_rule));
+    int received = PQntuples(res);
+    if (received == 1) {
+        /* Sets the rule_id to this new inserted value */
+        assert(ptr_rule_id);
+        *ptr_rule_id = atoi(PQgetvalue(res, 0, 0));
+    } else {
+        mistral_err("Expected to get 1 record with rule-id - but got %d\n", received);
+        PQclear(res);
         goto fail_insert_rule_details;
     }
 
-    /* Initialise the bind data structures */
-    memset(input_bind, 0, sizeof(input_bind));
-
-    /* Set the variables to use for input parameters in the INSERT query */
-    BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
-    BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
-    BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
-    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0,
-                str_length_measure);
-    BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
-    BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
-
-    /* Connect the input variables to the prepared query */
-    if (mysql_stmt_bind_param(insert_rule, input_bind)) {
-        mistral_err("mysql_stmt_bind_param(insert_rule) failed\n");
-        mistral_err("%s\n", mysql_stmt_error(insert_rule));
-        goto fail_insert_rule_details;
-    }
-
-    /* Set the length of the values of the variables used in the query, these will be truncated if
-     * they exceed the size of the database column.
-     */
-    str_length_label = strlen(log_entry->label);
-    str_length_vio = strlen(log_entry->path);
-    str_length_call = strlen(log_entry->call_type_names);
-    str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
-    str_length_size_range = strlen(log_entry->size_range);
-    str_length_threshold = strlen(log_entry->threshold_str);
-
-    /* Execute the query */
-    if (mysql_stmt_execute(insert_rule)) {
-        mistral_err("mysql_stmt_execute(insert_rule), failed\n");
-        mistral_err("%s\n", mysql_stmt_error(insert_rule));
-        goto fail_insert_rule_details;
-    }
-
-    /* Get the total rows affected */
-    my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_rule);
-    if (affected_rows != 1) {
-        mistral_err("Invalid number of rows inserted by insert_rule. Expected 1, saw %llu\n",
-                    affected_rows);
-        goto fail_insert_rule_details;
-    }
-
-    /* Sets the rule_id to this new inserted value */
-    assert(ptr_rule_id);
-    *ptr_rule_id = mysql_stmt_insert_id(insert_rule);
-
-    /* Close the statement */
-    if (mysql_stmt_close(insert_rule)) {
-        mistral_err("failed while closing the statement insert_rule\n");
-        mistral_err("%s\n", mysql_stmt_error(insert_rule));
-        goto fail_insert_rule_details;
-    }
+    PQclear(res);
 
     return true;
 
@@ -386,57 +225,20 @@ fail_insert_rule_details:
 }
 
 /*
- * env_table_compare
- *
- * Comparison function for use with tsearch to compare two environment tables.
- *
- * Parameters:
- *   p  - pointer to the first env_table structure
- *   q  - pointer to the second env_table structure
- *
- * Returns:
- *   < 0 if first table is "less than" the second table
- *   0   if first table is "equal to" the second table
- *   > 0 if first table is "greater than" the second table
- */
-static int env_table_compare(const void *p, const void *q)
-{
-    const env_table *tab1 = p;
-    const env_table *tab2 = q;
-    int retval = 0;
-
-    retval = tab1->table_number - tab2->table_number;
-    if (retval) {
-        return retval;
-    }
-
-    retval = strcmp(tab1->date, tab2->date);
-    return retval;
-}
-
-/*
  * insert_env_records
  *
  * This function checks to see if any additional environment varaibles that were
- * specified at the command line have been stored for this job in the
- * appropriate 'env_nn' table for the log record date.
+ * specified at the command line have been stored for this job in the env table.
  *
  * We do not expect a large number of these environment variables to be
- * specified and, even so, will only need to do this once for each date seen so
+ * specified and, even so, will only need to do this once so
  * there is no need to construct a large bulk insert.
- *
- * Parameters:
- *   table_number - The integer table number suffix to use when building the
- *                  table name.
- *   table_date   - The date associated with this table as, for long runing
- *                  jobs, it is possible a table may get reused (although this
- *                  is highly unlikely).
  *
  * Returns:
  *   true if environment variables are saved successfully
  *   false otherwise
  */
-static bool insert_env_records(int table_number, char *table_date)
+static bool insert_env_records()
 {
     /* Do we have any environment variables to store? */
     if (!env_head) {
@@ -444,129 +246,41 @@ static bool insert_env_records(int table_number, char *table_date)
         return true;
     }
 
-    /* First let's check if we have already stored the environment variables in
-     * the specified table.
-     */
-    env_table *this_table;
-    void *found;
-
-    this_table = calloc(1, sizeof(env_table));
-    if (this_table) {
-        this_table->table_number = table_number;
-        strncpy(this_table->date, table_date, DATE_LENGTH - 1);
-        this_table->date[DATE_LENGTH - 1] = '\0';
-
-        found = tsearch((void *)this_table, &table_root, env_table_compare);
-        if (found == NULL) {
-            mistral_err("Out of memory in tsearch - env var check\n");
-            free(this_table);
-            this_table = NULL;
-            goto fail_insert_env_records;
-        } else if (*(env_table **)found != this_table) {
-            /* Already saved details in this table */
-            free(this_table);
-            this_table = NULL;
-            return true;
-        }
-    } else {
-        mistral_err("Unable to allocate memory for table to be used in tsearch\n");
-        goto fail_insert_env_records;
-    }
-    /* If we have got here this is the first time we have seen this table -
-     * insert all the specified environment variables into it. Insert each
-     * variable one at a time as we are not expecting to see a large number of
-     * --var options on the command line and we only need to do this once a day
-     */
-    char env_table_name[ENV_TABLE_SIZE];
-    if (snprintf(env_table_name, ENV_TABLE_SIZE, ENV_TABLE_FMT, table_number) >=
-        (int)ENV_TABLE_SIZE)
-    {
-        mistral_err("Unable to build environment table name\n");
-        goto fail_insert_env_records;
-    }
+    char *input_bind[3];
 
     env_var *variable = env_head;
     while (variable) {
-        #define ENV_INSERT "INSERT INTO %s (plugin_run_id, env_name," \
-        "env_value, env_id) VALUES (?,?,?,NULL)"
-        MYSQL_STMT *insert_env;
-        MYSQL_BIND input_bind[3];
-        unsigned long str_length_run_id;
-        unsigned long str_length_name;
-        unsigned long str_length_value;
-        /* The insert statement is static apart from the table name,
-         * allocate a char array big enough for both parts. As the
-         * format string contains %s it is two characters longer than
-         * needed once we add the max table name length hence no need to
-         * add 1 for the trailing null
-         */
-        const int env_str_len = sizeof(ENV_INSERT) + ENV_TABLE_SIZE;
-        char insert_env_str[env_str_len];
+        input_bind[0] = run_id;
+        input_bind[1] = variable->name;
+        input_bind[2] = variable->value;
 
-        insert_env = mysql_stmt_init(con);
-        if (!insert_env) {
-            mistral_err("mysql_stmt_init() out of memory for insert_log\n");
+        PGresult *res = PQexecPrepared(con, insert_env_stmt_name, 6, input_bind, NULL, NULL, 0);
+        /* Has the query returned results */
+        if (NULL == res) {
+            mistral_err("Failed to insert env record\n");
+            goto fail_insert_env_records;
+        }
+        /* Was it succesful? */
+        if (PGRES_TUPLES_OK != PQresultStatus(res)) {
+            mistral_err("Failed to insert env record\n");
+            mistral_err("%s\n", PQresultErrorMessage(res));
+            PQclear(res);
             goto fail_insert_env_records;
         }
 
-        /* Prepares the statement for use */
-        snprintf(insert_env_str, env_str_len, ENV_INSERT, env_table_name);
-
-        if (mysql_stmt_prepare(insert_env, insert_env_str, strlen(insert_env_str))) {
-            mistral_err("mysql_stmt_prepare(insert_env) failed with statement: %s\n",
-                        insert_env_str);
-            mistral_err("%s\n", mysql_stmt_error(insert_env));
-            goto fail_insert_env_records;
-        }
-
-        /* Initialise the bind data structures */
-        memset(input_bind, 0, sizeof(input_bind));
-
-        BIND_STRING(input_bind, 0, run_id, 0, str_length_run_id);
-        BIND_STRING(input_bind, 1, variable->name, 0, str_length_name);
-        BIND_STRING(input_bind, 2, variable->value, 0, str_length_value);
-
-        /* Connect the input variables to the prepared query */
-        if (mysql_stmt_bind_param(insert_env, input_bind)) {
-            mistral_err("mysql_stmt_bind_param(insert_env) failed\n");
-            mistral_err("%s\n", mysql_stmt_error(insert_env));
-            goto fail_insert_env_records;
-        }
-
-        /* Set the appropriate string lengths (these have already been
-         * restricted to the max length for the appropriate column).
-         */
-        str_length_run_id = strlen(run_id);
-        str_length_name = strlen(variable->name);
-        str_length_value = strlen(variable->value);
-
-        /* Execute the query */
-        if (mysql_stmt_execute(insert_env)) {
-            mistral_err("mysql_stmt_execute(insert_env), failed\n");
-            mistral_err("%s\n", mysql_stmt_error(insert_env));
-            goto fail_insert_env_records;
-        }
-
-        /* Get the total rows affected */
-        my_ulonglong affected_rows = mysql_stmt_affected_rows(insert_env);
+        int affected_rows = PQntuples(res);
         if (affected_rows != 1) {
             mistral_err("Invalid number of rows inserted by insert_env. Expected 1, saw %llu\n",
                         affected_rows);
+            PQclear(res);
             goto fail_insert_env_records;
         }
 
-        /* Close the statement */
-        if (mysql_stmt_close(insert_env)) {
-            mistral_err("failed while closing the statement insert_env\n");
-            mistral_err("%s\n", mysql_stmt_error(insert_env));
-            goto fail_insert_env_records;
-        }
-
+        PQclear(res);
         variable = variable->forward;
     }
 
     return true;
-
 fail_insert_env_records:
     return false;
 }
@@ -649,12 +363,12 @@ static int rule_compare(const void *p, const void *q)
  *   false otherwise
  *
  */
-static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
+static bool set_rule_id(mistral_log *log_entry, long *ptr_rule_id)
 {
     const char    *input_bind[6];
     rule_param    *this_rule;
     void          *found;
-    int recieved, rule_id;
+    int received;
 
     /* First let's check if we have seen the rule before */
     this_rule = calloc(1, sizeof(rule_param));
@@ -691,49 +405,30 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
      */
 
     /* Prepares the statement for use */
-    char *get_rule_params_id_str = "SELECT rule_id FROM rule_details "      \
-                                   "WHERE label=? AND violation_path=? "    \
-                                   "AND call_type=? AND measurement=? AND " \
-                                   "size_range=? AND threshold=?";
-    int length[6];
-    int binary[6];
     input_bind[0] = log_entry->label;
-    length[0] = strlen(log_entry->label);
-    binary[0] = 0;
     input_bind[1] = log_entry->path;
-    length[1] = strlen(log_entry->path);
-    binary[1] = 0;
     input_bind[2] = log_entry->call_type_names;
-    length[2] = strlen(log_entry->call_type_names);
-    binary[2] = 0;
     input_bind[3] = mistral_measurement_name[log_entry->measurement];
-    length[3] = sizeof(mistral_measurement_name[log_entry->measurement]);
-    binary[3] = 0;
     input_bind[4] = log_entry->size_range;
-    length[4] = strlen(log_entry->size_range);
-    binary[4] = 0;
     input_bind[5] = log_entry->threshold_str;
-    length[5] = strlen(log_entry->threshold_str);
-    binary[5] = 0;
 
-    /* Run the query */
-    PGresult *res = PQexecParams(con, get_rule_params_id_str, 6, NULL, input_bind, length, binary,
-                                 0);
+    /** Get matching rules from the database */
+    PGresult *res = PQexecPrepared(con, get_rule_stmt_name, 6, input_bind, NULL, NULL, 0);
     /* Has the query returned results */
     if (NULL == res || PGRES_TUPLES_OK != PQresultStatus(res)) {
-        mistral_err("PQexecParams(get_rule) failed\n");
-        mistral_err("%s\n", PQerrorMessage(con));
+        mistral_err("PQexecPrepared(get_rule_stmt_name) failed\n");
+        mistral_err("%s\n", PQresultErrorMessage(res));
         goto fail_set_rule_id;
     }
-    /* Get the result */
-    received = PQntuples(res);
 
+    received = PQntuples(res);
     if (received == 1) {
-        rule_id = PQgetvalue(res, 0, 0);
         /* We found the rule in the DB, store this result in the tsearch tree */
-        this_rule->rule_id = rule_id; /* TODO: This previously did something with pointers - is this
-                                       * now correct? */
+        this_rule->rule_id = atoi(PQgetvalue(res, 0, 0)); /* TODO: This previously did something
+                                                           * with pointers - is this
+                                                           * now correct? */
     } else if (received == 0) {
+        PQclear(res);
         if (!insert_rule_details(log_entry, ptr_rule_id)) {
             tdelete((void *)this_rule, &rule_root, rule_compare);
             goto fail_set_rule_id;
@@ -751,7 +446,6 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
 fail_set_rule_id:
     mistral_err("Set_rule_ID failed!\n");
-    PQfinish(con);
     return false;
 }
 
@@ -776,7 +470,7 @@ fail_set_rule_id:
  *   A pointer to the string containing the VALUES string or
  *   NULL on error
  */
-static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_id)
+static char *build_log_values_string(mistral_log *log_entry, long rule_id)
 {
     /* Set up variables to hold the mysql escaped version of potentially
      * unsafe strings
