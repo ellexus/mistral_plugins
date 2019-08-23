@@ -117,7 +117,6 @@ static void usage(const char *name)
 
 static bool statements_prepared = false;
 const char *get_rule_stmt_name = "GET_RULE_ID_FROM_PARAMS";
-const char *get_tablenumber_stmt_name = "GET_TABLE_NUMBER";
 const char *insert_rule_details_stmt_name = "PUT_RULE_DETAILS";
 const char *insert_measure_stmt_name = "PUT_MEASURE";
 
@@ -137,21 +136,10 @@ static void setup_prepared_statements()
         }
         PQclear(res);
 
-        char *get_table_number_sql = "SELECT table_num FROM date_table_map WHERE " \
-                                     "table_date = DATE_FORMAT(?,'%Y-%m-%d')";
-        PGResult *res = PQPrepare(con, get_tablenumber_stmt_name, get_table_number_sql, 1, NULL);
-        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            PQclear(res);
-            mistral_err("Get table number prepared statement creation failed\n");
-            mistral_err("%s\n",  PQresultErrorMessage(res));
-            goto fail_prepared_statements;
-        }
-        PQclear(res);
-
         char *insert_rule_details_sql = "INSERT INTO rule_details"
-                                        "(rule_id, label, violation_path, call_type,"
-                                        "measurement, size_range, threshold)"
-                                        "VALUES (NULL,?,?,?,?,?,?)";
+                                        "(label, violation_path, call_type, measurement, " \
+                                        "size_range, threshold)"
+                                        "VALUES (?,?,?,?,?,?)";
         PGResult *res = PQPrepare(con, insert_rule_details_stmt_name, insert_rule_details_sql, 6,
                                   NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -162,11 +150,10 @@ static void setup_prepared_statements()
         }
         PQclear(res);
 
-        //TODO: set this table name
-        char *insert_rec_sql = "INSERT INTO measurements (scope, type, time_stamp, host,"     \
+        char *insert_rec_sql = "INSERT INTO mistral_log (scope, type, time_stamp, host,"     \
                                "rule_id, observed, pid, cpu, command,"              \
-                               "file_name, group_id, id, mpi_rank, plugin_run_id, " \
-                               "log_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+                               "file_name, group_id, id, mpi_rank, plugin_run_id" \
+                               ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
         PGResult *res = PQPrepare(con, insert_measure_stmt_name, insert_rec_sql, 14,
                                   NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {

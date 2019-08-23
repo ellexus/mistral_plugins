@@ -91,9 +91,9 @@ ALTER SEQUENCE public.env_env_id_seq OWNED BY public.env.env_id;
 
 CREATE TABLE public.mistral_log (
     log_id integer NOT NULL,
+    time_stamp TIMESTAMPTZ NOT NULL,
     scope character varying(6) NOT NULL,
     type character varying(8) NOT NULL,
-    time_stamp time with time zone NOT NULL,
     rule_id integer NOT NULL,
     observed character varying(64) NOT NULL,
     host character varying(256),
