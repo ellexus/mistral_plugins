@@ -133,7 +133,7 @@ static void setup_prepared_statements()
         char *insert_rec_sql = "INSERT INTO mistral_log (scope, type, time_stamp, host," \
                                "rule_id, observed, pid, cpu, command,"                   \
                                "file_name, group_id, id, mpi_rank, plugin_run_id"        \
-                               ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETRUNING log_id";
+                               ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING log_id";
         res = PQprepare(con, insert_measure_stmt_name, insert_rec_sql, 14,
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -246,7 +246,7 @@ static bool insert_env_records()
         return true;
     }
 
-    char *input_bind[3];
+    const char *input_bind[3];
 
     env_var *variable = env_head;
     while (variable) {
@@ -270,7 +270,7 @@ static bool insert_env_records()
 
         int affected_rows = PQntuples(res);
         if (affected_rows != 1) {
-            mistral_err("Invalid number of rows inserted by insert_env. Expected 1, saw %llu\n",
+            mistral_err("Invalid number of rows inserted by insert_env. Expected 1, saw %u\n",
                         affected_rows);
             PQclear(res);
             goto fail_insert_env_records;
@@ -436,7 +436,7 @@ static bool set_rule_id(mistral_log *log_entry, long *ptr_rule_id)
         /* Store the freshly inserted ID in the tsearch tree */
         this_rule->rule_id = *ptr_rule_id;
     } else {
-        mistral_err("Expected 1 returned row but received %llu\n", received);
+        mistral_err("Expected 1 returned row but received %u\n", received);
         PQclear(res);
         goto fail_set_rule_id;
     }
@@ -483,7 +483,8 @@ static char *build_log_values_string(mistral_log *log_entry, long rule_id)
     char timestamp[DATETIME_LENGTH];
     char *values_string = NULL;
 
-    int error_num = 0;
+    int *error_num = 0;
+
     PQescapeStringConn(con, escaped_command, log_entry->command, strlen(log_entry->command),
                        error_num);
     PQescapeStringConn(con, escaped_command, log_entry->command, strlen(log_entry->command),
@@ -499,8 +500,8 @@ static char *build_log_values_string(mistral_log *log_entry, long rule_id)
     /* Converts the timestamp to a formatted string */
     strftime(timestamp, sizeof(timestamp), "%F %T", &log_entry->time);
 
-    #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', %llu, '%s', %" PRIu64 \
-    ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32                                \
+    #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', %lu, '%s', %" PRIu64 \
+    ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32                               \
     ",'%s', NULL)"
 
     if (asprintf(&values_string,
@@ -551,7 +552,7 @@ static bool insert_log_to_db(void)
     PGresult *res = PQexec(con, log_insert);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         mistral_err("Failed while inserting log entry\n");
-        mistral_err("%s\n", PQresultStatus(res));
+        mistral_err("%d\n", PQresultStatus(res));
         mistral_err("Insert_log_to_db failed!\n");
         return false;
     }
@@ -589,7 +590,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     /* Returning without setting plug-in type will cause a clean exit */
 
     const struct option options[] = {
-        {"defaults-file", required_argument, NULL, 'c'},
         {"error", required_argument, NULL, 'e'},
         {"mode", required_argument, NULL, 'm'},
         {"output", required_argument, NULL, 'e'},
@@ -597,17 +597,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {0, 0, 0, 0},
     };
 
-    const char *config_file = NULL;
     const char *error_file = NULL;
     int opt;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "c:m:e:v:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "m:e:v:", options, NULL)) != -1) {
         switch (opt) {
-        case 'c':
-            /* TODO: Either remove this option or setup a PostgreSQL config file */
-            config_file = optarg;
-            break;
         case 'm': {
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
@@ -696,9 +691,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     /* Setup the PostgreSQL database connection
      * TODO: Stop using default username/password etc.
      */
-    con = PQconnectdb("user=mistral password=ellexus host=localhost port=5432 dbname=mistral");
+    con = PQconnectdb("user=mistral password=ellexus host=localhost port=5432 dbname=mistral_log");
 
-    if (PQStatus(con) == CONNECTION_BAD) {
+    if (PQstatus(con) == CONNECTION_BAD) {
         mistral_err("Unable to connect to PostgreSQL: %s\n", PQerrorMessage(con));
         PQfinish(con);
         return;
@@ -708,6 +703,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     uuid_t urun_id;
     uuid_generate(urun_id);
     uuid_unparse(urun_id, run_id);
+
+    /* Setup the prepared statements used by the plug-in */
+    setup_prepared_statements();
 
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
@@ -813,101 +811,30 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 {
     UNUSED(block_num);
     UNUSED(block_error);
-    my_ulonglong rule_id = 0;
-    static char last_log_date[DATE_LENGTH] = "";
-    static char table_name[LOG_TABLE_SIZE];
-    bool date_changed = false;
+    long rule_id = 0;
 
     mistral_log *log_entry = log_list_head;
 
     while (log_entry) {
-        char log_date[DATE_LENGTH] = "";
-        size_t result = 0;
-
-        /* Is the date on this record the same as the last record processed? */
-        result = strftime(log_date, DATE_LENGTH, "%F", &log_entry->time);
-
-        if (result > 0 && strncmp(log_date, last_log_date, DATE_LENGTH) != 0) {
-            /* The date is different to the last log seen, update the last seen
-             * value and look up the table name appropriate for this date.
-             *
-             * There is an assumption here that Mistral is running with live
-             * data on machines with correctly configured clocks and that the
-             * end_of_day processing has successfully run. This should mean that
-             * we are only seeing data from "today" and when the date rolls over
-             * at midnight we already have an empty table prepared for data.
-             *
-             * Processing saved data / clock errors will still not be an issue
-             * as long as the date on the records falls between -30 days (by
-             * default) and 23:59:59 on the current date as configured on the
-             * MySQL server. Data one day either side of this range may still be
-             * inserted successfully depending on whether the end_of_day
-             * processing has been completed or not.
-             */
-            strncpy(last_log_date, log_date, DATE_LENGTH);
-
-            int num = get_table_number(log_entry);
-            if (num < 0) {
-                mistral_err("get_table_number failed\n");
-                mistral_shutdown();
-                return;
-            }
-            date_changed = true;
-
-            if (snprintf(table_name, LOG_TABLE_SIZE, LOG_TABLE_FMT, num) >=
-                (int)LOG_TABLE_SIZE)
-            {
-                mistral_err("Unable to build log table name\n");
-                mistral_shutdown();
-                return;
-            }
-            /* Check if we have already stored our environment variables in the
-             * corresponding table, if not insert them.
-             */
-            if (!insert_env_records(num, log_date)) {
-                mistral_shutdown();
-                return;
-            }
-        }
-
         /* Get (or create) the appropriate rule id for this log entry */
         if (!set_rule_id(log_entry, &rule_id)) {
             mistral_shutdown();
             return;
         }
 
+        /* TODO: This might only need doing once */
+        insert_env_records();
+
         char *values = build_log_values_string(log_entry, rule_id);
         size_t values_len = strlen(values);
-
-        /* Check if this record will fit within the MySQL communication buffer.
-         * If not we need to send the currently built insert statement to MySQL
-         * and start a new statement.
-         *
-         * We also need to send the current query if the date has changed as
-         * this will change the table we are inserting into.
-         */
-        if (log_insert_len + values_len + 2 > BUFFER_SIZE ||
-            (log_insert_len && date_changed))
-        {
-            if (!insert_log_to_db()) {
-                if (date_changed) {
-                    mistral_err("Insert log entry on date change failed\n");
-                } else {
-                    mistral_err("Insert log entry on max buffer size failed\n");
-                }
-                mistral_shutdown();
-                return;
-            }
-            date_changed = false;
-        }
 
         if (log_insert_len == 0) {
             /* Create the insert statement */
             if (asprintf(&log_insert,
-                         "INSERT INTO %s (scope, type, time_stamp, host,"     \
-                         "rule_id, observed, pid, cpu, command,"              \
-                         "file_name, group_id, id, mpi_rank, plugin_run_id, " \
-                         "log_id) VALUES %s", table_name, values) < 0)
+                         "INSERT INTO mistral_log (scope, type, time_stamp, host," \
+                         "rule_id, observed, pid, cpu, command,"                   \
+                         "file_name, group_id, id, mpi_rank, plugin_run_id, "      \
+                         "log_id) VALUES %s", values) < 0)
             {
                 mistral_err("Unable to allocate memory for log insert\n");
                 mistral_shutdown();

@@ -15,7 +15,7 @@ LDLIBS := \
 	-luuid
 
 INCLUDE_FLAGS := \
-	$(shell pg_config --includedir)
+	-I$(shell pg_config --includedir)
 
 TARGETS = \
 	$(PLUGIN_NAME)
