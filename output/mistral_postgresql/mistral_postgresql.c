@@ -489,7 +489,7 @@ static char *build_log_values_string(mistral_log *log_entry, long rule_id)
 
     #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', %lu, '%s', %" PRIu64 \
     ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32                               \
-    ",'%s', NULL)"
+    ",'%s')"
 
     if (asprintf(&values_string,
                  LOG_VALUES,
@@ -539,7 +539,8 @@ static bool insert_log_to_db(void)
     PGresult *res = PQexec(con, log_insert);
     if (PQresultStatus(res) != PGRES_COMMAND_OK) {
         mistral_err("Failed while inserting log entry\n");
-        mistral_err("%d\n", PQresultStatus(res));
+        mistral_err("%s\n",  PQresultErrorMessage(res));
+        mistral_err("%s\n", log_insert);
         mistral_err("Insert_log_to_db failed!\n");
         return false;
     }
@@ -820,8 +821,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             if (asprintf(&log_insert,
                          "INSERT INTO mistral_log (scope, type, time_stamp, host," \
                          "rule_id, observed, pid, cpu, command,"                   \
-                         "file_name, group_id, id, mpi_rank, plugin_run_id, "      \
-                         "log_id) VALUES %s", values) < 0)
+                         "file_name, group_id, id, mpi_rank, plugin_run_id) VALUES %s", values) < 0)
             {
                 mistral_err("Unable to allocate memory for log insert\n");
                 mistral_shutdown();
@@ -848,7 +848,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
         /* TODO: remove this - this will log every record */
         if (!insert_log_to_db()) {
-            mistral_err("Insert log entry at end of block failed\n");
+            mistral_err("Insert log entry in main loop failed\n");
         }
 
         log_entry = log_list_head;
