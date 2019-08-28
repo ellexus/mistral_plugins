@@ -44,23 +44,13 @@ environment variable to point at the plug-in configuration file.
 Process Summary
 ---------------
 The schema creation script creates a database called ``mistral_log`` containing
-the following tables: 32 log tables; 32 environment tables; a control table
-named date_table_map; and a rule_details table. A user ``'mistral'@'%'`` is
+the following tables: mistral_log, env and a rule_details table. A user mistral is
 created and granted all privileges on ``mistral_log``.
 
-The plug-in uses a 32 day rotating log system to store Mistral data. The data is
-the same as would be output from Mistral to a log file. Each field is stored in
-a separate column with the exception of those stored in the ``rule_details``
+The data is the same as would be output from Mistral to a log file. Each field is
+stored in a separate column with the exception of those stored in the ``rule_details``
 table (see below). Additionally any environment variables specified on the
-plug-in command line will be stored in a similar set of 32 rotating environment
-tables.
-
-At some point during each day, the ``end_of_day`` script must be run. This script
-recycles the two oldest log and environment tables in order to prepare empty
-tables for that day and the next if needed. This is controlled by the
-``date_table_map`` which keeps an index of table numbers and corresponding dates.
-Records in the log and environment tables can be joined using a unique run ID
-held in the column named ``plugin_run_id``
+plug-in command line will be stored in the env table.
 
 The ``rule_details`` table converts unique combinations of ``Violation path,
 Call-Type, Size-Range, Measurement and Threshold`` into integer indexes which are
@@ -71,9 +61,8 @@ Password Hiding
 ---------------
 PostgreSQL requires a password for each user. If scripts are to be run automatically,
 the easiest way to protect passwords is to include them in a PostgreSQL format
-``options file`` (see https://dev.mysql.com/doc/refman/5.7/en/option-files.html)
-and change the permissions of this file to be read only to the user. PostgreSQL can
-read in a configuration file using the option ``--defaults-file=``.  This
+``options file`` and change the permissions of this file to be read only to the user.
+PostgreSQL can read in a configuration file using the option ``--defaults-file=``.  This
 configuration file should be of the format ::
 
     [client]
