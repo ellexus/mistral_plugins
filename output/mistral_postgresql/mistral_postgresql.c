@@ -254,29 +254,16 @@ static bool insert_env_records()
         input_bind[1] = variable->name;
         input_bind[2] = variable->value;
 
-        PGresult *res = PQexecPrepared(con, insert_env_stmt_name, 6, input_bind, NULL, NULL, 0);
-        /* Has the query returned results */
-        if (NULL == res) {
+        PGresult *res = PQexecPrepared(con, insert_env_stmt_name, 3, input_bind, NULL, NULL, 0);
+
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             mistral_err("Failed to insert env record\n");
-            goto fail_insert_env_records;
-        }
-        /* Was it succesful? */
-        if (PGRES_TUPLES_OK != PQresultStatus(res)) {
-            mistral_err("Failed to insert env record\n");
-            mistral_err("%s\n", PQresultErrorMessage(res));
+            mistral_err("%s\n",  PQresultErrorMessage(res));
             PQclear(res);
             goto fail_insert_env_records;
         }
-
-        int affected_rows = PQntuples(res);
-        if (affected_rows != 1) {
-            mistral_err("Invalid number of rows inserted by insert_env. Expected 1, saw %u\n",
-                        affected_rows);
-            PQclear(res);
-            goto fail_insert_env_records;
-        }
-
         PQclear(res);
+
         variable = variable->forward;
     }
 
@@ -858,6 +845,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         log_list_head = log_entry->forward;
         remque(log_entry);
         mistral_destroy_log_entry(log_entry);
+
+        /* TODO: remove this - this will log every record */
+        if (!insert_log_to_db()) {
+            mistral_err("Insert log entry at end of block failed\n");
+        }
 
         log_entry = log_list_head;
     }
