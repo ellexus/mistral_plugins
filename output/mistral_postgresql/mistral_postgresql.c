@@ -41,9 +41,6 @@ static mistral_log *log_list_tail = NULL;
 static void *rule_root = NULL;
 static void *table_root = NULL;
 
-static char *log_insert = NULL;
-static size_t log_insert_len = 0;
-
 typedef struct rule_param {
     char label[STRING_SIZE + 1];
     char path[STRING_SIZE + 1];
@@ -156,10 +153,10 @@ static bool setup_prepared_statements()
         }
         PQclear(res);
 
-        char *insert_rec_sql = "INSERT INTO mistral_log (scope, type, time_stamp, host," \
-                               "rule_id, observed, pid, cpu, command,"                   \
-                               "file_name, group_id, id, mpi_rank, plugin_run_id"        \
-                               ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING log_id";
+        char *insert_rec_sql =
+            "INSERT INTO mistral_log (plugin_run_id, rule_id, time_stamp, scope, type, observed," \
+            " host, pid, cpu, command, file_name, group_id, id, mpi_rank"                         \
+            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)";
         res = PQprepare(con, insert_measure_stmt_name, insert_rec_sql, 14,
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
@@ -464,123 +461,6 @@ fail_set_rule_id:
 }
 
 /*
- * build_log_values_string
- *
- * Create a values string for use with the main log insert statement.
- *
- * The log insert values raw performance over absolute data integrity so uses
- * a custom insert query containing multiple insert VALUES strings which must
- * be built correctly in order to be safe to insert. We can insert as many rows
- * as we like up to the limit allowed by the communication buffer size We do the
- * insert this way rather than using bind variables as this would limit us to
- * inserting a single row at a time.
- *
- * Parameters:
- *   log_entry   - A Mistral log record data structure containing the received
- *                 log information.
- *   rule_id     - The rule ID related to this log message.
- *
- * Returns:
- *   A pointer to the string containing the VALUES string or
- *   NULL on error
- */
-static char *build_log_values_string(mistral_log *log_entry, long rule_id)
-{
-    /* Set up variables to hold the mysql escaped version of potentially
-     * unsafe strings
-     */
-    char escaped_command[LONG_STRING_SIZE * 2 + 1];
-    char escaped_filename[LONG_STRING_SIZE * 2 + 1];
-    char escaped_hostname[STRING_SIZE * 2 + 1] = "";
-    char escaped_groupid[STRING_SIZE * 2 + 1];
-    char escaped_id[STRING_SIZE * 2 + 1];
-    char timestamp[DATETIME_LENGTH];
-    char *values_string = NULL;
-
-    int *error_num = 0;
-
-    PQescapeStringConn(con, escaped_command, log_entry->command, strlen(log_entry->command),
-                       error_num);
-    PQescapeStringConn(con, escaped_command, log_entry->command, strlen(log_entry->command),
-                       error_num);
-    PQescapeStringConn(con, escaped_filename, log_entry->file, strlen(log_entry->file),
-                       error_num);
-    PQescapeStringConn(con, escaped_hostname, log_entry->hostname, strlen(log_entry->hostname),
-                       error_num);
-    PQescapeStringConn(con, escaped_groupid, log_entry->job_group_id,
-                       strlen(log_entry->job_group_id), error_num);
-    PQescapeStringConn(con, escaped_id, log_entry->job_id, strlen(log_entry->job_id), error_num);
-
-    /* Converts the timestamp to a formatted string */
-    strftime(timestamp, sizeof(timestamp), "%F %T", &log_entry->time);
-
-    #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', %lu, '%s', %" PRIu64 \
-    ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32                               \
-    ",'%s')"
-
-    if (asprintf(&values_string,
-                 LOG_VALUES,
-                 mistral_scope_name[log_entry->scope],
-                 mistral_contract_name[log_entry->contract_type],
-                 timestamp,
-                 log_entry->microseconds,
-                 escaped_hostname,
-                 rule_id,
-                 log_entry->measured_str,
-                 log_entry->pid,
-                 log_entry->cpu,
-                 escaped_command,
-                 escaped_filename,
-                 escaped_groupid,
-                 escaped_id,
-                 log_entry->mpi_rank,
-                 run_id) < 0)
-    {
-        mistral_err("build_log_values_string failed to allocate memory in asprintf\n");
-        goto fail_build_log_values_string;
-    }
-
-    return values_string;
-
-fail_build_log_values_string:
-    mistral_err("build_log_values_string failed!\n");
-    return NULL;
-}
-
-/*
- * insert_log_to_db
- *
- * Performs the saved insert statement then frees the memory and resets the
- * related global variables.
- *
- * Parameters:
- *   void
- *
- * Returns:
- *   true if the records were inserted successfully
- *   false otherwise
- */
-static bool insert_log_to_db(void)
-{
-    /* Execute the statement */
-    PGresult *res = PQexec(con, log_insert);
-    if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-        mistral_err("Failed while inserting log entry\n");
-        mistral_err("%s\n",  PQresultErrorMessage(res));
-        mistral_err("%s\n", log_insert);
-        mistral_err("Insert_log_to_db failed!\n");
-        return false;
-    }
-    PQclear(res);
-
-    free(log_insert);
-    log_insert = NULL;
-    log_insert_len = 0;
-
-    return true;
-}
-
-/*
  * mistral_startup
  *
  * Required function that initialises the type of plug-in we are running. This
@@ -877,6 +757,13 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     UNUSED(block_num);
     UNUSED(block_error);
     long rule_id = 0;
+    char timestamp[DATETIME_LENGTH];
+    const char *values[14];
+
+    char *ruleid = NULL;
+    char *pid = NULL;
+    char *cpu = NULL;
+    char *mpirank = NULL;
 
     mistral_log *log_entry = log_list_head;
 
@@ -887,56 +774,54 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
 
-        char *values = build_log_values_string(log_entry, rule_id);
-        size_t values_len = strlen(values);
+        strftime(timestamp, sizeof(timestamp), "%F %T", &log_entry->time);
 
-        if (log_insert_len == 0) {
-            /* Create the insert statement */
-            if (asprintf(&log_insert,
-                         "INSERT INTO mistral_log (scope, type, time_stamp, host," \
-                         "rule_id, observed, pid, cpu, command,"                   \
-                         "file_name, group_id, id, mpi_rank, plugin_run_id) VALUES %s", values) < 0)
-            {
-                mistral_err("Unable to allocate memory for log insert\n");
-                mistral_shutdown();
-                return;
-            }
-            log_insert_len = strlen(log_insert);
-        } else {
-            /* Append values on the insert statement */
-            char *old_log_insert = log_insert;
-            if (asprintf(&log_insert, "%s,%s", log_insert, values) < 0) {
-                mistral_err("Unable to allocate memory for log insert\n");
-                mistral_shutdown();
-                free(old_log_insert);
-                return;
-            }
-            free(old_log_insert);
-            log_insert_len += values_len + 1;
+        values[0] = run_id; /* plug-in_run_id */
+        if (asprintf(&ruleid, "%ld", rule_id)) {
+            values[1] = ruleid;
         }
-        free(values);
+        values[2] = timestamp; /* time_stamp */
+        values[3] = mistral_scope_name[log_entry->scope]; /* scope */
+        values[4] = mistral_contract_name[log_entry->contract_type]; /* type */
+        values[5] = log_entry->measured_str; /* observed */
+        values[6] = log_entry->hostname; /* host */
+        if (asprintf(&pid, "%ld", log_entry->pid)) {
+            values[7] = pid;
+        }
+        if (asprintf(&cpu, "%d", log_entry->cpu)) {
+            values[8] = cpu;
+        }
+        values[9] = log_entry->command;  /* command */
+        values[10] = log_entry->file; /* file_name */
+        values[11] = log_entry->job_group_id; /* group_id */
+        values[12] = log_entry->job_id; /* id */
+        if (asprintf(&mpirank, "%d", log_entry->mpi_rank)) {
+            values[13] = mpirank;
+        }
+
+        PGresult *res = PQexecPrepared(con, insert_measure_stmt_name, 14, values, NULL, NULL, 0);
+        /* Has the prepared statement inserted correctly? */
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Unable to save log record %s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            mistral_shutdown();
+            return;
+        }
+        PQclear(res);
+
+        free(ruleid);
+        free(pid);
+        free(cpu);
+        free(mpirank);
+
         log_list_head = log_entry->forward;
         remque(log_entry);
         mistral_destroy_log_entry(log_entry);
 
-        if ((log_insert_len) > BUFFER_SIZE) {
-            if (!insert_log_to_db()) {
-                mistral_err("Writing logs to mysql due to full buffer failed\n");
-                mistral_shutdown();
-                return;
-            }
-        }
-
         log_entry = log_list_head;
     }
-    log_list_tail = NULL;
 
-    /* Send any log entries to the database that are still pending */
-    if (log_insert_len > 0 && !insert_log_to_db()) {
-        mistral_err("Insert log entry at end of block failed\n");
-        mistral_shutdown();
-        return;
-    }
+    log_list_tail = NULL;
 }
 
 /*
