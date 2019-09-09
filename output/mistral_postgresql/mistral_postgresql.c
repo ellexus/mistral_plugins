@@ -93,6 +93,30 @@ static void usage(const char *name)
                 "  -v var-name\n"
                 "     The name of an environment variable, the value of which should be\n"
                 "     stored by the plug-in. This option can be specified multiple times.\n"
+                "\n"
+                "  --host=hostname\n"
+                "  -h hostname\n"
+                "     The hostname of the PostgreSQL server with which to establish a\n"
+                "     connection. If not specified the plug-in will default to \"localhost\".\n"
+                "\n"
+                "  --dbname=database_name\n"
+                "  -d database_name\n"
+                "     Set the database name to be used for storing data. Defaults to \"mistral_log\".\n"
+                "\n"
+                "  --password=secret\n"
+                "  -p secret\n"
+                "     The password required to access the PostgreSQL server if needed. If not\n"
+                "     specified the plug-in will default to \"ellexus\".\n"
+                "\n"
+                "  --port=number\n"
+                "  -P number\n"
+                "     Specifies the port to connect to on the PostgreSQL server host.\n"
+                "     If not specified the plug-in will default to \"5432\".\n"
+                "\n"
+                "  --username=user\n"
+                "  -u user\n"
+                "     The username required to access the PostgreSQL server if needed. If not\n"
+                "     specified the plug-in will default to \"mistral\".\n"
                 "\n");
 }
 
@@ -585,6 +609,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"mode", required_argument, NULL, 'm'},
         {"output", required_argument, NULL, 'e'},
         {"var", required_argument, NULL, 'v'},
+        {"host", required_argument, NULL, 'h'},
+        {"username", required_argument, NULL, 'u'},
+        {"password", required_argument, NULL, 'p'},
+        {"port", required_argument, NULL, 'P'},
+        {"databasename", required_argument, NULL, 'd'},
         {0, 0, 0, 0},
     };
 
@@ -592,7 +621,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     int opt;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "m:e:v:", options, NULL)) != -1) {
+    const char *host = "localhost";
+    const char *username = "mistral";
+    const char *password = "ellexus";
+    const char *dbname = "mistral_log";
+    uint16_t port = 5432;
+
+    while ((opt = getopt_long(argc, argv, "m:e:v:h:u:p:P:d:", options, NULL)) != -1) {
         switch (opt) {
         case 'm': {
             char *end = NULL;
@@ -651,6 +686,28 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             break;
         }
+        case 'h':
+            host = optarg;
+            break;
+        case 'u':
+            username = optarg;
+            break;
+        case 'p':
+            password = optarg;
+            break;
+        case 'd':
+            dbname = optarg;
+            break;
+        case 'P': {
+            char *end = NULL;
+            unsigned long tmp_port = strtoul(optarg, &end, 10);
+            if (tmp_port == 0 || tmp_port > UINT16_MAX || !end || *end) {
+                mistral_err("Invalid port specified %s\n", optarg);
+                return;
+            }
+            port = (uint16_t)tmp_port;
+            break;
+        }
         default:
             usage(argv[0]);
             return;
@@ -679,14 +736,22 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
-    /* Setup the PostgreSQL database connection
-     * TODO: Stop using default username/password etc.
-     */
-    con = PQconnectdb("user=mistral password=ellexus host=localhost port=5432 dbname=mistral_log");
+    static char *connection_string = NULL;
+
+    if (asprintf(&connection_string, "user=%s password=%s host=%s port=%d dbname=%s", username,
+                 password, host, port, dbname) < 0)
+    {
+        mistral_err("Could not allocate memory for connection String\n");
+        return;
+    }
+
+    /* Setup the PostgreSQL database connection */
+    con = PQconnectdb(connection_string);
 
     if (PQstatus(con) == CONNECTION_BAD) {
         mistral_err("Unable to connect to PostgreSQL: %s\n", PQerrorMessage(con));
         PQfinish(con);
+        mistral_shutdown();
         return;
     }
 
