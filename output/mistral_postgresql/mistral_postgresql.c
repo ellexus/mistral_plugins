@@ -23,7 +23,7 @@
 #define UUID_SIZE 36
 
 /* Arbritrary string buffer size limit - copied from mysql */
-#define BUFFER_SIZE 1000000
+#define BUFFER_SIZE 10000
 #define DATE_FORMAT "YYYY-MM-DD"
 #define DATETIME_FORMAT "YYYY-MM-DD HH-mm-SS"
 #define DATE_LENGTH sizeof(DATE_FORMAT)
@@ -890,14 +890,6 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *values = build_log_values_string(log_entry, rule_id);
         size_t values_len = strlen(values);
 
-        if ((log_insert_len + values_len) > BUFFER_SIZE) {
-            if (!insert_log_to_db()) {
-                mistral_err("Writing logs to mysql due to full buffer failed\n");
-                mistral_shutdown();
-                return;
-            }
-        }
-
         if (log_insert_len == 0) {
             /* Create the insert statement */
             if (asprintf(&log_insert,
@@ -922,18 +914,25 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             free(old_log_insert);
             log_insert_len += values_len + 1;
         }
-
         free(values);
         log_list_head = log_entry->forward;
         remque(log_entry);
         mistral_destroy_log_entry(log_entry);
+
+        if ((log_insert_len) > BUFFER_SIZE) {
+            if (!insert_log_to_db()) {
+                mistral_err("Writing logs to mysql due to full buffer failed\n");
+                mistral_shutdown();
+                return;
+            }
+        }
 
         log_entry = log_list_head;
     }
     log_list_tail = NULL;
 
     /* Send any log entries to the database that are still pending */
-    if (!insert_log_to_db()) {
+    if (log_insert_len > 0 && !insert_log_to_db()) {
         mistral_err("Insert log entry at end of block failed\n");
         mistral_shutdown();
         return;
