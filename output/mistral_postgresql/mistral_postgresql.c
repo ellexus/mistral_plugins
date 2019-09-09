@@ -776,25 +776,25 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
 
         strftime(timestamp, sizeof(timestamp), "%F %T", &log_entry->time);
 
-        values[0] = run_id; /* plug-in_run_id */
+        values[0] = run_id;
         if (asprintf(&ruleid, "%ld", rule_id)) {
             values[1] = ruleid;
         }
-        values[2] = timestamp; /* time_stamp */
-        values[3] = mistral_scope_name[log_entry->scope]; /* scope */
-        values[4] = mistral_contract_name[log_entry->contract_type]; /* type */
-        values[5] = log_entry->measured_str; /* observed */
-        values[6] = log_entry->hostname; /* host */
+        values[2] = timestamp;
+        values[3] = mistral_scope_name[log_entry->scope];
+        values[4] = mistral_contract_name[log_entry->contract_type];
+        values[5] = log_entry->measured_str;
+        values[6] = log_entry->hostname;
         if (asprintf(&pid, "%ld", log_entry->pid)) {
             values[7] = pid;
         }
         if (asprintf(&cpu, "%d", log_entry->cpu)) {
             values[8] = cpu;
         }
-        values[9] = log_entry->command;  /* command */
-        values[10] = log_entry->file; /* file_name */
-        values[11] = log_entry->job_group_id; /* group_id */
-        values[12] = log_entry->job_id; /* id */
+        values[9] = log_entry->command;
+        values[10] = log_entry->file;
+        values[11] = log_entry->job_group_id;
+        values[12] = log_entry->job_id;
         if (asprintf(&mpirank, "%d", log_entry->mpi_rank)) {
             values[13] = mpirank;
         }
