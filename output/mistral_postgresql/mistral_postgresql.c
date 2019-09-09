@@ -750,7 +750,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (PQstatus(con) == CONNECTION_BAD) {
         mistral_err("Unable to connect to PostgreSQL: %s\n", PQerrorMessage(con));
-        PQfinish(con);
         mistral_shutdown();
         return;
     }
