@@ -630,7 +630,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     if (PQstatus(con) == CONNECTION_BAD) {
         mistral_err("Unable to connect to PostgreSQL: %s\n", PQerrorMessage(con));
-        mistral_shutdown();
         return;
     }
 
@@ -641,14 +640,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Setup the prepared statements used by the plug-in */
     if (!setup_prepared_statements()) {
-        mistral_shutdown();
+        mistral_err("Unable to setup Prepared statements in PostgreSQL");
         return;
     }
 
     /* Insert the environment records - we only get these at the start of the run, so might as well
      * record them here too */
     if (!insert_env_records()) {
-        mistral_shutdown();
+        mistral_err("Unable to record environment variables");
         return;
     }
 
@@ -661,7 +660,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
  *
  * Function called immediately before the plug-in exits. Check for any unhandled
  * log entries and call mistral_received_data_end to process them if any are
- * found. Clean up linked lists, search trees, any open error log and the MySQL
+ * found. Clean up linked lists, search trees, any open error log and the PostgreSQL
  * connection.
  *
  * Parameters:
@@ -734,7 +733,7 @@ void mistral_received_log(mistral_log *log_entry)
  *
  * Function called whenever an end of data block message is received. At this
  * point run through the linked list of log entries we have seen and send them
- * to MySQL. Remove each log_entry from the linked list as they are processed
+ * to PostgreSQL. Remove each log_entry from the linked list as they are processed
  * and destroy them.
  *
  * No special handling of data block number errors is done beyond the message
@@ -832,7 +831,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
  * but in certain failure cases this may not be true.
  *
  * On receipt of a shutdown message check to see if there are any log entries
- * stored and, if so, call mistral_received_data_end to send them to MySQL.
+ * stored and, if so, call mistral_received_data_end to send them to PostgreSQL.
  *
  * Parameters:
  *   void
