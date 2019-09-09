@@ -22,6 +22,8 @@
 #define MEASUREMENT_SIZE 13
 #define UUID_SIZE 36
 
+/* Arbritrary string buffer size limit - copied from mysql */
+#define BUFFER_SIZE 1000000
 #define DATE_FORMAT "YYYY-MM-DD"
 #define DATETIME_FORMAT "YYYY-MM-DD HH-mm-SS"
 #define DATE_LENGTH sizeof(DATE_FORMAT)
@@ -100,7 +102,7 @@ const char *insert_rule_details_stmt_name = "PUT_RULE_DETAILS";
 const char *insert_measure_stmt_name = "PUT_MEASURE";
 const char *insert_env_stmt_name = "PUT_ENV";
 
-static void setup_prepared_statements()
+static bool setup_prepared_statements()
 {
     if (!statements_prepared) {
         char *get_rule_params_id_sql = "SELECT rule_id FROM rule_details "              \
@@ -158,9 +160,10 @@ static void setup_prepared_statements()
 
         statements_prepared = true;
     }
-    return;
+    return statements_prepared;
 fail_prepared_statements:
     mistral_err("setup_prepared_statements failed!\n");
+    return false;
 }
 
 /*
@@ -693,7 +696,17 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     uuid_unparse(urun_id, run_id);
 
     /* Setup the prepared statements used by the plug-in */
-    setup_prepared_statements();
+    if (!setup_prepared_statements()) {
+        mistral_shutdown();
+        return;
+    }
+
+    /* Insert the environment records - we only get these at the start of the run, so might as well
+     * record them here too */
+    if (!insert_env_records()) {
+        mistral_shutdown();
+        return;
+    }
 
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
@@ -810,11 +823,16 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
 
-        /* TODO: This might only need doing once */
-        insert_env_records();
-
         char *values = build_log_values_string(log_entry, rule_id);
         size_t values_len = strlen(values);
+
+        if ((log_insert_len + values_len) > BUFFER_SIZE) {
+            if (!insert_log_to_db()) {
+                mistral_err("Writing logs to mysql due to full buffer failed\n");
+                mistral_shutdown();
+                return;
+            }
+        }
 
         if (log_insert_len == 0) {
             /* Create the insert statement */
@@ -845,11 +863,6 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         log_list_head = log_entry->forward;
         remque(log_entry);
         mistral_destroy_log_entry(log_entry);
-
-        /* TODO: remove this - this will log every record */
-        if (!insert_log_to_db()) {
-            mistral_err("Insert log entry in main loop failed\n");
-        }
 
         log_entry = log_list_head;
     }
