@@ -240,6 +240,235 @@ ALTER TABLE ONLY public.rule_details
 
 -- Completed on 2019-08-22 15:03:44
 
+-- Table: public.cpu
+
+-- DROP TABLE public.cpu;
+
+CREATE TABLE public.cpu
+(
+    log_id integer NOT NULL DEFAULT nextval('mistral_log_log_id_seq'::regclass),
+    plugin_run_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
+    rule_id integer NOT NULL,
+    time_stamp timestamp with time zone NOT NULL,
+    scope character varying(6) COLLATE pg_catalog."default" NOT NULL,
+    type character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    mistral_record character varying(64) COLLATE pg_catalog."default" NOT NULL,
+    measure bigint NOT NULL,
+    timeframe character varying(10) COLLATE pg_catalog."default",
+    host character varying(256) COLLATE pg_catalog."default",
+    pid integer,
+    cpu integer,
+    command character varying(1405) COLLATE pg_catalog."default",
+    file_name character varying(1405) COLLATE pg_catalog."default",
+    group_id character varying(256) COLLATE pg_catalog."default",
+    id character varying(256) COLLATE pg_catalog."default",
+    mpi_rank integer,
+    CONSTRAINT cpu_pkey PRIMARY KEY (log_id),
+    CONSTRAINT cpu_rule_id FOREIGN KEY (rule_id)
+        REFERENCES public.rule_details (rule_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.cpu
+    OWNER to mistral;
+
+-- Index: fki_cpu_rule_id
+
+-- DROP INDEX public.fki_cpu_rule_id;
+
+CREATE INDEX fki_cpu_rule_id
+    ON public.cpu USING btree
+    (rule_id)
+    TABLESPACE pg_default;
+
+-- Table: public.bandwidth
+
+-- DROP TABLE public.bandwidth;
+
+CREATE TABLE public.bandwidth
+(
+    log_id integer NOT NULL DEFAULT nextval('mistral_log_log_id_seq'::regclass),
+    plugin_run_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
+    rule_id integer NOT NULL,
+    time_stamp timestamp with time zone NOT NULL,
+    scope character varying(6) COLLATE pg_catalog."default" NOT NULL,
+    type character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    mistral_record character varying(64) COLLATE pg_catalog."default" NOT NULL,
+    measure bigint NOT NULL,
+    timeframe character varying(10) COLLATE pg_catalog."default",
+    host character varying(256) COLLATE pg_catalog."default",
+    pid integer,
+    cpu integer,
+    command character varying(1405) COLLATE pg_catalog."default",
+    file_name character varying(1405) COLLATE pg_catalog."default",
+    group_id character varying(256) COLLATE pg_catalog."default",
+    id character varying(256) COLLATE pg_catalog."default",
+    mpi_rank integer,
+    CONSTRAINT bandwidth_pkey PRIMARY KEY (log_id),
+    CONSTRAINT bandwidth_rule_id FOREIGN KEY (rule_id)
+        REFERENCES public.rule_details (rule_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.bandwidth
+    OWNER to mistral;
+
+-- Index: fki_bandwidth_rule_id
+
+-- DROP INDEX public.fki_bandwidth_rule_id;
+
+CREATE INDEX fki_bandwidth_rule_id
+    ON public.bandwidth USING btree
+    (rule_id)
+    TABLESPACE pg_default;
+
+-- Table: public.count
+
+-- DROP TABLE public.count;
+
+CREATE TABLE public.count
+(
+    log_id integer NOT NULL DEFAULT nextval('mistral_log_log_id_seq'::regclass),
+    plugin_run_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
+    rule_id integer NOT NULL,
+    time_stamp timestamp with time zone NOT NULL,
+    scope character varying(6) COLLATE pg_catalog."default" NOT NULL,
+    type character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    mistral_record character varying(64) COLLATE pg_catalog."default" NOT NULL,
+    measure bigint NOT NULL,
+    timeframe character varying(10) COLLATE pg_catalog."default",
+    host character varying(256) COLLATE pg_catalog."default",
+    pid integer,
+    cpu integer,
+    command character varying(1405) COLLATE pg_catalog."default",
+    file_name character varying(1405) COLLATE pg_catalog."default",
+    group_id character varying(256) COLLATE pg_catalog."default",
+    id character varying(256) COLLATE pg_catalog."default",
+    mpi_rank integer,
+    CONSTRAINT count_pkey PRIMARY KEY (log_id),
+    CONSTRAINT count_rule_id FOREIGN KEY (rule_id)
+        REFERENCES public.rule_details (rule_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.count
+    OWNER to mistral;
+
+-- Index: fki_count_rule_id
+
+-- DROP INDEX public.fki_count_rule_id;
+
+CREATE INDEX fki_count_rule_id
+    ON public.count USING btree
+    (rule_id)
+    TABLESPACE pg_default;
+
+-- Table: public.latency
+
+-- DROP TABLE public.latency;
+
+CREATE TABLE public.latency
+(
+    log_id integer NOT NULL DEFAULT nextval('mistral_log_log_id_seq'::regclass),
+    plugin_run_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
+    rule_id integer NOT NULL,
+    time_stamp timestamp with time zone NOT NULL,
+    scope character varying(6) COLLATE pg_catalog."default" NOT NULL,
+    type character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    mistral_record character varying(64) COLLATE pg_catalog."default" NOT NULL,
+    measure bigint NOT NULL,
+    timeframe character varying(10) COLLATE pg_catalog."default",
+    host character varying(256) COLLATE pg_catalog."default",
+    pid integer,
+    cpu integer,
+    command character varying(1405) COLLATE pg_catalog."default",
+    file_name character varying(1405) COLLATE pg_catalog."default",
+    group_id character varying(256) COLLATE pg_catalog."default",
+    id character varying(256) COLLATE pg_catalog."default",
+    mpi_rank integer,
+    CONSTRAINT latency_pkey PRIMARY KEY (log_id),
+    CONSTRAINT latency_rule_id FOREIGN KEY (rule_id)
+        REFERENCES public.rule_details (rule_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.latency
+    OWNER to mistral;
+
+-- Index: fki_latency_rule_id
+
+-- DROP INDEX public.fki_latency_rule_id;
+
+CREATE INDEX fki_latency_rule_id
+    ON public.latency USING btree
+    (rule_id)
+    TABLESPACE pg_default;
+
+-- Table: public.memory
+
+-- DROP TABLE public.memory;
+
+CREATE TABLE public.memory
+(
+    log_id integer NOT NULL DEFAULT nextval('mistral_log_log_id_seq'::regclass),
+    plugin_run_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
+    rule_id integer NOT NULL,
+    time_stamp timestamp with time zone NOT NULL,
+    scope character varying(6) COLLATE pg_catalog."default" NOT NULL,
+    type character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    mistral_record character varying(64) COLLATE pg_catalog."default" NOT NULL,
+    measure bigint NOT NULL,
+    timeframe character varying(10) COLLATE pg_catalog."default",
+    host character varying(256) COLLATE pg_catalog."default",
+    pid integer,
+    cpu integer,
+    command character varying(1405) COLLATE pg_catalog."default",
+    file_name character varying(1405) COLLATE pg_catalog."default",
+    group_id character varying(256) COLLATE pg_catalog."default",
+    id character varying(256) COLLATE pg_catalog."default",
+    mpi_rank integer,
+    CONSTRAINT memory_pkey PRIMARY KEY (log_id),
+    CONSTRAINT memory_rule_id FOREIGN KEY (rule_id)
+        REFERENCES public.rule_details (rule_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.memory
+    OWNER to mistral;
+
+-- Index: fki_memory_rule_id
+
+-- DROP INDEX public.fki_memory_rule_id;
+
+CREATE INDEX fki_memory_rule_id
+    ON public.memory USING btree
+    (rule_id)
+    TABLESPACE pg_default;
 --
 -- PostgreSQL database dump complete
 --
