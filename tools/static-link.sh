@@ -71,6 +71,18 @@ function main () {
                 dynamiclibs="${dynamiclibs} ${word}"
                 config_lib="${config_lib} ${word}"
                 ;;
+            -lpq)
+                # PostgreSQL plug-in requires SSL and Crypto
+                req_ssl=true
+                req_crypto=true
+                req_k5crypto=true
+                config_lib="${config_lib} -lssl -lcrypto -lk5crypto"
+                staticlibs="${staticlibs} ${word}"
+                config_lib="${config_lib} ${word}"
+                # Getting libldab_r-2 errors
+                staticlibs="${staticlibs} -lldap_r-2 -llber-2"
+                config_lib="${config_lib} -lldap_r-2 -llber-2"
+                ;;
             -l*)
                 staticlibs="${staticlibs} ${word}"
                 config_lib="${config_lib} ${word}"

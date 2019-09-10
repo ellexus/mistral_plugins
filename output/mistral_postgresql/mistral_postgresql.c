@@ -22,8 +22,6 @@
 #define MEASUREMENT_SIZE 13
 #define UUID_SIZE 36
 
-/* Arbritrary string buffer size limit - copied from mysql */
-#define BUFFER_SIZE 10000
 #define DATE_FORMAT "YYYY-MM-DD"
 #define DATETIME_FORMAT "YYYY-MM-DD HH-mm-SS"
 #define DATE_LENGTH sizeof(DATE_FORMAT)
@@ -171,9 +169,8 @@ static bool setup_prepared_statements()
             "INSERT INTO env (plugin_run_id, env_name, env_value) VALUES ($1,$2,$3)";
         res = PQprepare(con, insert_env_stmt_name, insert_env_sql, 6, NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            mistral_err("Get rule prepared statement creation failed\n");
+            mistral_err("Insert into environment statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
-            fprintf(stderr, "%s\n",  PQresultErrorMessage(res));
             PQclear(res);
             goto fail_prepared_statements;
         }
@@ -221,7 +218,6 @@ static bool insert_rule_details(mistral_log *log_entry, long *ptr_rule_id)
     if (NULL == res || PGRES_TUPLES_OK != PQresultStatus(res)) {
         mistral_err("PQexecParams(insert rule) failed\n");
         mistral_err("%s\n", PQresultErrorMessage(res));
-        fprintf(stderr, "%s\n", PQresultErrorMessage(res));
         if (res != NULL) {
             PQclear(res);
         }
@@ -435,9 +431,8 @@ static bool set_rule_id(mistral_log *log_entry, long *ptr_rule_id)
     received = PQntuples(res);
     if (received == 1) {
         /* We found the rule in the DB, store this result in the tsearch tree */
-        this_rule->rule_id = atoi(PQgetvalue(res, 0, 0)); /* TODO: This previously did something
-                                                           * with pointers - is this
-                                                           * now correct? */
+        *ptr_rule_id = atoi(PQgetvalue(res, 0, 0));
+        this_rule->rule_id = *ptr_rule_id;
     } else if (received == 0) {
         PQclear(res);
         if (!insert_rule_details(log_entry, ptr_rule_id)) {
