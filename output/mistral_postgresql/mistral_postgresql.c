@@ -803,17 +803,17 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         }
         PQclear(res);
 
-        free(ruleid);
-        free(pid);
-        free(cpu);
-        free(mpirank);
-
         log_list_head = log_entry->forward;
         remque(log_entry);
         mistral_destroy_log_entry(log_entry);
 
         log_entry = log_list_head;
     }
+
+    free(ruleid);
+    free(pid);
+    free(cpu);
+    free(mpirank);
 
     log_list_tail = NULL;
 }
