@@ -119,6 +119,12 @@ static bool statements_prepared = false;
 const char *get_rule_stmt_name = "GET_RULE_ID_FROM_PARAMS";
 const char *insert_rule_details_stmt_name = "PUT_RULE_DETAILS";
 const char *insert_measure_stmt_name = "PUT_MEASURE";
+const char *insert_count_stmt_name = "PUT_COUNT_RECORD";
+const char *insert_bandwidth_stmt_name = "PUT_BANDWIDTH_RECORD";
+const char *insert_latency_stmt_name = "PUT_LATENCY_RECORD";
+const char *insert_memory_stmt_name = "PUT_MEMORY_RECORD";
+const char *insert_cpu_stmt_name = "PUT_CPU_RECORD";
+
 const char *insert_env_stmt_name = "PUT_ENV";
 
 static bool setup_prepared_statements()
@@ -159,6 +165,76 @@ static bool setup_prepared_statements()
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             mistral_err("Insert measurement prepared statement creation failed\n");
+            mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            goto fail_prepared_statements;
+        }
+        PQclear(res);
+
+        char *insert_count_sql =
+            "INSERT INTO count (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
+            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"     \
+            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)";
+        res = PQprepare(con, insert_count_stmt_name, insert_count_sql, 16,
+                        NULL);
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Insert count prepared statement creation failed\n");
+            mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            goto fail_prepared_statements;
+        }
+        PQclear(res);
+
+        char *insert_bandwidth_sql =
+            "INSERT INTO bandwidth (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
+            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"         \
+            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)";
+        res = PQprepare(con, insert_bandwidth_stmt_name, insert_bandwidth_sql, 16,
+                        NULL);
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Insert bandwidth prepared statement creation failed\n");
+            mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            goto fail_prepared_statements;
+        }
+        PQclear(res);
+
+        char *insert_latency_sql =
+            "INSERT INTO latency (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
+            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"       \
+            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)";
+        res = PQprepare(con, insert_latency_stmt_name, insert_latency_sql, 16,
+                        NULL);
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Insert latency prepared statement creation failed\n");
+            mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            goto fail_prepared_statements;
+        }
+        PQclear(res);
+
+        char *insert_memory_sql =
+            "INSERT INTO memory (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
+            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"      \
+            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)";
+        res = PQprepare(con, insert_memory_stmt_name, insert_memory_sql, 16,
+                        NULL);
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Insert memory prepared statement creation failed\n");
+            mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            goto fail_prepared_statements;
+        }
+        PQclear(res);
+
+        char *insert_cpu_sql =
+            "INSERT INTO cpu (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
+            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"   \
+            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)";
+        res = PQprepare(con, insert_cpu_stmt_name, insert_cpu_sql, 16,
+                        NULL);
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Insert cpu prepared statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
             PQclear(res);
             goto fail_prepared_statements;
@@ -752,8 +828,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     UNUSED(block_error);
     long rule_id = 0;
     char timestamp[DATETIME_LENGTH];
-    const char *values[14];
+    const char *values[16];
 
+    char *value = NULL;
+    char *tf = NULL;
     char *ruleid = NULL;
     char *pid = NULL;
     char *cpu = NULL;
@@ -778,22 +856,61 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         values[3] = mistral_scope_name[log_entry->scope];
         values[4] = mistral_contract_name[log_entry->contract_type];
         values[5] = log_entry->measured_str;
-        values[6] = log_entry->hostname;
+        if (asprintf(&value, "%" PRIu64, log_entry->measured)) {
+            values[6] = value;
+        }
+        if (asprintf(&tf, "%" PRIu64, log_entry->timeframe)) {
+            values[7] = tf;
+        }
+        values[8] = log_entry->hostname;
         if (asprintf(&pid, "%" PRIu64, log_entry->pid)) {
-            values[7] = pid;
+            values[9] = pid;
         }
         if (asprintf(&cpu, "%d", log_entry->cpu)) {
-            values[8] = cpu;
+            values[10] = cpu;
         }
-        values[9] = log_entry->command;
-        values[10] = log_entry->file;
-        values[11] = log_entry->job_group_id;
-        values[12] = log_entry->job_id;
+        values[11] = log_entry->command;
+        values[12] = log_entry->file;
+        values[13] = log_entry->job_group_id;
+        values[14] = log_entry->job_id;
         if (asprintf(&mpirank, "%d", log_entry->mpi_rank)) {
-            values[13] = mpirank;
+            values[15] = mpirank;
         }
 
-        PGresult *res = PQexecPrepared(con, insert_measure_stmt_name, 14, values, NULL, NULL, 0);
+        const char *correct_table_stmt = insert_measure_stmt_name;
+        switch (log_entry->measurement) {
+        case MEASUREMENT_CPU_TIME:
+        case MEASUREMENT_SYSTEM_TIME:
+        case MEASUREMENT_USER_TIME:
+            correct_table_stmt = insert_cpu_stmt_name;
+            break;
+        case MEASUREMENT_MEMORY_VSIZE:
+        case MEASUREMENT_MEMORY_RSS:
+        case MEASUREMENT_MEMORY:
+            correct_table_stmt = insert_memory_stmt_name;
+            break;
+        case MEASUREMENT_TOTAL_LATENCY:
+        case MEASUREMENT_MEAN_LATENCY:
+        case MEASUREMENT_MAX_LATENCY:
+        case MEASUREMENT_MIN_LATENCY:
+            correct_table_stmt = insert_latency_stmt_name;
+            break;
+        case MEASUREMENT_SEEK_DISTANCE:
+            /* TODO: Add table for Seek distance */
+            correct_table_stmt = insert_bandwidth_stmt_name;
+            break;
+        case MEASUREMENT_COUNT:
+            correct_table_stmt = insert_count_stmt_name;
+            break;
+        case MEASUREMENT_BANDWIDTH:
+            correct_table_stmt = insert_bandwidth_stmt_name;
+            break;
+        case MEASUREMENT_MAX:
+            correct_table_stmt = insert_latency_stmt_name;
+            break;
+        }
+
+        PGresult *res = PQexecPrepared(con, correct_table_stmt, 16, values, NULL, NULL, 0);
         /* Has the prepared statement inserted correctly? */
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             mistral_err("Unable to save log record %s\n",  PQresultErrorMessage(res));
@@ -803,17 +920,17 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         }
         PQclear(res);
 
+        free(ruleid);
+        free(pid);
+        free(cpu);
+        free(mpirank);
+
         log_list_head = log_entry->forward;
         remque(log_entry);
         mistral_destroy_log_entry(log_entry);
 
         log_entry = log_list_head;
     }
-
-    free(ruleid);
-    free(pid);
-    free(cpu);
-    free(mpirank);
 
     log_list_tail = NULL;
 }
