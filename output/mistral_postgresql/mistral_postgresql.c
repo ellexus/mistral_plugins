@@ -784,7 +784,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         values[4] = mistral_contract_name[log_entry->contract_type];
         values[5] = log_entry->measured_str;
         values[6] = log_entry->hostname;
-        if (asprintf(&pid, "%ld", log_entry->pid)) {
+        if (asprintf(&pid, "%" PRIu64, log_entry->pid)) {
             values[7] = pid;
         }
         if (asprintf(&cpu, "%d", log_entry->cpu)) {
