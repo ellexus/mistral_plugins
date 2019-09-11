@@ -469,6 +469,52 @@ CREATE INDEX fki_memory_rule_id
     ON public.memory USING btree
     (rule_id)
     TABLESPACE pg_default;
+
+    -- Table: public.seek_distance
+
+-- DROP TABLE public.seek_distance;
+
+CREATE TABLE public.seek_distance
+(
+    log_id integer NOT NULL DEFAULT nextval('mistral_log_log_id_seq'::regclass),
+    plugin_run_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
+    rule_id integer NOT NULL,
+    time_stamp timestamp with time zone NOT NULL,
+    scope character varying(6) COLLATE pg_catalog."default" NOT NULL,
+    type character varying(8) COLLATE pg_catalog."default" NOT NULL,
+    mistral_record character varying(64) COLLATE pg_catalog."default" NOT NULL,
+    measure bigint NOT NULL,
+    timeframe character varying(10) COLLATE pg_catalog."default",
+    host character varying(256) COLLATE pg_catalog."default",
+    pid integer,
+    cpu integer,
+    command character varying(1405) COLLATE pg_catalog."default",
+    file_name character varying(1405) COLLATE pg_catalog."default",
+    group_id character varying(256) COLLATE pg_catalog."default",
+    id character varying(256) COLLATE pg_catalog."default",
+    mpi_rank integer,
+    CONSTRAINT seek_distance_pkey PRIMARY KEY (log_id),
+    CONSTRAINT seek_distance_rule_id FOREIGN KEY (rule_id)
+        REFERENCES public.rule_details (rule_id) MATCH SIMPLE
+        ON UPDATE NO ACTION
+        ON DELETE NO ACTION
+)
+WITH (
+    OIDS = FALSE
+)
+TABLESPACE pg_default;
+
+ALTER TABLE public.seek_distance
+    OWNER to mistral;
+
+-- Index: fki_seek_distance_rule_id
+
+-- DROP INDEX public.fki_seek_distance_rule_id;
+
+CREATE INDEX fki_seek_distance_rule_id
+    ON public.seek_distance USING btree
+    (rule_id)
+    TABLESPACE pg_default;
 --
 -- PostgreSQL database dump complete
 --
