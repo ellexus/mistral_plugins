@@ -124,6 +124,7 @@ const char *insert_bandwidth_stmt_name = "PUT_BANDWIDTH_RECORD";
 const char *insert_latency_stmt_name = "PUT_LATENCY_RECORD";
 const char *insert_memory_stmt_name = "PUT_MEMORY_RECORD";
 const char *insert_cpu_stmt_name = "PUT_CPU_RECORD";
+const char *insert_seek_stmt_name = "PUT_SEEK_RECORD";
 
 const char *insert_env_stmt_name = "PUT_ENV";
 
@@ -235,6 +236,20 @@ static bool setup_prepared_statements()
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             mistral_err("Insert cpu prepared statement creation failed\n");
+            mistral_err("%s\n",  PQresultErrorMessage(res));
+            PQclear(res);
+            goto fail_prepared_statements;
+        }
+        PQclear(res);
+
+        char *insert_seek_sql =
+            "INSERT INTO seek_distance (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
+            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"             \
+            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)";
+        res = PQprepare(con, insert_seek_stmt_name, insert_seek_sql, 16,
+                        NULL);
+        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+            mistral_err("Insert seek distance prepared statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
             PQclear(res);
             goto fail_prepared_statements;
@@ -877,7 +892,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             values[15] = mpirank;
         }
 
-        const char *correct_table_stmt = insert_measure_stmt_name;
+        const char *correct_table_stmt = insert_bandwidth_stmt_name;
         switch (log_entry->measurement) {
         case MEASUREMENT_CPU_TIME:
         case MEASUREMENT_SYSTEM_TIME:
@@ -896,8 +911,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             correct_table_stmt = insert_latency_stmt_name;
             break;
         case MEASUREMENT_SEEK_DISTANCE:
-            /* TODO: Add table for Seek distance */
-            correct_table_stmt = insert_bandwidth_stmt_name;
+            correct_table_stmt = insert_seek_stmt_name;
             break;
         case MEASUREMENT_COUNT:
             correct_table_stmt = insert_count_stmt_name;
@@ -906,6 +920,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             correct_table_stmt = insert_bandwidth_stmt_name;
             break;
         case MEASUREMENT_MAX:
+            /* This shouldn't be a rule type - I'm not sure what it is. */
             correct_table_stmt = insert_latency_stmt_name;
             break;
         }
@@ -913,7 +928,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         PGresult *res = PQexecPrepared(con, correct_table_stmt, 16, values, NULL, NULL, 0);
         /* Has the prepared statement inserted correctly? */
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            mistral_err("Unable to save log record %s\n",  PQresultErrorMessage(res));
+            mistral_err("Unable to save log record (%s) %s\n", correct_table_stmt,
+                        PQresultErrorMessage(res));
             PQclear(res);
             mistral_shutdown();
             return;
