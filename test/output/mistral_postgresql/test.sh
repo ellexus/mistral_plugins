@@ -2,18 +2,17 @@
 
 . ../../plugin_test_utilities.sh
 
-mysql_admin_parameters=$script_dir/admin_login.cnf
-mysql_parameters=$script_dir/plugin_login.cnf
-
-mysql_cmd=$(which mysql 2>/dev/null)
-if [ -z "$mysql_cmd" ]; then
-    logerr "mysql not found"
+psql_cmd=$(which psql 2>/dev/null)
+if [ -z "$psql_cmd" ]; then
+    logerr "psql not found"
     exit 1
 fi
 
+pgres_options="-h 10.33.100.84 -U mistral -d mistral_log"
+export PGPASSWORD=ellexus
+
 # Create the test database
-"$mysql_cmd" --defaults-file="$mysql_admin_parameters" \
-    < "$plugin_dir"/sql/create_mistral.sql
+echo "$psql_cmd" $pgres_options < "$plugin_dir"/sql/create_mistral.sql
 
 if [ $? -ne 0 ]; then
     logerr "Error creating test database"
@@ -21,27 +20,25 @@ if [ $? -ne 0 ]; then
 fi
 
 # Set up the SQL command to fetch the results
-sql_cmd="SELECT scope, type, time_stamp, label, violation_path, call_type,"
-sql_cmd="$sql_cmd measurement, size_range, threshold, observed, host, pid, cpu,"
-sql_cmd="$sql_cmd command, file_name, group_id, id, mpi_rank, env_name,"
-sql_cmd="$sql_cmd env_value FROM log_01 a, rule_details b, env_01 c WHERE "
-sql_cmd="$sql_cmd b.rule_id = a.rule_id AND a.plugin_run_id = c.plugin_run_id"
-sql_cmd="$sql_cmd ORDER BY log_id ASC, env_name ASC"
+# TODO: Setup the actual SQL commands that need to be run
+sql_cmd="\copy ("
+sql_cmd="$sql_cmd SELECT * FROM count"
+sql_cmd="$sql_cmd ) TO '"$results_dir"/results.txt' WITH DELIMITER ',' CSV HEADER;"
 
 # Set a custom value to be included in the output
 export _test_var=MISTRAL
 
-run_test --defaults-file="$mysql_parameters" --var=_test_var
+run_test -h localhost -u mistral -p ellexus -d mistral_log --var=_test_var
 
 # Get the results
-"$mysql_cmd" --defaults-file="$mysql_parameters" -ss -e "$sql_cmd" \
-    >> $results_dir/results.txt
+"$psql_cmd" $pgres_options -c "$sql_cmd"
 
 check_results
 
 if [ -z "$KEEP_TEST_OUTPUT" ];then
     # Delete the test database regardless of test status
-    "$mysql_cmd" --defaults-file="$mysql_parameters" -ss -e \
+    # TODO: Remove the echo on thi
+    echo "$psql_cmd" $pgres_options -c \
         "DROP DATABASE IF EXISTS mistral_log;" >/dev/null 2>&1
 
     if [ $? -ne 0 ]; then
