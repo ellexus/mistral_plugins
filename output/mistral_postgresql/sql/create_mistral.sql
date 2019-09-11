@@ -83,33 +83,6 @@ ALTER TABLE public.env_env_id_seq OWNER TO mistral;
 
 ALTER SEQUENCE public.env_env_id_seq OWNED BY public.env.env_id;
 
-
---
--- TOC entry 199 (class 1259 OID 24598)
--- Name: mistral_log; Type: TABLE; Schema: public; Owner: mistral
---
-
-CREATE TABLE public.mistral_log (
-    log_id integer NOT NULL,
-    plugin_run_id character varying(36) NOT NULL,
-    rule_id integer NOT NULL,
-    time_stamp TIMESTAMPTZ NOT NULL,
-    scope character varying(6) NOT NULL,
-    type character varying(8) NOT NULL,
-    observed character varying(64) NOT NULL,
-    host character varying(256),
-    pid integer,
-    cpu integer,
-    command character varying(1405),
-    file_name character varying(1405),
-    group_id character varying(256),
-    id character varying(256),
-    mpi_rank integer
-);
-
-
-ALTER TABLE public.mistral_log OWNER TO mistral;
-
 --
 -- TOC entry 198 (class 1259 OID 24596)
 -- Name: mistral_log_log_id_seq; Type: SEQUENCE; Schema: public; Owner: mistral
@@ -209,15 +182,6 @@ ALTER TABLE ONLY public.rule_details ALTER COLUMN rule_id SET DEFAULT nextval('p
 
 ALTER TABLE ONLY public.env
     ADD CONSTRAINT env_pkey PRIMARY KEY (env_id);
-
-
---
--- TOC entry 2708 (class 2606 OID 24606)
--- Name: mistral_log mistral_log_pkey; Type: CONSTRAINT; Schema: public; Owner: mistral
---
-
-ALTER TABLE ONLY public.mistral_log
-    ADD CONSTRAINT mistral_log_pkey PRIMARY KEY (log_id);
 
 
 --

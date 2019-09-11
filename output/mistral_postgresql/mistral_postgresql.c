@@ -118,7 +118,6 @@ static void usage(const char *name)
 static bool statements_prepared = false;
 const char *get_rule_stmt_name = "GET_RULE_ID_FROM_PARAMS";
 const char *insert_rule_details_stmt_name = "PUT_RULE_DETAILS";
-const char *insert_measure_stmt_name = "PUT_MEASURE";
 const char *insert_count_stmt_name = "PUT_COUNT_RECORD";
 const char *insert_bandwidth_stmt_name = "PUT_BANDWIDTH_RECORD";
 const char *insert_latency_stmt_name = "PUT_LATENCY_RECORD";
@@ -152,20 +151,6 @@ static bool setup_prepared_statements()
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             mistral_err("Insert rule prepared statement creation failed\n");
-            mistral_err("%s\n",  PQresultErrorMessage(res));
-            PQclear(res);
-            goto fail_prepared_statements;
-        }
-        PQclear(res);
-
-        char *insert_rec_sql =
-            "INSERT INTO mistral_log (plugin_run_id, rule_id, time_stamp, scope, type, observed," \
-            " host, pid, cpu, command, file_name, group_id, id, mpi_rank"                         \
-            ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)";
-        res = PQprepare(con, insert_measure_stmt_name, insert_rec_sql, 14,
-                        NULL);
-        if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            mistral_err("Insert measurement prepared statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
             PQclear(res);
             goto fail_prepared_statements;
