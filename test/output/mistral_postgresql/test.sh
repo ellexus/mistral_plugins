@@ -22,7 +22,7 @@ fi
 # Set up the SQL command to fetch the results
 # TODO: Setup the actual SQL commands that need to be run
 sql_cmd="\copy ("
-sql_cmd="$sql_cmd SELECT * FROM count"
+sql_cmd="$sql_cmd SELECT * FROM counts"
 sql_cmd="$sql_cmd ) TO '"$results_dir"/results.txt' WITH DELIMITER ',' CSV HEADER;"
 
 # Set a custom value to be included in the output

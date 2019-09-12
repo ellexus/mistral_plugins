@@ -296,11 +296,11 @@ CREATE INDEX fki_bandwidth_rule_id
     (rule_id)
     TABLESPACE pg_default;
 
--- Table: public.count
+-- Table: public.counts
 
--- DROP TABLE public.count;
+-- DROP TABLE public.counts;
 
-CREATE TABLE public.count
+CREATE TABLE public.counts
 (
     log_id integer NOT NULL DEFAULT nextval('mistral_log_log_id_seq'::regclass),
     plugin_run_id character varying(36) COLLATE pg_catalog."default" NOT NULL,
@@ -319,8 +319,8 @@ CREATE TABLE public.count
     group_id character varying(256) COLLATE pg_catalog."default",
     id character varying(256) COLLATE pg_catalog."default",
     mpi_rank integer,
-    CONSTRAINT count_pkey PRIMARY KEY (log_id),
-    CONSTRAINT count_rule_id FOREIGN KEY (rule_id)
+    CONSTRAINT counts_pkey PRIMARY KEY (log_id),
+    CONSTRAINT counts_rule_id FOREIGN KEY (rule_id)
         REFERENCES public.rule_details (rule_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
@@ -330,15 +330,15 @@ WITH (
 )
 TABLESPACE pg_default;
 
-ALTER TABLE public.count
+ALTER TABLE public.counts
     OWNER to mistral;
 
--- Index: fki_count_rule_id
+-- Index: fki_counts_rule_id
 
--- DROP INDEX public.fki_count_rule_id;
+-- DROP INDEX public.fki_counts_rule_id;
 
-CREATE INDEX fki_count_rule_id
-    ON public.count USING btree
+CREATE INDEX fki_counts_rule_id
+    ON public.counts USING btree
     (rule_id)
     TABLESPACE pg_default;
 
