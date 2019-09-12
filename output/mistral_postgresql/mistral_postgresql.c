@@ -510,7 +510,6 @@ static bool set_rule_id(mistral_log *log_entry, long *ptr_rule_id)
         *ptr_rule_id = atoi(PQgetvalue(res, 0, 0));
         this_rule->rule_id = *ptr_rule_id;
     } else if (received == 0) {
-        PQclear(res);
         if (!insert_rule_details(log_entry, ptr_rule_id)) {
             tdelete((void *)this_rule, &rule_root, rule_compare);
             goto fail_set_rule_id;
@@ -921,12 +920,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         }
         PQclear(res);
 
-        /* Atempt to prevent double free
-         * free(ruleid);
-         * free(pid);
-         * free(cpu);
-         * free(mpirank);
-         */
+        free(ruleid);
+        free(pid);
+        free(cpu);
+        free(mpirank);
 
         log_list_head = log_entry->forward;
         remque(log_entry);
