@@ -158,13 +158,13 @@ static bool setup_prepared_statements()
         PQclear(res);
 
         char *insert_count_sql =
-            "INSERT INTO count (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
-            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"     \
+            "INSERT INTO counts (plugin_run_id, rule_id, time_stamp, scope, type, mistral_record," \
+            " measure, timeframe, host, pid, cpu, command, file_name, group_id, id, mpi_rank"      \
             ") VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)";
         res = PQprepare(con, insert_count_stmt_name, insert_count_sql, 16,
                         NULL);
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
-            mistral_err("Insert count prepared statement creation failed\n");
+            mistral_err("Insert counts prepared statement creation failed\n");
             mistral_err("%s\n",  PQresultErrorMessage(res));
             PQclear(res);
             goto fail_prepared_statements;
@@ -921,10 +921,12 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         }
         PQclear(res);
 
-        free(ruleid);
-        free(pid);
-        free(cpu);
-        free(mpirank);
+        /* Atempt to prevent double free
+         * free(ruleid);
+         * free(pid);
+         * free(cpu);
+         * free(mpirank);
+         */
 
         log_list_head = log_entry->forward;
         remque(log_entry);
