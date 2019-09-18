@@ -8,11 +8,12 @@ if [ -z "$psql_cmd" ]; then
     exit 1
 fi
 
-pgres_options="-h 10.33.100.84 -U mistral -d mistral_log"
+pgres_options="-h sql -U mistral -d mistral_log"
 export PGPASSWORD=ellexus
 
 # Create the test database
-echo "$psql_cmd" $pgres_options < "$plugin_dir"/sql/create_mistral.sql
+"$psql_cmd" $pgres_options < "$plugin_dir"/sql/create_mistral.sql 2&> /dev/null
+"$psql_cmd" $pgres_options < ./empty_database.sql > /dev/null
 
 if [ $? -ne 0 ]; then
     logerr "Error creating test database"
@@ -22,24 +23,24 @@ fi
 # Set up the SQL command to fetch the results
 # TODO: Setup the actual SQL commands that need to be run
 sql_cmd="\copy ("
-sql_cmd="$sql_cmd SELECT * FROM counts"
+sql_cmd="$sql_cmd SELECT measure, timeframe, host, pid, cpu, command, file_name,"
+sql_cmd="$sql_cmd group_id, id, mpi_rank, env_name, env_value"
+sql_cmd="$sql_cmd FROM bandwidth LEFT JOIN env ON bandwidth.plugin_run_id=env.plugin_run_id"
 sql_cmd="$sql_cmd ) TO '"$results_dir"/results.txt' WITH DELIMITER ',' CSV HEADER;"
 
 # Set a custom value to be included in the output
 export _test_var=MISTRAL
 
-run_test -h localhost -u mistral -p ellexus -d mistral_log --var=_test_var
+run_test -h sql -u mistral -p ellexus -d mistral_log --var=_test_var
 
 # Get the results
-"$psql_cmd" $pgres_options -c "$sql_cmd"
+"$psql_cmd" $pgres_options -c "$sql_cmd" > /dev/null
 
 check_results
 
 if [ -z "$KEEP_TEST_OUTPUT" ];then
     # Delete the test database regardless of test status
-    # TODO: Remove the echo on thi
-    echo "$psql_cmd" $pgres_options -c \
-        "DROP DATABASE IF EXISTS mistral_log;" >/dev/null 2>&1
+    "$psql_cmd" $pgres_options < ./empty_database.sql > /dev/null
 
     if [ $? -ne 0 ]; then
         logerr "Unable to remove test database"
