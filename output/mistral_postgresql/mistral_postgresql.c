@@ -27,7 +27,7 @@
 #define DATE_LENGTH sizeof(DATE_FORMAT)
 #define DATETIME_LENGTH sizeof(DATETIME_FORMAT)
 
-#define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
+#define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
 
 static char run_id[UUID_SIZE + 1];
 
@@ -67,20 +67,16 @@ static env_var *env_tail = NULL;
 static void usage(const char *name)
 {
     mistral_err("Usage:\n"
-                "  %s -c config [-o file [-m octal-mode]] [-v var-name ...]\n", name);
+                "  %s [-e file [-m octal-mode]] [-v var-name ...] [-h hostname] [-d database-name] [-u user] [-p password] [-P port]\n",
+                name);
     mistral_err("\n"
-                "  --defaults-file=config\n"
-                "  -c config\n"
-                "     Location of a PostgreSQL formatted options file \"config\" that\n"
-                "     contains database connection configuration.\n"
-                "\n"
                 "  --mode=octal-mode\n"
                 "  -m octal-mode\n"
                 "     Permissions used to create the error log file specified by the -o\n"
                 "     option.\n"
                 "\n"
-                "  --output=file\n"
-                "  -o file\n"
+                "  --error=file\n"
+                "  -e file\n"
                 "     Specify location for error log. If not specified all errors will\n"
                 "     be output on stderr and handled by Mistral error logging.\n"
                 "\n"

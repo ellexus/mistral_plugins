@@ -35,7 +35,7 @@
 #define ENV_TABLE_FMT "env_%02d"
 #define ENV_TABLE_SIZE sizeof("env_nn")
 
-#define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
+#define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
 
 #define BIND_STRING(b, i, str, null_is, str_len)    \
     b[i].buffer_type = MYSQL_TYPE_STRING;           \

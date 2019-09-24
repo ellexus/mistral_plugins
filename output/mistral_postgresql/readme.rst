@@ -6,10 +6,6 @@ database named ``mistral_log``.
 
 The plug-in accepts the following command line options:
 
---defaults-file=config-file | -c config-file
-  The name of a PostgreSQL formated ``options file`` containing the database
-  connection details. See ``Password Hiding`` below for more details.
-
 --error=filename | -e filename
   The name of the file to which any error messages will be written.
 
@@ -19,6 +15,25 @@ The plug-in accepts the following command line options:
 --var=var-name | -v var-name
   The name of an environment variable, the value of which should be stored by
   the plug-in. This option can be specified multiple times.
+
+--host=hostname | -h hostname
+  The hostname of the PostgreSQL server with which to establish a
+  connection. If not specified the plug-in will default to 'localhost'
+
+--dbname=database_name | -d database_name
+  Set the database name to be used for storing data. Defaults to "mistral_log"
+  
+--password=secret | -p secret\
+  The password required to access the PostgreSQL server if needed. If not
+  specified the plug-in will default to "ellexus".
+  
+--port=number | -P number
+  Specifies the port to connect to on the PostgreSQL server host.
+  If not specified the plug-in will default to "5432".
+
+--username=user | -u user
+  The username required to access the PostgreSQL server if needed. If not
+  specified the plug-in will default to "mistral"
 
 The options would normally be included in a plug-in configuration file, such as
 
@@ -44,8 +59,8 @@ environment variable to point at the plug-in configuration file.
 Process Summary
 ---------------
 The schema creation script creates a database called ``mistral_log`` containing
-the following tables: mistral_log, env and a rule_details table. A user mistral is
-created and granted all privileges on ``mistral_log``.
+the following tables: bandwidth, counts, memory, latency, cpu, seek_distance, env and a 
+rule_details table. A user mistral is created and granted all privileges on ``mistral_log``.
 
 The data is the same as would be output from Mistral to a log file. Each field is
 stored in a separate column with the exception of those stored in the ``rule_details``
@@ -57,41 +72,22 @@ Call-Type, Size-Range, Measurement and Threshold`` into integer indexes which ar
 then stored in the log tables. The rule_details table is never cleaned out by
 any of the scripts.
 
-Password Hiding
----------------
-PostgreSQL requires a password for each user. If scripts are to be run automatically,
-the easiest way to protect passwords is to include them in a PostgreSQL format
-``options file`` and change the permissions of this file to be read only to the user.
-PostgreSQL can read in a configuration file using the option ``--defaults-file=``.  This
-configuration file should be of the format ::
-
-    [client]
-    user=mistral
-    password=mistral
-    host=localhost
-    port=3306
-    database=mistral_log
-
-The plug-in requires the use of such a file to specify the database connection
-parameters.
+Passwords
+---------
+PostgreSQL has quite a few options for user security. This plug-in is currently
+setup to work with an md5 password specified at runtime. This plug-in will need
+modifications in order to work with any other method of authentication.
 
 Set-Up Instructions
 -------------------
 From a terminal on the host machine designated to house the database, run ::
 
-    # TODO: Write PostgreSQL instructions
-    mysql -u root -p < create_mistral.sql
+    sudo -u postgres psql < create_mistral.sql
 
-And enter the password to the root user account. This will create the database
-schema and the related mistral user. Any user with sufficient privileges to
-create both databases and users can be used in place of the root account.
+This will create the database schema and the related mistral user. Any user with
+sufficient privileges to create both databases and users can be used in place of
+the postgres account.
 
-Set up a ``CRON`` job to run ::
-
-    # TODO: Write PostgreSQL instructions
-    mysql --defaults-file=<path-to-password-file> -u mistral mistral_log < end_of_day.sql
-
-once a day. <path-to-password-file> should point to the configuration file as
-explained in ``Password Hiding``.
-
-
+There are no data maintenance functions currently present. We would recommend
+retaining data for a few days or weeks at most, and a regular clear down from 
+all the tables based on the time_stamp column would be sensible.
