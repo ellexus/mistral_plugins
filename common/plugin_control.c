@@ -882,7 +882,9 @@ static bool parse_log_entry(const char *line)
                 goto fail_log_size_range;
             }
             log_entry->size_min = (ssize_t)range;
-
+            if (log_entry->size_min == 0) {
+                log_entry->size_min_unit = UNIT_BYTES;
+            }
             if (mistral_unit_type[log_entry->size_min_unit] != UNIT_CLASS_SIZE) {
                 mistral_err("Unexpected unit for size range: %s\n", size_range_split[0]);
                 goto fail_log_size_range;
