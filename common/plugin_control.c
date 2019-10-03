@@ -19,7 +19,8 @@
 #include <stdio.h>              /* fprintf, asprintf, vfprintf, setvbuf */
 #include <stdlib.h>             /* calloc, free */
 #include <string.h>             /* strerror_r, strdup, strncmp, strcmp, etc. */
-#include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO, setsid */
+#include <sys/time.h>           /* gettimeofday, localtime, strftime */
+#include <unistd.h>             /* STDOUT_FILENO, STDIN_FILENO, setsid, gethostname */
 
 #include "plugin_control.h"
 
@@ -105,11 +106,28 @@ int mistral_err(const char *format, ...)
             fmt = file_fmt;
         }
     } else if (log_stream != stderr) {
+        char hostname[HOST_NAME_MAX];
+        if (gethostname(hostname, HOST_NAME_MAX) != 0) {
+            strcpy(hostname, "unknown");
+        }
         struct timeval tv = {0, 0};
+        char timestr[64] = "unknown";
         if (gettimeofday(&tv, NULL) == 0) {
-            if (asprintf(&file_fmt, "%ld.%06ld %s", tv.tv_sec, tv.tv_usec, format) >= 0) {
-                fmt = file_fmt;
+            time_t nowtime = tv.tv_sec;
+            struct tm nowtm;
+            if (localtime_r(&nowtime, &nowtm) != NULL) {
+                char datetime[44];
+                if (strftime(datetime, sizeof(datetime), "%F %T", &nowtm) > 0) {
+                    if (sprintf(timestr, "%s.%06lu", datetime, tv.tv_usec) == 0) {
+                        /* Failed to add microseconds - continue without them */
+                        strcpy(timestr, datetime);
+                    }
+                }
             }
+        }
+
+        if (asprintf(&file_fmt, "[time=%s host=%s] %s", timestr, hostname, format) >= 0) {
+            fmt = file_fmt;
         }
     }
 
