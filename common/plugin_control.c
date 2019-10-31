@@ -739,19 +739,21 @@ static bool parse_log_entry(const char *line)
 
     /* As there might be commas in the command and/or filename we cannot just check the raw count */
     if (log_field_count < FIELD_MAX) {
-        mistral_err("Invalid log message: %s\n", line);
+        mistral_err("Invalid log message: %s (%d/%d max fields)\n", line, log_field_count,
+                    FIELD_MAX);
         goto fail_split_comma_fields;
     }
 
     char **hash_split = str_split(comma_split[FIELD_TIMESTAMP], '#', &field_count);
     if (!hash_split) {
-        mistral_err("Unable to allocate memory for mistral fields: %s\n",
+        mistral_err("Unable to allocate memory for mistral timestamp fields: %s\n",
                     comma_split[FIELD_TIMESTAMP]);
         goto fail_split_hashes;
     }
 
     if (field_count != PLUGIN_MESSAGE_FIELDS) {
-        mistral_err("Invalid log message: %s\n", line);
+        mistral_err("Invalid log message: %s (%d/%d timestamp fields)\n", line, field_count,
+                    PLUGIN_MESSAGE_FIELDS);
         goto fail_split_hash_fields;
     }
 
