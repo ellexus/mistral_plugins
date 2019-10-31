@@ -503,9 +503,7 @@ static char **line_split_and_unescape(const char *s, size_t *field_count)
         for (len = 0; s[len]; ++len) {
             if (s[len] == '\\') {
                 ++len;
-                break;
-            }
-            if (s[len] == ',') {
+            } else if (s[len] == ',') {
                 n++;
             }
         }
@@ -527,14 +525,14 @@ static char **line_split_and_unescape(const char *s, size_t *field_count)
         result[i] = copy;
         for (len = 0; s[len]; ++len) {
             if (s[len] == '\\') {
-                switch (s[len + 1]) {
+                ++len;
+                switch (s[len]) {
                 case 'n':
                     *copy++ = '\n';
                     break;
                 default:
-                    *copy++ = s[len + 1];
+                    *copy++ = s[len];
                 }
-                ++len;
             } else if (s[len] == ',') {
                 *copy++ = '\0';
                 result[++i] = copy;
@@ -739,7 +737,7 @@ static bool parse_log_entry(const char *line)
 
     /* As there might be commas in the command and/or filename we cannot just check the raw count */
     if (log_field_count < FIELD_MAX) {
-        mistral_err("Invalid log message: %s (%d/%d max fields)\n", line, log_field_count,
+        mistral_err("Invalid log message: %s (%zd/%d max fields)\n", line, log_field_count,
                     FIELD_MAX);
         goto fail_split_comma_fields;
     }
@@ -752,7 +750,7 @@ static bool parse_log_entry(const char *line)
     }
 
     if (field_count != PLUGIN_MESSAGE_FIELDS) {
-        mistral_err("Invalid log message: %s (%d/%d timestamp fields)\n", line, field_count,
+        mistral_err("Invalid log message: %s (%zd/%d timestamp fields)\n", line, field_count,
                     PLUGIN_MESSAGE_FIELDS);
         goto fail_split_hash_fields;
     }
