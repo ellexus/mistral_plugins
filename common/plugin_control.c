@@ -519,7 +519,7 @@ static char **line_split_and_unescape(const char *s, size_t *field_count)
     } else {
         /* Count separators. */
         for (len = 0; s[len]; ++len) {
-            if (s[len] == '\\') {
+            if (s[len] == '\\' && s[len + 1] != '\0') {
                 ++len;
             } else if (s[len] == ',') {
                 n++;
@@ -548,6 +548,9 @@ static char **line_split_and_unescape(const char *s, size_t *field_count)
                 case 'n':
                     *copy++ = '\n';
                     break;
+                case '\0':
+                    *copy++ = '\\';
+                    goto done;
                 default:
                     *copy++ = s[len];
                 }
@@ -558,6 +561,7 @@ static char **line_split_and_unescape(const char *s, size_t *field_count)
                 *copy++ = s[len];
             }
         }
+done:
         *copy = '\0';
         result[n] = NULL;
         return result;
