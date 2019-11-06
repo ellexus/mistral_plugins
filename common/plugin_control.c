@@ -483,11 +483,18 @@ static char **str_split(const char *s, int sep, size_t *field_count)
 }
 
 /*
- * csv_split
+ * line_split_and_unescape
  *
- * Function to split an RFC 4180 compliant CSV formatted string into an array of strings. A trailing
- * NULL pointer will be added to the array so it can be used by functions that use this convention
- * rather than taking array length as a parameter.
+ * Function to split one of our log lines into an array of strings. A
+ * trailing NULL pointer will be added to the array so it can be used by
+ * functions that use this convention rather than taking array length as
+ * a parameter.
+ *
+ * Our format does not have quoted fields. Rather, the following
+ * characters are escaped:
+ *   \n is newline
+ *   \, is comma
+ *   \\ is backslash
  *
  * Consecutive separators will not be consolidated , i.e. empty strings will be produced.
  *
@@ -501,11 +508,10 @@ static char **str_split(const char *s, int sep, size_t *field_count)
  *   A pointer to the start of the array if successful
  *   NULL otherwise
  */
-static char **csv_split(const char *s, size_t *field_count)
+static char **line_split_and_unescape(const char *s, size_t *field_count)
 {
     size_t n = 1;               /* One more string than separators. */
     size_t len;                 /* Length of 's' */
-    bool in_string = false;
 
     if (s == NULL || *s == '\0') {
         *field_count = 0;
@@ -513,14 +519,10 @@ static char **csv_split(const char *s, size_t *field_count)
     } else {
         /* Count separators. */
         for (len = 0; s[len]; ++len) {
-            if (s[len] == ',' && !in_string) {
+            if (s[len] == '\\' && s[len + 1] != '\0') {
+                ++len;
+            } else if (s[len] == ',') {
                 n++;
-            } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
-                /* Leading quote */
-                in_string = true;
-            } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
-                /* Trailing quote */
-                in_string = false;
             }
         }
         *field_count = n;
@@ -539,28 +541,27 @@ static char **csv_split(const char *s, size_t *field_count)
 
         size_t i = 0;
         result[i] = copy;
-        size_t qcount = 0;
         for (len = 0; s[len]; ++len) {
-            if (s[len] == ',' && !in_string) {
-                copy++;
-                result[++i] = copy;
-                qcount = 0;
-            } else if (s[len] == '"' && !in_string && (len == 0 || s[len - 1] == ',')) {
-                /* Leading quote */
-                in_string = true;
-            } else if (s[len] == '"' && in_string && (s[len + 1] == ',' || s[len + 1] == '\0')) {
-                /* Trailing quote */
-                in_string = false;
-            } else if (s[len] == '"' && in_string) {
-                /* ignore the first double quote we see in a string */
-                if (++qcount % 2 == 0) {
+            if (s[len] == '\\') {
+                ++len;
+                switch (s[len]) {
+                case 'n':
+                    *copy++ = '\n';
+                    break;
+                case '\0':
+                    *copy++ = '\\';
+                    goto done;
+                default:
                     *copy++ = s[len];
                 }
+            } else if (s[len] == ',') {
+                *copy++ = '\0';
+                result[++i] = copy;
             } else {
                 *copy++ = s[len];
-                qcount = 0;
             }
         }
+done:
         *copy = '\0';
         result[n] = NULL;
         return result;
@@ -749,7 +750,7 @@ static bool parse_log_entry(const char *line)
     size_t field_count;
     mistral_log *log_entry = NULL;
 
-    char **comma_split = csv_split(line, &field_count);
+    char **comma_split = line_split_and_unescape(line, &field_count);
     size_t log_field_count = field_count;
     if (!comma_split) {
         mistral_err("Unable to allocate memory for split log line: %s\n", line);
@@ -758,19 +759,21 @@ static bool parse_log_entry(const char *line)
 
     /* As there might be commas in the command and/or filename we cannot just check the raw count */
     if (log_field_count < FIELD_MAX) {
-        mistral_err("Invalid log message: %s\n", line);
+        mistral_err("Invalid log message: %s (%zd/%d max fields)\n", line, log_field_count,
+                    FIELD_MAX);
         goto fail_split_comma_fields;
     }
 
     char **hash_split = str_split(comma_split[FIELD_TIMESTAMP], '#', &field_count);
     if (!hash_split) {
-        mistral_err("Unable to allocate memory for mistral fields: %s\n",
+        mistral_err("Unable to allocate memory for mistral timestamp fields: %s\n",
                     comma_split[FIELD_TIMESTAMP]);
         goto fail_split_hashes;
     }
 
     if (field_count != PLUGIN_MESSAGE_FIELDS) {
-        mistral_err("Invalid log message: %s\n", line);
+        mistral_err("Invalid log message: %s (%zd/%d timestamp fields)\n", line, field_count,
+                    PLUGIN_MESSAGE_FIELDS);
         goto fail_split_hash_fields;
     }
 
