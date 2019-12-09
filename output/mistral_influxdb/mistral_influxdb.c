@@ -127,6 +127,10 @@ static void usage(const char *name)
                 "  -s\n"
                 "     Connect to the InfluxDB server via secure HTTP.\n"
                 "\n"
+                "  --skip-ssl-validation\n"
+                "  -k\n"
+                "     Disbale SSL certificate validation when connecting to InfluxDB.\n"
+                "\n"
                 "  --username=user\n"
                 "  -u user\n"
                 "     The username required to access the InfluxDB server if needed.\n"
@@ -272,6 +276,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"password", required_argument, NULL, 'p'},
         {"port", required_argument, NULL, 'P'},
         {"https", no_argument, NULL, 's'},
+        {"skip-ssl-validation", no_argument, NULL, 'k'},
         {"username", required_argument, NULL, 'u'},
         {"var", required_argument, NULL, 'v'},
         {0, 0, 0, 0},
@@ -285,9 +290,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *username = NULL;
     const char *protocol = "http";
     int opt;
+    bool skipValidation = false;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:su:v:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:sku:v:", options, NULL)) != -1) {
         switch (opt) {
         case 'd':
             database = optarg;
@@ -346,6 +352,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
         case 's':
             protocol = "https";
+            break;
+        case 'k':
+            skipValidation = true;
             break;
         case 'u':
             username = optarg;
@@ -437,6 +446,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         mistral_err("Could not set curl to fail on HTTP error\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
+    }
+
+    /* If using a self-signed certificate (for example) disable SSL validation */
+    if (skipValidation) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_SSL_VERIFYPEER, 0) != CURLE_OK) {
+            mistral_err("Could not disable curl peer validation\n");
+            return;
+        }
     }
 
     /* Set InfluxDB connection options and set precision to microseconds as this
