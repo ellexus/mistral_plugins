@@ -290,7 +290,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *username = NULL;
     const char *protocol = "http";
     int opt;
-    bool skipValidation = false;
+    bool skip_validation = false;
     mode_t new_mode = 0;
 
     while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:sku:v:", options, NULL)) != -1) {
@@ -354,7 +354,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             protocol = "https";
             break;
         case 'k':
-            skipValidation = true;
+            skip_validation = true;
             break;
         case 'u':
             username = optarg;
@@ -449,7 +449,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     /* If using a self-signed certificate (for example) disable SSL validation */
-    if (skipValidation) {
+    if (skip_validation) {
         if (curl_easy_setopt(easyhandle, CURLOPT_SSL_VERIFYPEER, 0) != CURLE_OK) {
             mistral_err("Could not disable curl peer validation\n");
             return;
