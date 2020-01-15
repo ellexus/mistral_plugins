@@ -11,7 +11,7 @@ set -e
 
 # Build the sample plugins on the same machines that we use to build mistral.
 
-REMOTE_BUILD_MACHINE_32=ellexus@10.33.0.103
+#REMOTE_BUILD_MACHINE_32=ellexus@10.33.0.103
 REMOTE_BUILD_MACHINE_64=ellexus@10.33.0.104
 
 
@@ -100,7 +100,7 @@ BUILD_DIR=$(mktemp -d)
 # Build both the 32-bit and 64-bit versions of the plugins on the appropriate
 # build machines.
 
-remote_build ${REMOTE_BUILD_MACHINE_32} ${SOURCE_DIR} ${BUILD_DIR} ${BUILD32}
+#remote_build ${REMOTE_BUILD_MACHINE_32} ${SOURCE_DIR} ${BUILD_DIR} ${BUILD32}
 remote_build ${REMOTE_BUILD_MACHINE_64} ${SOURCE_DIR} ${BUILD_DIR} ${BUILD64}
 
 # Iterate over all plugins, collecting up the files and creating tar files which
