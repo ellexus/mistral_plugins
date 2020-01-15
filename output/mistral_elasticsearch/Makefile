@@ -110,6 +110,6 @@ $(PLUGIN_NAME).o: $(STANDARD_DEPS) $(PLUGIN_DEPS)
 # be installed on other machines.)
 
 $(PLUGIN_NAME).$(HOST_ARCH) : $(PLUGIN_NAME) $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS)
-	$(GCC) -o $@ $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS) /usr/local/lib/libcurl.a\
+	$(GCC) -o $@ $(STANDARD_OBJECTS) $(PLUGIN_OBJECTS) /usr/local/lib/libcurl.a \
 	$(shell ../../tools/static-link.sh $(PLUGIN_NAME) $(LDLIBS))
 
