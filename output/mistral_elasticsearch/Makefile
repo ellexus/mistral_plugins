@@ -114,4 +114,6 @@ $(PLUGIN_NAME).o: $(STANDARD_DEPS) $(PLUGIN_DEPS)
 #		$(shell ../../tools/static-link.sh $(PLUGIN_NAME) $(LDLIBS))
 
 gcc -o mistral_elasticsearch.x86_64 ../../common/plugin_control.o mistral_elasticsearch.o \
--Wl,-Bstatic -L/usr/local/lib -lcurl -L/usr/local/ssl/lib -lkrb5support -lkeyutils -lssl -lcrypto -lz -Wl,-Bdynamic  -L/usr/local/ssl/lib -lrt -ldl  -lpthread -lresolv -lselinux -lsepol -lgcc_s
+		-Wl,-Bstatic -L/usr/local/lib -lcurl -L/usr/local/ssl/lib -lkrb5support -lkeyutils \
+		-lssl -lcrypto -lz -Wl,-Bdynamic  -L/usr/local/ssl/lib -lrt -ldl  -lpthread -lresolv \
+		-lselinux -lsepol -lgcc_s
