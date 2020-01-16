@@ -47,6 +47,10 @@ function main () {
 
     for word in ${config} ; do
         case $word in
+            *libcurl.a)
+                staticlibs="${staticlibs} ${word}"
+                config_lib="${config_lib} ${word}"
+                ;;
             -lz)
                 req_z=true
                 config_lib="${config_lib} ${word}"
