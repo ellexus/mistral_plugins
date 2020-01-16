@@ -47,6 +47,10 @@ function main () {
 
     for word in ${config} ; do
         case $word in
+            *libcurl.a)
+                staticlibs="${staticlibs} ${word}"
+                config_lib="${config_lib} ${word}"
+                ;;
             -lz)
                 req_z=true
                 config_lib="${config_lib} ${word}"
@@ -116,7 +120,7 @@ function main () {
     # Now piece together the command line using the libraries we have deduced, and adding
     # "-lgcc_s" which seems to always be needed.
 
-    echo "-Wl,-Bstatic /usr/local/lib/libcurl.a ${staticlibs} -Wl,-Bdynamic ${dynamiclibs} ${extra_lib} -lgcc_s"
+    echo "-Wl,-Bstatic ${staticlibs} -Wl,-Bdynamic ${dynamiclibs} ${extra_lib} -lgcc_s"
 }
 
 # package.sh ./mistral_mysql.dynamic $(mysql_config --libs)
