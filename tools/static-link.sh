@@ -120,7 +120,7 @@ function main () {
     # Now piece together the command line using the libraries we have deduced, and adding
     # "-lgcc_s" which seems to always be needed.
 
-    echo "-Wl,-Bstatic ${staticlibs} -Wl,-Bdynamic -L/usr/lib64 ${dynamiclibs} ${extra_lib} -lgcc_s"
+    echo "-Wl,-Bstatic ${staticlibs} -Wl,-Bdynamic ${dynamiclibs} ${extra_lib} -lgcc_s"
 }
 
 # package.sh ./mistral_mysql.dynamic $(mysql_config --libs)
