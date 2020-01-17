@@ -86,6 +86,7 @@ PACKAGES=$(find . -name PACKAGE -print)
 BUILD32=""
 BUILD64=""
 for PACKAGE in ${PACKAGES}; do
+    echo $PACKAGE
     PLUGIN_DIRECTORY=$(dirname ${PACKAGE})
     PLUGIN=$(basename ${PLUGIN_DIRECTORY})
     BUILD32="${BUILD32} ${PLUGIN_DIRECTORY}/${PLUGIN}.i386"
