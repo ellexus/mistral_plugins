@@ -169,6 +169,10 @@ static void usage(const char *name)
                 "  -V num\n"
                 "     The major version of the Elasticsearch server to connect to.\n"
                 "     If not specified the plug-in will default to \"5\".\n"
+                "\n"
+                "  --config=file\n"
+                "  -c\n"
+                "     Path to a file with the Elasticsearch password.\n"
                 "\n");
 }
 
@@ -284,10 +288,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"username", required_argument, NULL, 'u'},
         {"var", required_argument, NULL, 'v'},
         {"es-version", required_argument, NULL, 'V'},
+        {"config", required_argument, NULL, 'c'},
         {0, 0, 0, 0},
     };
 
     const char *error_file = NULL;
+    const char *config_file = NULL;
     const char *host = "localhost";
     const char *password = NULL;
     uint16_t port = 9200;
@@ -301,6 +307,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         switch (opt) {
         case 'e':
             error_file = optarg;
+            break;
+        case 'c':
+            config_file = optarg;
             break;
         case 'h':
             host = optarg;
@@ -417,6 +426,29 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             char buf[256];
             mistral_err("Could not open error file %s: %s\n", error_file,
                         strerror_r(errno, buf, sizeof buf));
+        }
+    }
+
+    if (config_file != NULL) {
+        FILE * f = fopen(config_file, O_RDONLY);
+        if (f) {
+            size_t len = fseek(f, 0, SEEK_END);
+            if (len > 0) {
+                char *buff = malloc(sizeof(char) * (len + 1));
+                if (fread(buff, sizeof(char), len, f) != len) {
+                    buff[len] = '\0';
+                    mistral_err("Success in getting password - value is %s\n", buff);
+                    password = buff;
+                } else {
+                    mistral_err("Unable to read from config file %s\n", config_file);
+                }
+                free(buff);
+            } else {
+                mistral_err("Could not get length of config file %s\n", config_file);
+            }
+            fclose(f);
+        } else {
+             mistral_err("Could not open config file %s\n", config_file);
         }
     }
 
