@@ -23,9 +23,9 @@ build-mistral_mysql:
 build-mistral_influxdb:
 	$(MAKE) -C output/mistral_influxdb
 
-.PHONY: build-mistral_postgresql
-build-mistral_postgresql:
-	$(MAKE) -C output/mistral_postgresql
+#.PHONY: build-mistral_postgresql
+#build-mistral_postgresql:
+#	$(MAKE) -C output/mistral_postgresql
 
 .PHONY: build-mistral_rtm
 build-mistral_rtm:
@@ -46,7 +46,7 @@ package:
 	$(MAKE) -C output/mistral_graphite package
 	$(MAKE) -C output/mistral_mysql package
 	$(MAKE) -C output/mistral_influxdb package
-	$(MAKE) -C output/mistral_postgresql package
+#	$(MAKE) -C output/mistral_postgresql package
 	$(MAKE) -C output/mistral_rtm package
 	$(MAKE) -C output/mistral_splunk package
 	$(MAKE) -C output/mistral_fluentbit package
@@ -58,7 +58,7 @@ clean:
 	$(MAKE) -C output/mistral_graphite clean
 	$(MAKE) -C output/mistral_mysql clean
 	$(MAKE) -C output/mistral_influxdb clean
-	$(MAKE) -C output/mistral_postgresql clean
+#	$(MAKE) -C output/mistral_postgresql clean
 	$(MAKE) -C output/mistral_rtm clean
 	$(MAKE) -C output/mistral_splunk clean
 	$(MAKE) -C output/mistral_fluentbit clean
