@@ -430,25 +430,18 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     if (config_file != NULL) {
-        FILE * f = fopen(config_file, O_RDONLY);
+        FILE *f = fopen(config_file, "r");
         if (f) {
-            size_t len = fseek(f, 0, SEEK_END);
-            if (len > 0) {
-                char *buff = malloc(sizeof(char) * (len + 1));
-                if (fread(buff, sizeof(char), len, f) != len) {
-                    buff[len] = '\0';
-                    mistral_err("Success in getting password - value is %s\n", buff);
-                    password = buff;
-                } else {
-                    mistral_err("Unable to read from config file %s\n", config_file);
+            char line[256];
+            while (!feof(f)) {
+                if (fgets(line, sizeof(line), f)) {
+                    password = line;
+                    continue;
                 }
-                free(buff);
-            } else {
-                mistral_err("Could not get length of config file %s\n", config_file);
             }
             fclose(f);
         } else {
-             mistral_err("Could not open config file %s\n", config_file);
+            mistral_err("Could not open config file %s\n", config_file);
         }
     }
 
