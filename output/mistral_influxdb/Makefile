@@ -11,7 +11,7 @@ HOST_ARCH := $(patsubst i%86,i386,$(shell uname -m))
 $(eval $(call check_arch,$(HOST_ARCH)))
 
 LDLIBS = \
-	$(shell curl-config --libs)
+	$(shell curl-config --static-libs)
 
 LDLIBS += -lkrb5support -lkeyutils
 
