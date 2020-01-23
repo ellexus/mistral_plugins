@@ -142,6 +142,8 @@ static void usage(const char *name)
                 "  --password=secret\n"
                 "  -p secret\n"
                 "     The password required to access the Elasticsearch server if needed.\n"
+                "     If password is specified as \"file:<filename>\" the plug-in will attempt\n"
+                "     to read the password from the first line of <filename>.\n"
                 "\n"
                 "  --port=number\n"
                 "  -P number\n"
@@ -169,10 +171,6 @@ static void usage(const char *name)
                 "  -V num\n"
                 "     The major version of the Elasticsearch server to connect to.\n"
                 "     If not specified the plug-in will default to \"5\".\n"
-                "\n"
-                "  --config=file\n"
-                "  -c\n"
-                "     Path to a file with the Elasticsearch password.\n"
                 "\n");
 }
 
@@ -288,12 +286,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"username", required_argument, NULL, 'u'},
         {"var", required_argument, NULL, 'v'},
         {"es-version", required_argument, NULL, 'V'},
-        {"config", required_argument, NULL, 'c'},
         {0, 0, 0, 0},
     };
 
     const char *error_file = NULL;
-    const char *config_file = NULL;
     const char *host = "localhost";
     const char *password = NULL;
     uint16_t port = 9200;
@@ -307,9 +303,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         switch (opt) {
         case 'e':
             error_file = optarg;
-            break;
-        case 'c':
-            config_file = optarg;
             break;
         case 'h':
             host = optarg;
@@ -429,19 +422,32 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
-    if (config_file != NULL) {
-        FILE *f = fopen(config_file, "r");
-        if (f) {
-            char line[256];
-            while (!feof(f)) {
-                if (fgets(line, sizeof(line), f)) {
-                    password = line;
-                    continue;
+    if (password != NULL) {
+        /* If the password starts with file: it is actually the path to a file to read the
+         * password from.
+         */
+        if (strncmp(password, "file:", 5) == 0) {
+            char *line = NULL;
+            FILE *token_file = fopen(password + 5, "r");
+            if (token_file == NULL) {
+                mistral_err("Could not open authentication token file %s: %s\n",
+                            password + 5, strerror(errno));
+                return;
+            } else {
+                size_t n = 4096;
+                int ret = getline(&line, &n, token_file);
+                if (-1 == ret) {
+                    mistral_err("Could not read authentication token file %s: %s\n",
+                                password + 5, strerror(errno));
+                    fclose(token_file);
+                    return;
                 }
+                fclose(token_file);
+                if (line[ret - 1] == '\n') {
+                    line[ret - 1] = '\0';
+                }
+                password = line;
             }
-            fclose(f);
-        } else {
-            mistral_err("Could not open config file %s\n", config_file);
         }
     }
 
