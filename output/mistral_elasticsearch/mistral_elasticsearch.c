@@ -291,12 +291,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     const char *error_file = NULL;
     const char *host = "localhost";
-    const char *password = NULL;
+    char *password = NULL;
     uint16_t port = 9200;
     const char *username = NULL;
     const char *protocol = "http";
     int opt;
     bool skip_validation = false;
+    bool passwordAllocated = false;
     mode_t new_mode = 0;
 
     while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:", options, NULL)) != -1) {
@@ -427,7 +428,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
          * password from.
          */
         if (strncmp(password, "file:", 5) == 0) {
-            char *line = NULL;
             FILE *token_file = fopen(password + 5, "r");
             if (token_file == NULL) {
                 mistral_err("Could not open authentication token file %s: %s\n",
@@ -435,18 +435,21 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                 return;
             } else {
                 size_t n = 4096;
-                int ret = getline(&line, &n, token_file);
+                char *line = NULL;
+                ssize_t ret = getline(&line, &n, token_file);
                 if (-1 == ret) {
                     mistral_err("Could not read authentication token file %s: %s\n",
                                 password + 5, strerror(errno));
                     fclose(token_file);
+                    free(line);
                     return;
                 }
                 fclose(token_file);
-                if (line[ret - 1] == '\n') {
+                if (ret && line[ret - 1] == '\n') {
                     line[ret - 1] = '\0';
                 }
                 password = line;
+                passwordAllocated = true;
             }
         }
     }
@@ -518,6 +521,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     {
         mistral_err("Could not allocate memory for authentication\n");
         return;
+    }
+
+    if (passwordAllocated) {
+        free(password);
+        password = NULL;
     }
 
     if (strcmp(auth, ":")) {
