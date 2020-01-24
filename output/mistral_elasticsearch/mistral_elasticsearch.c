@@ -142,6 +142,8 @@ static void usage(const char *name)
                 "  --password=secret\n"
                 "  -p secret\n"
                 "     The password required to access the Elasticsearch server if needed.\n"
+                "     If password is specified as \"file:<filename>\" the plug-in will attempt\n"
+                "     to read the password from the first line of <filename>.\n"
                 "\n"
                 "  --port=number\n"
                 "  -P number\n"
@@ -289,12 +291,13 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     const char *error_file = NULL;
     const char *host = "localhost";
-    const char *password = NULL;
+    char *password = NULL;
     uint16_t port = 9200;
     const char *username = NULL;
     const char *protocol = "http";
     int opt;
     bool skip_validation = false;
+    bool passwordAllocated = false;
     mode_t new_mode = 0;
 
     while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:", options, NULL)) != -1) {
@@ -420,6 +423,37 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
+    if (password != NULL) {
+        /* If the password starts with file: it is actually the path to a file to read the
+         * password from.
+         */
+        if (strncmp(password, "file:", 5) == 0) {
+            FILE *token_file = fopen(password + 5, "r");
+            if (token_file == NULL) {
+                mistral_err("Could not open authentication token file %s: %s\n",
+                            password + 5, strerror(errno));
+                return;
+            } else {
+                size_t n = 4096;
+                char *line = NULL;
+                ssize_t ret = getline(&line, &n, token_file);
+                if (-1 == ret) {
+                    mistral_err("Could not read authentication token file %s: %s\n",
+                                password + 5, strerror(errno));
+                    fclose(token_file);
+                    free(line);
+                    return;
+                }
+                fclose(token_file);
+                if (ret && line[ret - 1] == '\n') {
+                    line[ret - 1] = '\0';
+                }
+                password = line;
+                passwordAllocated = true;
+            }
+        }
+    }
+
     if (curl_global_init(CURL_GLOBAL_ALL)) {
         mistral_err("Could not initialise curl\n");
         return;
@@ -487,6 +521,11 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     {
         mistral_err("Could not allocate memory for authentication\n");
         return;
+    }
+
+    if (passwordAllocated) {
+        free(password);
+        password = NULL;
     }
 
     if (strcmp(auth, ":")) {
