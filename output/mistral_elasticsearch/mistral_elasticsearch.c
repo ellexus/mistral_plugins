@@ -478,14 +478,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
-    /* If using a self-signed certificate (for example) disable SSL validation */
-    if (skip_validation) {
-        if (curl_easy_setopt(easyhandle, CURLOPT_SSL_VERIFYPEER, 0) != CURLE_OK) {
-            mistral_err("Could not disable curl peer validation\n");
-            return;
-        }
-    }
-
     /* Use a custom write function to save any response from Elasticsearch */
     if (!set_curl_option(CURLOPT_WRITEFUNCTION, write_callback)) {
         mistral_shutdown();
@@ -515,6 +507,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         return;
     }
 
+    /* If using a self-signed certificate (for example) disable SSL validation */
+    if (skip_validation) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_SSL_VERIFYPEER, 0) != CURLE_OK) {
+            mistral_err("Could not disable curl peer validation\n");
+            return;
+        }
+    }
+
     /* Set up authentication */
     if (asprintf(&auth, "%s:%s", username ? username : "",
                  password ? password : "") < 0)
@@ -535,6 +535,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             return;
         }
     }
+
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
 }
