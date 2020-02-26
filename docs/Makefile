@@ -4,11 +4,11 @@
 
 DOCS = \
     mistral_elasticsearch_plugin_manual \
-    mistral_influxdb_plugin_manual \
-    mistral_splunk_plugin_manual \
     mistral_graphite_plugin_manual \
+    mistral_influxdb_plugin_manual \
     mistral_mysql_plugin_manual \
-    mistral_plugin_api
+    mistral_plugin_api \
+    mistral_splunk_plugin_manual
 
 # Pandoc.
 PANDOC_VERSION = $(shell which pandoc >/dev/null && pandoc --version | grep ^pandoc | sed 's/^.* //g' | cut -f1 -d.)

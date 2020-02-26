@@ -168,17 +168,12 @@ separated pair of a single configuration option directive and its value.
 Whitespace is treated as significant in this file. The full
 specification for a plug-in configuration block is as follows:
 
-PLUGIN,\<OUTPUT|UPDATE\>
-
-INTERVAL,\<Calling interval in seconds\>
-
-PLUGIN\_PATH,\<Fully specified path to plug-in\>
-
-\[PLUGIN\_OPTION,\<Option to pass to plug-in\>\]
-
-…
-
-END
+  PLUGIN,<OUTPUT|UPDATE>
+  INTERVAL,<Calling interval in seconds>
+  PLUGIN_PATH,<Fully specified path to plug-in>
+  [PLUGIN_OPTION,<Option to pass to plug-in>]
+  …
+  END
 
 ## PLUGIN directive
 
@@ -215,9 +210,8 @@ to the plug-in. Whitespace is respected in these values.
     As whitespace is respected command line options that take parameters must be specified as separate PLUGIN_OPTION values. For example if the plug-in uses the option
     “--output /dir/name/” to specify where to store its output then this must be specified in the plug-in configuration file as:
 
-PLUGIN\_OPTION,--output
-
-PLUGIN\_OPTION,/dir/name/
+  PLUGIN_OPTION,--output
+  PLUGIN_OPTION,/dir/name/
 
 Options will be passed to the plug-in in the order in which they are
 defined.
@@ -244,29 +238,20 @@ above cause a warning to be raised.
 Consider the following configuration file; line numbers have been added
 for clarity:
 
-1\# Plug-ins configuration
-
-2PLUGIN,OUTPUT
-
-3INTERVAL,300
-
-4PLUGIN\_PATH,/home/ellexus/bin/output\_plugin.sh
-
-5PLUGIN\_OPTION,--output
-
-6PLUGIN\_OPTION,/home/ellexus/log files
-
-7END
-
-8
-
-9PLUGIN,UPDATE
-
-10INTERVAL,60
-
-11PLUGIN\_PATH,$HOME/bin/update\_plugin
-
-12END
+```
+1  # Plug-ins configuration
+2  PLUGIN,OUTPUT
+3  INTERVAL,300
+4  PLUGIN_PATH,/home/ellexus/bin/output_plugin.sh
+5  PLUGIN_OPTION,--output
+6  PLUGIN_OPTION,/home/ellexus/log files
+7  END
+8  
+9  PLUGIN,UPDATE
+10 INTERVAL,60
+11 PLUGIN_PATH,$HOME/bin/update_plugin
+12 END
+```
 
 The configuration file above sets up both update and output plug-ins.
 
@@ -275,7 +260,7 @@ Line 1 starts with a '`#`' character and is ignored as comment.
 The first configuration block defines an output plug-in (line 2) that
 will be called every 300 seconds (line 3) using the command line
 
-`/home/ellexus/bin/output_plugin.sh –-output
+`/home/ellexus/bin/output_plugin.sh --output
 "/home/ellexus/log files"`
 
 (lines 4-6). The configuration block is terminated on line 7.
