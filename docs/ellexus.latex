@@ -3,12 +3,10 @@
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 % Get title and version from files
-\CatchFileDef\ellexusVersion{version}{}
 \CatchFileDef\ellexusTitle{title}{}
 % headers and footers
 \lfoot{\textsl{\ellexusTitle}}
 \cfoot{\textsl{\thepage}}
-\rfoot{\textsl{Version: \ellexusVersion}}
 \lhead{}
 \renewcommand{\footrulewidth}{0.4pt}
 % Start each section on a new page
