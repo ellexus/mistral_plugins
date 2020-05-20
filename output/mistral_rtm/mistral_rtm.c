@@ -25,17 +25,17 @@
 #define DATETIME_FORMAT "YYYY-MM-DD HH-mm-SS"
 #define DATETIME_LENGTH sizeof(DATETIME_FORMAT)
 
-#define BIND_STRING(b, i, str, null_is, str_len)    \
-    b[i].buffer_type = MYSQL_TYPE_STRING;           \
-    b[i].buffer = (char *)str;                      \
-    b[i].buffer_length = LONG_STRING_SIZE;          \
-    b[i].is_null = null_is;                         \
+#define BIND_STRING(b, i, str, null_is, str_len) \
+    b[i].buffer_type = MYSQL_TYPE_STRING;        \
+    b[i].buffer = (char *)str;                   \
+    b[i].buffer_length = LONG_STRING_SIZE;       \
+    b[i].is_null = null_is;                      \
     b[i].length = &str_len;
 
-#define BIND_INT(b, i, integer, null_is)            \
-    b[i].buffer_type = MYSQL_TYPE_LONG;             \
-    b[i].buffer = (char *)integer;                  \
-    b[i].is_null = null_is;                         \
+#define BIND_INT(b, i, integer, null_is) \
+    b[i].buffer_type = MYSQL_TYPE_LONG;  \
+    b[i].buffer = (char *)integer;       \
+    b[i].is_null = null_is;              \
     b[i].length = 0;
 
 enum debug_states {
@@ -47,11 +47,11 @@ enum debug_states {
 };
 
 /* Define debug output function as a macro so we can use mistral_err */
-#define DEBUG_OUTPUT(level, format, ...)        \
-do {                                            \
-    if ((1 << level) & debug_level) {           \
+#define DEBUG_OUTPUT(level, format, ...)                                                      \
+do {                                                                                          \
+    if ((1 << level) & debug_level) {                                                         \
         mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
-    }                                           \
+    }                                                                                         \
 } while (0)
 
 static FILE *log_file = NULL;
@@ -87,7 +87,6 @@ typedef struct rule_param {
     my_ulonglong cluster_id;
 } rule_param;
 
-
 static void usage(const char *name)
 {
     /* This may be called before options have been processed so errors will go to stderr.
@@ -122,8 +121,8 @@ static void usage(const char *name)
     mistral_err("     Permissions used to create the error log file specified by the -o\n");
     mistral_err("     option.\n");
     mistral_err("\n");
-    return;
 }
+
 /*
  * insert_rule_parameters
  *
@@ -144,7 +143,7 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
 {
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function, %p, %p", log_entry, ptr_rule_id);
     MYSQL_STMT   *insert_rule;
-    MYSQL_BIND    input_bind[7];
+    MYSQL_BIND input_bind[7];
     unsigned long str_length_vio;
     unsigned long str_length_label;
     unsigned long str_length_call;
@@ -160,12 +159,13 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
     }
 
     /* Prepares the statement for use */
-    insert_rule_parameters_str = "INSERT INTO mistral_rule_parameters"
-                                 "(rule_id, label, violation_path, call_type,"
-                                 "measurement, size_range, threshold,"
+    insert_rule_parameters_str = "INSERT INTO mistral_rule_parameters "
+                                 "(rule_id, label, violation_path, call_type, "
+                                 "measurement, size_range, threshold, "
                                  "clusterid) VALUES (NULL,?,?,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_parameters_str,
-                           strlen(insert_rule_parameters_str))) {
+                           strlen(insert_rule_parameters_str)))
+    {
         mistral_err("mysql_stmt_prepare(insert_rule), failed\n");
         mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_parameters;
@@ -178,7 +178,8 @@ static bool insert_rule_parameters(mistral_log *log_entry, my_ulonglong *ptr_rul
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
     BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
     BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
-    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
+    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0,
+                str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
     BIND_INT(input_bind, 6, &cluster_id, 0);
@@ -311,6 +312,7 @@ static int rule_compare(const void *p, const void *q)
     DEBUG_OUTPUT(DBG_HIGH, "Leaving function");
     return retval;
 }
+
 /*
  * set_rule_id
  *
@@ -340,8 +342,8 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT *get_rule_id;
 
-    MYSQL_BIND    input_bind[7];
-    MYSQL_BIND    output_bind[1];
+    MYSQL_BIND input_bind[7];
+    MYSQL_BIND output_bind[1];
     rule_param    *this_rule;
     void          *found;
     unsigned long str_length_vio;
@@ -395,12 +397,12 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Prepares the statement for use */
     char *get_rule_params_id_str = "SELECT rule_id FROM mistral_rule_parameters " \
-                                   "WHERE label=? AND violation_path=? " \
-                                   "AND call_type=? AND measurement=? AND " \
-                                   "size_range=? AND threshold=? AND " \
+                                   "WHERE label=? AND violation_path=? "          \
+                                   "AND call_type=? AND measurement=? AND "       \
+                                   "size_range=? AND threshold=? AND "            \
                                    "clusterid=?";
     if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str,
-        strlen(get_rule_params_id_str)))
+                           strlen(get_rule_params_id_str)))
     {
         mistral_err("mysql_stmt_prepare(get_rule_id) failed\n");
         mistral_err("%s\n", mysql_stmt_error(get_rule_id));
@@ -415,7 +417,8 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
     BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
     BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
-    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
+    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0,
+                str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
     BIND_INT(input_bind, 6, &cluster_id, 0);
@@ -441,12 +444,12 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Reset the lengths if they are larger than the column the string is being
      * compared to. Doing it this way round avoids calling strlen twice.
      */
-    str_length_vio = (str_length_vio > STRING_SIZE)? STRING_SIZE : str_length_vio;
-    str_length_call = (str_length_call > STRING_SIZE)? STRING_SIZE : str_length_call;
-    str_length_measure = (str_length_measure > MEASUREMENT_SIZE)? MEASUREMENT_SIZE : str_length_measure;
-    str_length_size_range = (str_length_size_range > RATE_SIZE)? RATE_SIZE : str_length_size_range;
-    str_length_threshold = (str_length_threshold > RATE_SIZE)? RATE_SIZE : str_length_threshold;
-
+    str_length_vio = (str_length_vio > STRING_SIZE) ? STRING_SIZE : str_length_vio;
+    str_length_call = (str_length_call > STRING_SIZE) ? STRING_SIZE : str_length_call;
+    str_length_measure = (str_length_measure > MEASUREMENT_SIZE) ? MEASUREMENT_SIZE :
+                                                                   str_length_measure;
+    str_length_size_range = (str_length_size_range > RATE_SIZE) ? RATE_SIZE : str_length_size_range;
+    str_length_threshold = (str_length_threshold > RATE_SIZE) ? RATE_SIZE : str_length_threshold;
 
     /* Execute the query */
     if (mysql_stmt_execute(get_rule_id)) {
@@ -527,7 +530,7 @@ static bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigne
     char *s = (char *)input_str;
     char *end = NULL;
     errno = 0;
-    *job_id = (my_ulonglong) strtoull(s, &end, 10);
+    *job_id = (my_ulonglong)strtoull(s, &end, 10);
     if (errno || !end || job_id == 0 || s == end || (end && *end != '\0' && *end != '[')) {
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
         return false;
@@ -547,6 +550,7 @@ static bool parse_lsf_jobid(const char *input_str, my_ulonglong *job_id, unsigne
     DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
     return true;
 }
+
 /*
  * build_values_string
  *
@@ -577,6 +581,9 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
      */
     char escaped_command[LONG_STRING_SIZE * 2 + 1];
     char escaped_filename[LONG_STRING_SIZE * 2 + 1];
+    char escaped_fstype[STRING_SIZE * 2 + 1];
+    char escaped_fsname[STRING_SIZE * 2 + 1];
+    char escaped_fshost[STRING_SIZE * 2 + 1];
     char escaped_groupid[STRING_SIZE * 2 + 1];
     char escaped_id[STRING_SIZE * 2 + 1];
     char timestamp[DATETIME_LENGTH];
@@ -586,6 +593,12 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
                              strlen(log_entry->command));
     mysql_real_escape_string(con, escaped_filename, log_entry->file,
                              strlen(log_entry->file));
+    mysql_real_escape_string(con, escaped_fstype, log_entry->fstype,
+                             strlen(log_entry->fstype));
+    mysql_real_escape_string(con, escaped_fsname, log_entry->fsname,
+                             strlen(log_entry->fsname));
+    mysql_real_escape_string(con, escaped_fshost, log_entry->fshost,
+                             strlen(log_entry->fshost));
     mysql_real_escape_string(con, escaped_groupid, log_entry->job_group_id,
                              strlen(log_entry->job_group_id));
     mysql_real_escape_string(con, escaped_id, log_entry->job_id,
@@ -610,26 +623,27 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
     my_ulonglong temp_gid = 0;
     unsigned long temp_gid_array_idx = 0;
     if (strlen(log_entry->job_group_id) &&
-        !parse_lsf_jobid(log_entry->job_group_id, &temp_gid, &temp_gid_array_idx)) {
+        !parse_lsf_jobid(log_entry->job_group_id, &temp_gid, &temp_gid_array_idx))
+    {
         mistral_err("build_values_string failed with job id: %s\n", log_entry->job_id);
         goto fail_build_values_string;
-
     }
 
     my_ulonglong temp_id = 0;
     unsigned long temp_array_idx = 0;
     if (strlen(log_entry->job_id) &&
-        !parse_lsf_jobid(log_entry->job_id, &temp_id, &temp_array_idx)) {
+        !parse_lsf_jobid(log_entry->job_id, &temp_id, &temp_array_idx))
+    {
         mistral_err("build_values_string failed with job id: %s\n", log_entry->job_id);
         goto fail_build_values_string;
-
     }
 
-    #define LOG_VALUES "('%s', '%s', '%s', '%s', '%s', %llu, %" PRIu64 "," \
-                       " '%s', %" PRIu64 ", %" PRId64 ", '%s', '%s', '%s'," \
-                       " IF(%llu > 0, %llu, NULL)," \
-                       " IF(%lu > 0, %lu, NULL), '%s', IF(%llu > 0, %llu, NULL)," \
-                       " IF(%lu > 0, %lu, NULL), FROM_UNIXTIME(%llu), NULL, %" \
+    #define LOG_VALUES "('%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', "          \
+                       " %llu, %" PRIu64 ", '%s', %" PRIu64 ", %" PRId64 ", '%s', " \
+                       " '%s', '%s',"                                               \
+                       " IF(%llu > 0, %llu, NULL),"                                 \
+                       " IF(%lu > 0, %lu, NULL), '%s', IF(%llu > 0, %llu, NULL),"   \
+                       " IF(%lu > 0, %lu, NULL), FROM_UNIXTIME(%llu), NULL, %"      \
                        PRIu64 ")"
 
     if (asprintf(&values_string,
@@ -638,6 +652,9 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
                  mistral_contract_name[log_entry->contract_type],
                  timestamp,
                  escaped_hostname,
+                 escaped_fstype,
+                 escaped_fsname,
+                 escaped_fshost,
                  escaped_project,
                  rule_id,
                  log_entry->measured,
@@ -653,7 +670,8 @@ static char *build_values_string(mistral_log *log_entry, my_ulonglong rule_id)
                  temp_id, temp_id,
                  temp_array_idx, temp_array_idx,
                  submit_time,
-                 cluster_id) < 0) {
+                 cluster_id) < 0)
+    {
         mistral_err("build_values_string failed to allocate memory in asprintf\n");
         goto fail_build_values_string;
     }
@@ -720,7 +738,7 @@ static void get_lsf_hostname(void)
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function");
     char env_hostname[STRING_SIZE];
     char *temp_hostname = getenv("HOSTNAME");
-    if(temp_hostname) {
+    if (temp_hostname) {
         strncpy(env_hostname, temp_hostname, STRING_SIZE - 1);
         env_hostname[STRING_SIZE - 1] = '\0';
     } else {
@@ -728,7 +746,7 @@ static void get_lsf_hostname(void)
     }
 
     char dns_hostname[STRING_SIZE];
-    if(gethostname(dns_hostname, sizeof(dns_hostname)) == -1) {
+    if (gethostname(dns_hostname, sizeof(dns_hostname)) == -1) {
         dns_hostname[0] = '\0';
     }
 
@@ -736,7 +754,7 @@ static void get_lsf_hostname(void)
     char **host_arr = NULL;
     char *temp_lsb_hosts = getenv("LSB_MCPU_HOSTS");
     size_t num_hosts = 1;
-    if(temp_lsb_hosts) {
+    if (temp_lsb_hosts) {
         lsb_hosts = strdup(temp_lsb_hosts);
         if (lsb_hosts) {
             /* Convert this into an array of hostname strings - first count separators */
@@ -758,10 +776,10 @@ static void get_lsf_hostname(void)
                 char *q = NULL;
                 *p = strtok_r(lsb_hosts, " ", &q);
                 p++;
-                if(strtok_r(NULL, " ", &q)) {
+                if (strtok_r(NULL, " ", &q)) {
                     while ((*p = strtok_r(NULL, " ", &q))) {
                         p++;
-                        if(!strtok_r(NULL, " ", &q)) {
+                        if (!strtok_r(NULL, " ", &q)) {
                             break;
                         }
                     }
@@ -842,7 +860,8 @@ static void get_lsf_hostname(void)
     }
 
     if (hostname[0] == '\0') {
-        mistral_err("Unable to find hostname in LSF environment. Attempting to use System environment\n");
+        mistral_err(
+            "Unable to find hostname in LSF environment. Attempting to use System environment\n");
         char *p = NULL;
 
         p = strchr(env_hostname, '.');
@@ -867,6 +886,7 @@ static void get_lsf_hostname(void)
         }
     }
 }
+
 /*
  * mistral_startup
  *
@@ -912,7 +932,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'c':
             config_file = optarg;
             break;
-        case 'd':{
+        case 'd': {
             char *end = NULL;
             unsigned long tmp_level = strtoul(optarg, &end, 10);
             if (tmp_level <= 0 || !end || *end || tmp_level > DBG_LIMIT) {
@@ -923,7 +943,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             debug_level = (2 << tmp_level) - 1;
             break;
         }
-        case 'i':{
+        case 'i': {
             char *end = NULL;
             unsigned long tmp_id = strtoul(optarg, &end, 10);
             if (tmp_id <= 0 || !end || *end) {
@@ -933,7 +953,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             cluster_id = (uint64_t)tmp_id;
             break;
         }
-        case 'm':{
+        case 'm': {
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
             if (tmp_mode <= 0 || !end || *end) {
@@ -941,15 +961,15 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             new_mode = (mode_t)tmp_mode;
 
-            if (new_mode <= 0 || new_mode > 0777)
-            {
+            if (new_mode <= 0 || new_mode > 0777) {
                 mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
-            if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
-            {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
+            if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
+                mistral_err(
+                    "Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n",
+                    optarg);
                 new_mode = 0;
             }
             break;
@@ -993,7 +1013,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Try and detect the job project from the environment */
     char *job_project = getenv("LSB_PROJECT_NAME");
-    if(job_project) {
+    if (job_project) {
         strncpy(project, job_project, STRING_SIZE - 1);
         project[STRING_SIZE - 1] = '\0';
     } else {
@@ -1003,7 +1023,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     /* Try and detect the job submission time from the environment */
     char *job_filename = getenv("LSB_JOBFILENAME");
-    if(job_filename) {
+    if (job_filename) {
         char *filebase = basename(job_filename);
         if (filebase) {
             char *subtime_str = strdup(filebase);
@@ -1014,7 +1034,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                 }
                 *p = '\0';
                 errno = 0;
-                submit_time = (my_ulonglong) strtoull(subtime_str, NULL, 10);
+                submit_time = (my_ulonglong)strtoull(subtime_str, NULL, 10);
                 free(subtime_str);
                 if (errno) {
                     /* Just be absoultely sure that the time is set to 0 which is handled below */
@@ -1024,7 +1044,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
-    if(submit_time == 0) {
+    if (submit_time == 0) {
         mistral_err("Unable to parse job submission time\n");
         /* Do not treat this as fatal */
     }
@@ -1057,7 +1077,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     /* Now we have initialised the connection we can escape strings */
     mysql_real_escape_string(con, escaped_hostname, hostname, strlen(hostname));
     mysql_real_escape_string(con, escaped_project, project, strlen(project));
-
 
     /* Makes a connection to MySQl */
     if (mysql_real_connect(con, NULL, NULL, NULL, NULL, 0, NULL, 0) == NULL) {
@@ -1161,7 +1180,7 @@ void mistral_received_log(mistral_log *log_entry)
  */
 void mistral_received_data_end(uint64_t block_num, bool block_error)
 {
-    DEBUG_OUTPUT(DBG_ENTRY, "Entered function, %"PRIu64", %d", block_num, block_error);
+    DEBUG_OUTPUT(DBG_ENTRY, "Entered function, %" PRIu64 ", %d", block_num, block_error);
     UNUSED(block_num);
     UNUSED(block_error);
     my_ulonglong rule_id = 0;
@@ -1171,7 +1190,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     while (log_entry) {
         DEBUG_OUTPUT(DBG_MED, "Processing log entry, %p", log_entry);
         /* Get (or create) the appropriate rule id for this log entry */
-        if (! set_rule_id(log_entry, &rule_id)) {
+        if (!set_rule_id(log_entry, &rule_id)) {
             mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
             return;
@@ -1186,10 +1205,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          * will fit within the buffer. If not we need to send the currently
          * built insert statement to MySQL and start a new statement.
          */
-        if(log_insert_len + values_len + 2 > 1000000) {
+        if (log_insert_len + values_len + 2 > 1000000) {
             DEBUG_OUTPUT(DBG_MED, "Buffer full, sending data to db, %zd, %zd", log_insert_len,
                          values_len);
-            if(!insert_log_to_db()) {
+            if (!insert_log_to_db()) {
                 mistral_err("Insert log entry on max buffer size failed\n");
                 mistral_shutdown();
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
@@ -1201,12 +1220,13 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             DEBUG_OUTPUT(DBG_HIGH, "Buffer empty, creating new statement");
             /* Create the insert statement */
             if (asprintf(&log_insert,
-                         "INSERT INTO mistral_events (scope, type, time," \
-                         "host, project, rule_parameters, observed," \
-                         "observed_unit, observed_time, pid, command," \
+                         "INSERT INTO mistral_events (scope, type, time,"      \
+                         "host, project, rule_parameters, observed,"           \
+                         "observed_unit, observed_time, pid, command,"         \
                          "file_name, groupid, group_jobid, group_indexid, id," \
-                         "jobid, indexid, submit_time, log_id, clusterid) "\
-                         "VALUES %s", values) < 0) {
+                         "jobid, indexid, submit_time, log_id, clusterid) "    \
+                         "VALUES %s", values) < 0)
+            {
                 mistral_err("Unable to allocate memory for log insert\n");
                 mistral_shutdown();
                 DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
@@ -1243,7 +1263,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                  log_list_tail, log_insert_len);
     DEBUG_OUTPUT(DBG_HIGH, "SQL %s", log_insert);
     /* Send any log entries to the database that are still pending */
-    if(!insert_log_to_db()) {
+    if (!insert_log_to_db()) {
         mistral_err("Insert log entry at end of block failed\n");
         mistral_shutdown();
         DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed");
@@ -1251,7 +1271,6 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     }
 
     DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, success");
-    return;
 }
 
 /*

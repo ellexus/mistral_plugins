@@ -176,6 +176,9 @@ typedef struct mistral_log {
     uint32_t microseconds;
     const char *label;
     const char *path;
+    const char *fstype;
+    const char *fsname;
+    const char *fshost;
     uint32_t call_type_mask;
     bool call_types[CALL_TYPE_MAX];
     const char *call_type_names;

@@ -68,6 +68,9 @@ const char * const mistral_log_message[PLUGIN_MESSAGE_LIMIT] = {
     X(TIMESTAMP)     \
     X(LABEL)         \
     X(PATH)          \
+    X(FS_TYPE)       \
+    X(FS_NAME)       \
+    X(FS_HOST)       \
     X(CALL_TYPE)     \
     X(SIZE_RANGE)    \
     X(MEASUREMENT)   \
