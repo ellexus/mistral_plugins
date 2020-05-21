@@ -19,7 +19,7 @@ size_t mistral_call_type_len[CALL_TYPE_MAX] = {
 };
 
 /* Version of the API used by the plug-in */
-#define MISTRAL_API_VERSION 5
+#define MISTRAL_API_VERSION 6
 
 /* Define the number of fields in the plugin message string */
 #define PLUGIN_MESSAGE_FIELDS 3
