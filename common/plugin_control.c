@@ -1085,28 +1085,28 @@ static bool parse_log_entry(const char *line)
 
 fail_log_sequence:
 fail_log_mpi_rank:
-    free(log_entry->job_id);
+    free((void *)log_entry->job_id);
 fail_log_job:
     free(log_entry->job_group_id);
 fail_log_group:
-    free(log_entry->file);
+    free((void *)log_entry->file);
 fail_log_filename:
-    free(log_entry->command);
+    free((void *)log_entry->command);
 fail_log_command:
 fail_log_cpu:
 fail_log_pid:
-    free(log_entry->hostname);
+    free((void *)log_entry->hostname);
 fail_log_host:
-    free(log_entry->full_hostname);
+    free((void *)log_entry->full_hostname);
 fail_log_fullhost:
 fail_log_observed:
-    free(log_entry->measured_str);
+    free((void *)log_entry->measured_str);
 fail_log_measured_str:
 fail_log_allowed:
-    free(log_entry->threshold_str);
+    free((void *)log_entry->threshold_str);
 fail_log_threshold_str:
 fail_log_measurement:
-    free(log_entry->size_range);
+    free((void *)log_entry->size_range);
 fail_log_size_range:
     free(size_range_split);
 fail_log_size_range_split:
@@ -1115,15 +1115,15 @@ fail_log_call_type:
 fail_log_call_types:
     free(call_type_split);
 fail_log_call_types_split:
-    free(log->entry->fshost);
+    free((void *)log->entry->fshost);
 fail_log_fshost:
-    free(log_entry->fsname);
+    free((void *)log_entry->fsname);
 fail_log_fsname:
-    free(log_entry->fstype);
+    free((void *)log_entry->fstype);
 fail_log_fstype:
-    free(log_entry->path);
+    free((void *)log_entry->path);
 fail_log_path:
-    free(log_entry->label);
+    free((void *)log_entry->label);
 fail_log_label:
 fail_log_localtime:
 fail_log_mktime:
