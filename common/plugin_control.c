@@ -1115,7 +1115,7 @@ fail_log_call_type:
 fail_log_call_types:
     free(call_type_split);
 fail_log_call_types_split:
-    free((void *)log->entry->fshost);
+    free((void *)log_entry->fshost);
 fail_log_fshost:
     free((void *)log_entry->fsname);
 fail_log_fsname:
