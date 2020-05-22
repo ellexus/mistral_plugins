@@ -1087,7 +1087,7 @@ fail_log_sequence:
 fail_log_mpi_rank:
     free((void *)log_entry->job_id);
 fail_log_job:
-    free(log_entry->job_group_id);
+    free((void *)log_entry->job_group_id);
 fail_log_group:
     free((void *)log_entry->file);
 fail_log_filename:
