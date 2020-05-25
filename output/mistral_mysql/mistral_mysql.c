@@ -37,17 +37,17 @@
 
 #define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_"
 
-#define BIND_STRING(b, i, str, null_is, str_len)    \
-    b[i].buffer_type = MYSQL_TYPE_STRING;           \
-    b[i].buffer = (char *)str;                      \
-    b[i].buffer_length = STRING_SIZE;               \
-    b[i].is_null = null_is;                         \
+#define BIND_STRING(b, i, str, null_is, str_len) \
+    b[i].buffer_type = MYSQL_TYPE_STRING;        \
+    b[i].buffer = (char *)str;                   \
+    b[i].buffer_length = STRING_SIZE;            \
+    b[i].is_null = null_is;                      \
     b[i].length = &str_len;
 
-#define BIND_INT(b, i, integer, null_is)            \
-    b[i].buffer_type = MYSQL_TYPE_LONG;             \
-    b[i].buffer = (char *)integer;                  \
-    b[i].is_null = null_is;                         \
+#define BIND_INT(b, i, integer, null_is) \
+    b[i].buffer_type = MYSQL_TYPE_LONG;  \
+    b[i].buffer = (char *)integer;       \
+    b[i].is_null = null_is;              \
     b[i].length = 0;
 
 static char run_id[UUID_SIZE + 1];
@@ -113,8 +113,8 @@ static void usage(const char *name)
                 "     The name of an environment variable, the value of which should be\n"
                 "     stored by the plug-in. This option can be specified multiple times.\n"
                 "\n");
-    return;
 }
+
 /*
  * get_table_number
  *
@@ -133,11 +133,11 @@ static bool get_table_number(const mistral_log *log_entry)
 {
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT      *get_table_num;
-    MYSQL_BIND      input_bind[1];
-    MYSQL_BIND      output_bind[1];
-    unsigned long   str_length;
-    char            log_date[STRING_SIZE];
-    int             table_num;
+    MYSQL_BIND input_bind[1];
+    MYSQL_BIND output_bind[1];
+    unsigned long str_length;
+    char log_date[STRING_SIZE];
+    int table_num;
 
     get_table_num = mysql_stmt_init(con);
     if (!get_table_num) {
@@ -240,8 +240,8 @@ fail_get_table_number:
 static bool insert_rule_details(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 {
     MYSQL_STMT   *insert_rule;
-    MYSQL_BIND    input_bind[6];
-    unsigned long str_length_vio;
+    MYSQL_BIND input_bind[6];
+    unsigned long str_length_path;
     unsigned long str_length_label;
     unsigned long str_length_call;
     unsigned long str_length_measure;
@@ -257,11 +257,12 @@ static bool insert_rule_details(mistral_log *log_entry, my_ulonglong *ptr_rule_i
 
     /* Prepares the statement for use */
     insert_rule_details_str = "INSERT INTO rule_details"
-                                 "(rule_id, label, violation_path, call_type,"
-                                 "measurement, size_range, threshold)"
-                                 "VALUES (NULL,?,?,?,?,?,?)";
+                              "(rule_id, label, violation_path, call_type, "
+                              "measurement, size_range, threshold)"
+                              "VALUES (NULL,?,?,?,?,?,?)";
     if (mysql_stmt_prepare(insert_rule, insert_rule_details_str,
-                           strlen(insert_rule_details_str))) {
+                           strlen(insert_rule_details_str)))
+    {
         mistral_err("mysql_stmt_prepare(insert_rule), failed\n");
         mistral_err("%s\n", mysql_stmt_error(insert_rule));
         goto fail_insert_rule_details;
@@ -272,9 +273,10 @@ static bool insert_rule_details(mistral_log *log_entry, my_ulonglong *ptr_rule_i
 
     /* Set the variables to use for input parameters in the INSERT query */
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
-    BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
+    BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_path);
     BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
-    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
+    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0,
+                str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
 
@@ -289,7 +291,7 @@ static bool insert_rule_details(mistral_log *log_entry, my_ulonglong *ptr_rule_i
      * they exceed the size of the database column.
      */
     str_length_label = strlen(log_entry->label);
-    str_length_vio = strlen(log_entry->path);
+    str_length_path = strlen(log_entry->path);
     str_length_call = strlen(log_entry->call_type_names);
     str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
     str_length_size_range = strlen(log_entry->size_range);
@@ -421,8 +423,9 @@ static bool insert_env_records(int table_number, char *table_date)
      * --var options on the command line and we only need to do this once a day
      */
     char env_table_name[ENV_TABLE_SIZE];
-    if (snprintf(env_table_name, ENV_TABLE_SIZE, ENV_TABLE_FMT, table_number)
-        >= (int)ENV_TABLE_SIZE) {
+    if (snprintf(env_table_name, ENV_TABLE_SIZE, ENV_TABLE_FMT, table_number) >=
+        (int)ENV_TABLE_SIZE)
+    {
         mistral_err("Unable to build environment table name\n");
         goto fail_insert_env_records;
     }
@@ -596,11 +599,11 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Allocates memory for a MYSQL_STMT and initializes it */
     MYSQL_STMT *get_rule_id;
 
-    MYSQL_BIND    input_bind[6];
-    MYSQL_BIND    output_bind[1];
+    MYSQL_BIND input_bind[6];
+    MYSQL_BIND output_bind[1];
     rule_param    *this_rule;
     void          *found;
-    unsigned long str_length_vio;
+    unsigned long str_length_path;
     unsigned long str_length_label;
     unsigned long str_length_call;
     unsigned long str_length_measure;
@@ -648,12 +651,12 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     }
 
     /* Prepares the statement for use */
-    char *get_rule_params_id_str = "SELECT rule_id FROM rule_details " \
-                                   "WHERE label=? AND violation_path=? " \
+    char *get_rule_params_id_str = "SELECT rule_id FROM rule_details "      \
+                                   "WHERE label=? AND violation_path=? "    \
                                    "AND call_type=? AND measurement=? AND " \
                                    "size_range=? AND threshold=?";
     if (mysql_stmt_prepare(get_rule_id, get_rule_params_id_str,
-        strlen(get_rule_params_id_str)))
+                           strlen(get_rule_params_id_str)))
     {
         mistral_err("mysql_stmt_prepare(get_rule_id) failed\n");
         mistral_err("%s\n", mysql_stmt_error(get_rule_id));
@@ -666,9 +669,10 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Set the variables to use for input parameters in the SELECT query */
     BIND_STRING(input_bind, 0, log_entry->label, 0, str_length_label);
-    BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_vio);
+    BIND_STRING(input_bind, 1, log_entry->path, 0, str_length_path);
     BIND_STRING(input_bind, 2, log_entry->call_type_names, 0, str_length_call);
-    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0, str_length_measure);
+    BIND_STRING(input_bind, 3, mistral_measurement_name[log_entry->measurement], 0,
+                str_length_measure);
     BIND_STRING(input_bind, 4, log_entry->size_range, 0, str_length_size_range);
     BIND_STRING(input_bind, 5, log_entry->threshold_str, 0, str_length_threshold);
 
@@ -684,7 +688,7 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
 
     /* Set the length of the values of the variables used in the query */
     str_length_label = strlen(log_entry->label);
-    str_length_vio = strlen(log_entry->path);
+    str_length_path = strlen(log_entry->path);
     str_length_call = strlen(log_entry->call_type_names);
     str_length_measure = strlen(mistral_measurement_name[log_entry->measurement]);
     str_length_size_range = strlen(log_entry->size_range);
@@ -693,13 +697,13 @@ static bool set_rule_id(mistral_log *log_entry, my_ulonglong *ptr_rule_id)
     /* Reset the lengths if they are larger than the column the string is being compared to. Doing
      * it this way round avoids calling strlen twice
      */
-    str_length_label = (str_length_label > STRING_SIZE)? STRING_SIZE : str_length_label;
-    str_length_vio = (str_length_vio > STRING_SIZE)? STRING_SIZE : str_length_vio;
-    str_length_call = (str_length_call > STRING_SIZE)? STRING_SIZE : str_length_call;
-    str_length_measure = (str_length_measure > MEASUREMENT_SIZE)? MEASUREMENT_SIZE : str_length_measure;
-    str_length_size_range = (str_length_size_range > RATE_SIZE)? RATE_SIZE : str_length_size_range;
-    str_length_threshold = (str_length_threshold > RATE_SIZE)? RATE_SIZE : str_length_threshold;
-
+    str_length_label = (str_length_label > STRING_SIZE) ? STRING_SIZE : str_length_label;
+    str_length_path = (str_length_path > STRING_SIZE) ? STRING_SIZE : str_length_path;
+    str_length_call = (str_length_call > STRING_SIZE) ? STRING_SIZE : str_length_call;
+    str_length_measure = (str_length_measure > MEASUREMENT_SIZE) ? MEASUREMENT_SIZE :
+                                                                   str_length_measure;
+    str_length_size_range = (str_length_size_range > RATE_SIZE) ? RATE_SIZE : str_length_size_range;
+    str_length_threshold = (str_length_threshold > RATE_SIZE) ? RATE_SIZE : str_length_threshold;
 
     /* Execute the query */
     if (mysql_stmt_execute(get_rule_id)) {
@@ -783,6 +787,9 @@ static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_i
     char escaped_command[LONG_STRING_SIZE * 2 + 1];
     char escaped_filename[LONG_STRING_SIZE * 2 + 1];
     char escaped_hostname[STRING_SIZE * 2 + 1] = "";
+    char escaped_fstype[STRING_SIZE * 2 + 1] = "";
+    char escaped_fsname[STRING_SIZE * 2 + 1] = "";
+    char escaped_fshost[STRING_SIZE * 2 + 1] = "";
     char escaped_groupid[STRING_SIZE * 2 + 1];
     char escaped_id[STRING_SIZE * 2 + 1];
     char timestamp[DATETIME_LENGTH];
@@ -794,6 +801,12 @@ static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_i
                              strlen(log_entry->file));
     mysql_real_escape_string(con, escaped_hostname, log_entry->hostname,
                              strlen(log_entry->hostname));
+    mysql_real_escape_string(con, escaped_fstype, log_entry->fstype,
+                             strlen(log_entry->fstype));
+    mysql_real_escape_string(con, escaped_fsname, log_entry->fsname,
+                             strlen(log_entry->fsname));
+    mysql_real_escape_string(con, escaped_fshost, log_entry->fshost,
+                             strlen(log_entry->fshost));
     mysql_real_escape_string(con, escaped_groupid, log_entry->job_group_id,
                              strlen(log_entry->job_group_id));
     mysql_real_escape_string(con, escaped_id, log_entry->job_id,
@@ -801,8 +814,8 @@ static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_i
     /* Converts the timestamp to a formatted string */
     strftime(timestamp, sizeof(timestamp), "%F %H-%M-%S", &log_entry->time);
 
-    #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', %llu, '%s', %" PRIu64 \
-                       ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32 \
+    #define LOG_VALUES "('%s', '%s', '%s.%06" PRIu32 "', '%s', '%s', '%s', '%s', %llu, "  \
+                       "'%s', %" PRIu64 ", %" PRId32 ", '%s', '%s', '%s', '%s', %" PRId32 \
                        ",'%s', NULL)"
 
     if (asprintf(&values_string,
@@ -812,6 +825,9 @@ static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_i
                  timestamp,
                  log_entry->microseconds,
                  escaped_hostname,
+                 escaped_fstype,
+                 escaped_fsname,
+                 escaped_fshost,
                  rule_id,
                  log_entry->measured_str,
                  log_entry->pid,
@@ -821,7 +837,8 @@ static char *build_log_values_string(mistral_log *log_entry, my_ulonglong rule_i
                  escaped_groupid,
                  escaped_id,
                  log_entry->mpi_rank,
-                 run_id) < 0) {
+                 run_id) < 0)
+    {
         mistral_err("build_log_values_string failed to allocate memory in asprintf\n");
         goto fail_build_log_values_string;
     }
@@ -906,7 +923,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'c':
             config_file = optarg;
             break;
-        case 'm':{
+        case 'm': {
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
             if (!end || *end) {
@@ -914,15 +931,15 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             new_mode = (mode_t)tmp_mode;
 
-            if (new_mode <= 0 || new_mode > 0777)
-            {
+            if (new_mode <= 0 || new_mode > 0777) {
                 mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
-            if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
-            {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
+            if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
+                mistral_err(
+                    "Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n",
+                    optarg);
                 new_mode = 0;
             }
             break;
@@ -930,20 +947,20 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'e':
             error_file = optarg;
             break;
-        case 'v':{
+        case 'v': {
             env_var *this_env = NULL;
 
             if (optarg[0] != '\0' && strspn(optarg, VALID_NAME_CHARS) == strlen(optarg)) {
                 this_env = calloc(1, sizeof(env_var));
                 if (this_env) {
                     char *temp_var = getenv(optarg);
-                    if(temp_var) {
+                    if (temp_var) {
                         /* calloc ensures NULL termination */
                         strncpy(this_env->value, temp_var, STRING_SIZE);
                     } else {
                         this_env->value[0] = '\0';
                     }
-                    strncpy(this_env->name,optarg, STRING_SIZE);
+                    strncpy(this_env->name, optarg, STRING_SIZE);
 
                     if (!env_head) {
                         /* Initialise linked list */
@@ -1171,8 +1188,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             }
             date_changed = true;
 
-            if (snprintf(table_name, LOG_TABLE_SIZE, LOG_TABLE_FMT, num)
-                >= (int)LOG_TABLE_SIZE) {
+            if (snprintf(table_name, LOG_TABLE_SIZE, LOG_TABLE_FMT, num) >=
+                (int)LOG_TABLE_SIZE)
+            {
                 mistral_err("Unable to build log table name\n");
                 mistral_shutdown();
                 return;
@@ -1180,14 +1198,14 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             /* Check if we have already stored our environment variables in the
              * corresponding table, if not insert them.
              */
-            if (! insert_env_records(num, log_date)) {
+            if (!insert_env_records(num, log_date)) {
                 mistral_shutdown();
                 return;
             }
         }
 
         /* Get (or create) the appropriate rule id for this log entry */
-        if (! set_rule_id(log_entry, &rule_id)) {
+        if (!set_rule_id(log_entry, &rule_id)) {
             mistral_shutdown();
             return;
         }
@@ -1202,10 +1220,10 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          * We also need to send the current query if the date has changed as
          * this will change the table we are inserting into.
          */
-        if(log_insert_len + values_len + 2 > BUFFER_SIZE ||
-           (log_insert_len && date_changed))
+        if (log_insert_len + values_len + 2 > BUFFER_SIZE ||
+            (log_insert_len && date_changed))
         {
-            if(!insert_log_to_db()) {
+            if (!insert_log_to_db()) {
                 if (date_changed) {
                     mistral_err("Insert log entry on date change failed\n");
                 } else {
@@ -1220,10 +1238,12 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         if (log_insert_len == 0) {
             /* Create the insert statement */
             if (asprintf(&log_insert,
-                         "INSERT INTO %s (scope, type, time_stamp, host," \
-                         "rule_id, observed, pid, cpu, command," \
-                         "file_name, group_id, id, mpi_rank, plugin_run_id, "\
-                         "log_id) VALUES %s", table_name, values) < 0) {
+                         "INSERT INTO %s (scope, type, time_stamp, host, "     \
+                         "fstype, fsname, fshost, rule_id, observed, pid, "    \
+                         "cpu, command, rule_id, observed, pid, cpu, command," \
+                         "file_name, group_id, id, mpi_rank, plugin_run_id, "  \
+                         "log_id) VALUES %s", table_name, values) < 0)
+            {
                 mistral_err("Unable to allocate memory for log insert\n");
                 mistral_shutdown();
                 return;
@@ -1252,13 +1272,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
     log_list_tail = NULL;
 
     /* Send any log entries to the database that are still pending */
-    if(!insert_log_to_db()) {
+    if (!insert_log_to_db()) {
         mistral_err("Insert log entry at end of block failed\n");
         mistral_shutdown();
         return;
     }
-
-    return;
 }
 
 /*

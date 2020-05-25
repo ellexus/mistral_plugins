@@ -672,10 +672,13 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         strftime(strdate, date_len, "%F", &utc_time);
         strftime(strts, ts_len, "%FT%T", &utc_time);
 
-        /* Command and filename must be JSON escaped */
+        /* Several fields  must be JSON escaped */
         char *command = elasticsearch_escape(log_entry->command);
         char *file = elasticsearch_escape(log_entry->file);
         char *path = elasticsearch_escape(log_entry->path);
+        char *fstype = elasticsearch_escape(log_entry->fstype);
+        char *fsname = elasticsearch_escape(log_entry->fsname);
+        char *fshost = elasticsearch_escape(log_entry->fshost);
         const char *job_gid = (log_entry->job_group_id[0] == 0) ? "N/A" : log_entry->job_group_id;
         const char *job_id = (log_entry->job_id[0] == 0) ? "N/A" : log_entry->job_id;
         char *new_data = NULL;
@@ -696,6 +699,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"measurement\":\"%s\","
                      "\"calltype\":\"%s\","
                      "\"path\":\"%s\","
+                     "\"fstype\":\"%s\","
+                     "\"fsname\":\"%s\","
+                     "\"fshost\":\"%s\","
                      "\"threshold\":%" PRIu64 ","
                      "\"timeframe\":%" PRIu64 ","
                      "\"size-min\":%" PRIu64 ","
@@ -728,6 +734,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->call_type_names,
                      path,
+                     fstype,
+                     fsname,
+                     fshost,
                      log_entry->threshold,
                      log_entry->timeframe,
                      log_entry->size_min,
@@ -747,6 +756,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         {
             mistral_err("Could not allocate memory for log entry\n");
             free(data);
+            free(fshost);
+            free(fsname);
+            free(fstype);
             free(path);
             free(file);
             free(command);
@@ -754,6 +766,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
         free(data);
+        free(fshost);
+        free(fsname);
+        free(fstype);
         free(path);
         free(file);
         free(command);

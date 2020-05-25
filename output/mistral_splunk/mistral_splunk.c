@@ -487,8 +487,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         }
     }
 
-    if (asprintf(&auth, "Authorization: Splunk %s", splunk_token) < 0)
-    {
+    if (asprintf(&auth, "Authorization: Splunk %s", splunk_token) < 0) {
         mistral_err("Could not allocate memory for authentication\n");
         return;
     }
@@ -501,7 +500,6 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         mistral_shutdown();
         return;
     }
-
 
     /* Returning after this point indicates success */
     plugin->type = OUTPUT_PLUGIN;
@@ -611,6 +609,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *command = splunk_escape(log_entry->command);
         char *file = splunk_escape(log_entry->file);
         char *path = splunk_escape(log_entry->path);
+        char *fstype = splunk_escape(log_entry->fstype);
+        char *fsname = splunk_escape(log_entry->fsname);
+        char *fshost = splunk_escape(log_entry->fshost);
         const char *job_gid = (log_entry->job_group_id[0] == 0) ? "N/A" : log_entry->job_group_id;
         const char *job_id = (log_entry->job_id[0] == 0) ? "N/A" : log_entry->job_id;
         char *new_data = NULL;
@@ -630,6 +631,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"measurement\":\"%s\","
                      "\"calltype\":\"%s\","
                      "\"path\":\"%s\","
+                     "\"fstype\":\"%s\","
+                     "\"fsname\":\"%s\","
+                     "\"fshost\":\"%s\","
                      "\"threshold\":%" PRIu64 ","
                      "\"timeframe\":%" PRIu64 ","
                      "\"size-min\":%" PRIu64 ","
@@ -663,6 +667,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->call_type_names,
                      path,
+                     fstype,
+                     fsname,
+                     fshost,
                      log_entry->threshold,
                      log_entry->timeframe,
                      log_entry->size_min,
@@ -682,6 +689,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         {
             mistral_err("Could not allocate memory for log entry\n");
             free(data);
+            free(fshost);
+            free(fsname);
+            free(fstype);
             free(path);
             free(file);
             free(command);
@@ -689,6 +699,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
         free(data);
+        free(fshost);
+        free(fsname);
+        free(fstype);
         free(path);
         free(file);
         free(command);

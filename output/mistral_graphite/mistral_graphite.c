@@ -75,7 +75,6 @@ static void usage(const char *name)
                 "     Specifies the port to connect to on the Graphite server host.\n"
                 "     If not specified the plug-in will default to \"2003\".\n"
                 "\n");
-    return;
 }
 
 /*
@@ -175,7 +174,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'i':
             schema = optarg;
             break;
-        case 'm':{
+        case 'm': {
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
             if (!end || *end) {
@@ -189,12 +188,14 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
 
             if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
+                mistral_err(
+                    "Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n",
+                    optarg);
                 new_mode = 0;
             }
             break;
         }
-        case 'p':{
+        case 'p': {
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port > UINT16_MAX || !end || *end) {
@@ -374,6 +375,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         char *job_gid = graphite_escape(log_entry->job_group_id);
         char *job_id = graphite_escape(log_entry->job_id);
         char *path = graphite_escape(log_entry->path);
+        char *fstype = graphite_escape(log_entry->fstype);
+        char *fsname = graphite_escape(log_entry->fsname);
+        char *fshost = graphite_escape(log_entry->fshost);
         if (job_gid[0] == 0) {
             free(job_gid);
             job_gid = strdup("None");
@@ -391,13 +395,17 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          * as epoch time with a maximum resolution of 1-second.
          */
         if (asprintf(&data,
-                     "%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%"PRIu32".%"PRId32" %"PRIu64 " %ld\n",
+                     "%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%s.%" PRIu32 ".%" PRId32 " %" PRIu64
+                     " %ld\n",
                      schema,
                      mistral_scope_name[log_entry->scope],
                      mistral_contract_name[log_entry->contract_type],
                      mistral_measurement_name[log_entry->measurement],
                      log_entry->label,
                      path,
+                     fstype,
+                     fsname,
+                     fshost,
                      log_entry->call_type_names,
                      log_entry->size_range,
                      job_gid,
@@ -406,15 +414,21 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->cpu,
                      log_entry->mpi_rank,
                      log_entry->measured,
-                     log_entry->epoch.tv_sec) < 0) {
-
+                     log_entry->epoch.tv_sec) < 0)
+        {
             mistral_err("Could not allocate memory for log entry\n");
             mistral_shutdown();
+            free(fshost);
+            free(fsname);
+            free(fstype);
             free(path);
             free(job_id);
             free(job_gid);
             return;
         }
+        free(fshost);
+        free(fsname);
+        free(fstype);
         free(path);
         free(job_id);
         free(job_gid);

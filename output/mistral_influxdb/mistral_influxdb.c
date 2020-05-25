@@ -22,11 +22,11 @@ enum debug_states {
 };
 
 /* Define debug output function as a macro so we can use mistral_err */
-#define DEBUG_OUTPUT(level, format, ...)        \
-do {                                            \
-    if ((1 << level) & debug_level) {           \
+#define DEBUG_OUTPUT(level, format, ...)                                                      \
+do {                                                                                          \
+    if ((1 << level) & debug_level) {                                                         \
         mistral_err("DEBUG[%d] %s:%d " format, level + 1, __func__, __LINE__, ##__VA_ARGS__); \
-    }                                           \
+    }                                                                                         \
 } while (0)
 
 #define VALID_NAME_CHARS "1234567890abcdefghijklmnopqrstvuwxyzABCDEFGHIJKLMNOPQRSTVUWXYZ-_"
@@ -92,7 +92,9 @@ static void usage(const char *name)
      * to stderr.
      */
     mistral_err("Usage:\n");
-    mistral_err("  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n", name);
+    mistral_err(
+        "  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n",
+        name);
     mistral_err("\n"
                 "  --database=db-name\n"
                 "  -d db-name\n"
@@ -140,7 +142,6 @@ static void usage(const char *name)
                 "     The name of an environment variable, the value of which should be\n"
                 "     stored by the plug-in. This option can be specified multiple times.\n"
                 "\n");
-    return;
 }
 
 /* influxdb_escape
@@ -298,7 +299,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'd':
             database = optarg;
             break;
-        case 'D':{
+        case 'D': {
             char *end = NULL;
             unsigned long tmp_level = strtoul(optarg, &end, 10);
             if (tmp_level == 0 || !end || *end || tmp_level > DBG_LIMIT) {
@@ -315,7 +316,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'h':
             host = optarg;
             break;
-        case 'm':{
+        case 'm': {
             char *end = NULL;
             unsigned long tmp_mode = strtoul(optarg, &end, 8);
             if (!end || *end) {
@@ -323,15 +324,15 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             }
             new_mode = (mode_t)tmp_mode;
 
-            if (new_mode <= 0 || new_mode > 0777)
-            {
+            if (new_mode <= 0 || new_mode > 0777) {
                 mistral_err("Invalid mode '%s' specified, using default\n", optarg);
                 new_mode = 0;
             }
 
-            if ((new_mode & (S_IWUSR|S_IWGRP|S_IWOTH)) == 0)
-            {
-                mistral_err("Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n", optarg);
+            if ((new_mode & (S_IWUSR | S_IWGRP | S_IWOTH)) == 0) {
+                mistral_err(
+                    "Invalid mode '%s' specified, plug-in will not be able to write to log. Using default\n",
+                    optarg);
                 new_mode = 0;
             }
             break;
@@ -339,7 +340,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'p':
             password = optarg;
             break;
-        case 'P':{
+        case 'P': {
             char *end = NULL;
             unsigned long tmp_port = strtoul(optarg, &end, 10);
             if (tmp_port <= 0 || tmp_port > UINT16_MAX || !end || *end) {
@@ -359,7 +360,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'u':
             username = optarg;
             break;
-        case 'v':{
+        case 'v': {
             char *var_val = NULL;
             char *new_var = NULL;
 
@@ -370,7 +371,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                     var_val = strdup("N/A");
                 }
                 if (var_val == NULL) {
-                    mistral_err("Could not allocate memory for environment variable value %s\n", optarg);
+                    mistral_err("Could not allocate memory for environment variable value %s\n",
+                                optarg);
                     DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
                     return;
                 }
@@ -378,9 +380,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                 mistral_err("Invalid environment variable name %s\n", optarg);
             }
             if (asprintf(&new_var, "%s,%s=%s",
-                                   (custom_variables)? custom_variables : "",
-                                   optarg,
-                                   var_val) < 0) {
+                         (custom_variables) ? custom_variables : "",
+                         optarg,
+                         var_val) < 0)
+            {
                 mistral_err("Could not allocate memory for environment variable %s\n", optarg);
                 DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
                 free(var_val);
@@ -464,7 +467,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
      * authentication strings.
      */
     if (asprintf(&url, "%s://%s:%d/write?db=%s&precision=u", protocol, host,
-                 port, database) < 0) {
+                 port, database) < 0)
+    {
         mistral_err("Could not allocate memory for connection URL\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
@@ -478,8 +482,9 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     }
 
     /* Set up authentication */
-    if (asprintf(&auth, "%s:%s", (username)? username : "",
-                                 (password)? password : "" ) < 0) {
+    if (asprintf(&auth, "%s:%s", (username) ? username : "",
+                 (password) ? password : "") < 0)
+    {
         mistral_err("Could not allocate memory for authentication\n");
         DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
         return;
@@ -591,7 +596,7 @@ void mistral_received_log(mistral_log *log_entry)
  */
 void mistral_received_data_end(uint64_t block_num, bool block_error)
 {
-    DEBUG_OUTPUT(DBG_ENTRY, "Entered function, %"PRIu64", %d\n", block_num, block_error);
+    DEBUG_OUTPUT(DBG_ENTRY, "Entered function, %" PRIu64 ", %d\n", block_num, block_error);
     UNUSED(block_num);
     UNUSED(block_error);
 
@@ -603,8 +608,12 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         /* Double quotes must must be escaped in the field strings. */
         char *command = influxdb_escape_field(log_entry->command);
         char *file = influxdb_escape_field(log_entry->file);
-        const char *job_gid = (log_entry->job_group_id[0] == 0)? "N/A" : log_entry->job_group_id;
-        const char *job_id = (log_entry->job_id[0] == 0)? "N/A" : log_entry->job_id;
+        char *path = influxdb_escape_field(log_entry->path);
+        char *fstype = influxdb_escape_field(log_entry->fstype);
+        char *fsname = influxdb_escape_field(log_entry->fsname);
+        char *fshost = influxdb_escape_field(log_entry->fshost);
+        const char *job_gid = (log_entry->job_group_id[0] == 0) ? "N/A" : log_entry->job_group_id;
+        const char *job_id = (log_entry->job_id[0] == 0) ? "N/A" : log_entry->job_id;
         char *new_data = NULL;
 
         /* InfluxDB tags are always strings. They are indexed and stored in memory. Our current
@@ -620,7 +629,8 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
          * returns 9223372036854776000.
          */
         if (asprintf(&new_data,
-                     "%s%s%s,calltype=%s,jobgroup=%s,jobid=%s,label=%s,path=%s,host=%s%s"
+                     "%s%s%s,calltype=%s,jobgroup=%s,jobid=%s,label=%s,path=\"%s\","
+                     "fstype=\"%s\",fsname=\"%s\",fshost=\"%s\",host=%s%s"
                      " command=\"%s\",cpu=%" PRIu32 "i,file=\"%s\",logtype=\"%s\""
                      ",mpirank=%" PRId32 "i,pid=%" PRId64 "i,scope=\"%s\""
                      ",sizemin=%" PRIu64 "i,sizemax=%" PRIu64 "i,threshold=%" PRIu64
@@ -632,9 +642,12 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      job_gid,
                      job_id,
                      log_entry->label,
-                     log_entry->path,
+                     path,
+                     fstype,
+                     fsname,
+                     fshost,
                      log_entry->hostname,
-                     (custom_variables)? custom_variables : "",
+                     (custom_variables) ? custom_variables : "",
                      command,
                      log_entry->cpu,
                      file,
@@ -648,9 +661,13 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      log_entry->timeframe,
                      log_entry->measured,
                      log_entry->epoch.tv_sec,
-                     log_entry->microseconds) < 0) {
+                     log_entry->microseconds) < 0)
+        {
             mistral_err("Could not allocate memory for log entry\n");
             free(data);
+            free(fshost);
+            free(fsname);
+            free(fstype);
             free(file);
             free(command);
             mistral_shutdown();
@@ -658,6 +675,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
         free(data);
+        free(fshost);
+        free(fsname);
+        free(fstype);
         free(file);
         free(command);
         data = new_data;
@@ -684,7 +704,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
              * the less detailed error based on return code instead.
              */
             mistral_err("Could not run curl query: %s\n",
-                        (*curl_error != '\0')? curl_error : curl_easy_strerror(ret));
+                        (*curl_error != '\0') ? curl_error : curl_easy_strerror(ret));
             mistral_shutdown();
             DEBUG_OUTPUT(DBG_ENTRY, "Leaving function, failed\n");
         }

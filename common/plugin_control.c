@@ -846,7 +846,28 @@ static bool parse_log_entry(const char *line)
     /* Record the rule path */
     if ((log_entry->path = strdup(comma_split[FIELD_PATH])) == NULL) {
         mistral_err("Unable to allocate memory for path: %s\n", comma_split[FIELD_PATH]);
-        goto fail_log_label;
+        goto fail_log_path;
+    }
+
+    /* Record the filesystem type */
+    if ((log_entry->fstype = strdup(comma_split[FIELD_FSTYPE])) == NULL) {
+        mistral_err("Unable to allocate memory for filesystem type: %s\n",
+                    comma_split[FIELD_FSTYPE]);
+        goto fail_log_fstype;
+    }
+
+    /* Record the filesystem name */
+    if ((log_entry->fsname = strdup(comma_split[FIELD_FSNAME])) == NULL) {
+        mistral_err("Unable to allocate memory for filesystem name: %s\n",
+                    comma_split[FIELD_FSNAME]);
+        goto fail_log_fsname;
+    }
+
+    /* Record the filesystem host */
+    if ((log_entry->fshost = strdup(comma_split[FIELD_FSHOST])) == NULL) {
+        mistral_err("Unable to allocate memory for filesystem host: %s\n",
+                    comma_split[FIELD_FSHOST]);
+        goto fail_log_fshost;
     }
 
     /* Record the rule call types */
@@ -949,7 +970,7 @@ static bool parse_log_entry(const char *line)
     /* Record the allowed rate */
     if ((log_entry->threshold_str = strdup(comma_split[FIELD_THRESHOLD])) == NULL) {
         mistral_err("Unable to allocate memory for allowed: %s\n", comma_split[FIELD_THRESHOLD]);
-        goto fail_log_allowed;
+        goto fail_log_threshold_str;
     }
 
     /* And also store its constituent parts */
@@ -962,7 +983,7 @@ static bool parse_log_entry(const char *line)
     /* Record the observed rate */
     if ((log_entry->measured_str = strdup(comma_split[FIELD_MEASURED])) == NULL) {
         mistral_err("Unable to allocate memory for allowed: %s\n", comma_split[FIELD_MEASURED]);
-        goto fail_log_observed;
+        goto fail_log_measured_str;
     }
 
     /* And also store its constituent parts */
@@ -1010,103 +1031,47 @@ static bool parse_log_entry(const char *line)
         goto fail_log_cpu;
     }
 
-    /* Record the command
-     *
-     * Now we need to make an assumption. As it is currently coded we do nothing to escape commas in
-     * commands or file names. The command is truncated after roughly 1.5kB though. Assuming we have
-     * more than five fields left keep on appending them to the command until either the length
-     * limit is reached or we have the right number of fields left.
-     */
-    size_t field = FIELD_COMMAND;
-    char *command = NULL;
-    do {
-        if (!command) {
-            command = strdup(comma_split[field]);
-            if (!command) {
-                mistral_err("Unable to store command: %s\n", line);
-                goto fail_log_command;
-            }
-        } else {
-            char *new_command = NULL;
+    /* Record the command */
+    if ((log_entry->command = strdup(comma_split[FIELD_COMMAND])) == NULL) {
+        mistral_err("Unable to store command: %s\n", line);
+        goto fail_log_command;
+    }
 
-            if (asprintf(&new_command, "%s,%s", command, comma_split[field]) > 0) {
-                free(command);
-                command = new_command;
-            } else {
-                mistral_err("Unable to store command: %s\n", line);
-                goto fail_log_command;
-            }
-        }
-        field++;
-    } while (field < (log_field_count - (FIELD_MAX - FIELD_COMMAND) + 1) &&
-             strlen(command) + strlen(comma_split[field]) + 2 <= PLUGIN_MESSAGE_CMD_LEN);
-
-    log_entry->command = command;
-
-    /* Record the file name
-     *
-     * If we break because of field length above we will still have too many fields left so, as
-     * above keep appending fields to the filename until we have the right number remaining, this
-     * time without the length restriction.
-     */
-    char *filename = NULL;
-    do {
-        if (!filename) {
-            filename = strdup(comma_split[field]);
-            if (!filename) {
-                mistral_err("Unable to store filename: %s\n", line);
-                goto fail_log_filename;
-            }
-        } else {
-            char *new_filename = NULL;
-
-            if (asprintf(&new_filename, "%s,%s", filename, comma_split[field]) > 0) {
-                free(filename);
-                filename = new_filename;
-            } else {
-                mistral_err("Unable to store filename: %s\n", line);
-                goto fail_log_filename;
-            }
-        }
-        field++;
-    } while (field < (log_field_count - (FIELD_MAX - FIELD_FILENAME) + 1));
-
-    log_entry->file = filename;
-
-    size_t offset = field - FIELD_FILENAME - 1;
+    /* Record the file name */
+    if ((log_entry->file = strdup(comma_split[FIELD_FILENAME])) == NULL) {
+        mistral_err("Unable to store filename: %s\n", line);
+        goto fail_log_filename;
+    }
 
     /* Record the job group id */
-    if ((log_entry->job_group_id = (const char *)strdup(comma_split[FIELD_JOB_GROUP_ID +
-                                                                    offset])) == NULL)
-    {
+    if ((log_entry->job_group_id = strdup(comma_split[FIELD_JOB_GROUP_ID])) == NULL) {
         mistral_err("Unable to allocate memory for job group id: %s\n",
-                    comma_split[FIELD_JOB_GROUP_ID + offset]);
+                    comma_split[FIELD_JOB_GROUP_ID]);
         goto fail_log_group;
     }
 
     /* Record the job id */
-    if ((log_entry->job_id = (const char *)strdup(comma_split[FIELD_JOB_ID + offset])) == NULL) {
-        mistral_err("Unable to allocate memory for job id: %s\n", comma_split[FIELD_JOB_ID +
-                                                                              offset]);
+    if ((log_entry->job_id = strdup(comma_split[FIELD_JOB_ID])) == NULL) {
+        mistral_err("Unable to allocate memory for job id: %s\n", comma_split[FIELD_JOB_ID]);
         goto fail_log_job;
     }
 
     /* Record the MPI Rank */
     end = NULL;
     errno = 0;
-    log_entry->mpi_rank = (int32_t)strtol(comma_split[FIELD_MPI_RANK + offset], &end, 10);
+    log_entry->mpi_rank = (int32_t)strtol(comma_split[FIELD_MPI_RANK], &end, 10);
 
     if (!end || *end != '\0' || errno) {
-        mistral_err("Invalid MPI rank seen: [%s].\n", comma_split[FIELD_MPI_RANK + offset]);
+        mistral_err("Invalid MPI rank seen: [%s].\n", comma_split[FIELD_MPI_RANK]);
         goto fail_log_mpi_rank;
     }
 
     end = NULL;
     errno = 0;
-    log_entry->sequence = (int64_t)strtoll(comma_split[FIELD_SEQUENCE + offset], &end, 10);
+    log_entry->sequence = (int64_t)strtoll(comma_split[FIELD_SEQUENCE], &end, 10);
 
-    if (!end || *end != '\0' || end == comma_split[FIELD_SEQUENCE + offset] || errno) {
-        mistral_err("Invalid sequence seen: [%s].\n", comma_split[FIELD_SEQUENCE + offset]);
+    if (!end || *end != '\0' || end == comma_split[FIELD_SEQUENCE] || errno) {
+        mistral_err("Invalid sequence seen: [%s].\n", comma_split[FIELD_SEQUENCE]);
         goto fail_log_sequence;
     }
 
@@ -1120,19 +1085,28 @@ static bool parse_log_entry(const char *line)
 
 fail_log_sequence:
 fail_log_mpi_rank:
+    free((void *)log_entry->job_id);
 fail_log_job:
+    free((void *)log_entry->job_group_id);
 fail_log_group:
+    free((void *)log_entry->file);
 fail_log_filename:
-    free(filename);
+    free((void *)log_entry->command);
 fail_log_command:
-    free(command);
 fail_log_cpu:
 fail_log_pid:
+    free((void *)log_entry->hostname);
 fail_log_host:
+    free((void *)log_entry->full_hostname);
 fail_log_fullhost:
 fail_log_observed:
+    free((void *)log_entry->measured_str);
+fail_log_measured_str:
 fail_log_allowed:
+    free((void *)log_entry->threshold_str);
+fail_log_threshold_str:
 fail_log_measurement:
+    free((void *)log_entry->size_range);
 fail_log_size_range:
     free(size_range_split);
 fail_log_size_range_split:
@@ -1141,12 +1115,22 @@ fail_log_call_type:
 fail_log_call_types:
     free(call_type_split);
 fail_log_call_types_split:
+    free((void *)log_entry->fshost);
+fail_log_fshost:
+    free((void *)log_entry->fsname);
+fail_log_fsname:
+    free((void *)log_entry->fstype);
+fail_log_fstype:
+    free((void *)log_entry->path);
+fail_log_path:
+    free((void *)log_entry->label);
 fail_log_label:
 fail_log_localtime:
 fail_log_mktime:
 fail_log_strptime:
 fail_log_contract:
 fail_log_scope:
+    free(log_entry);
 fail_log_alloc:
 fail_split_hash_fields:
     free(hash_split);
@@ -1195,6 +1179,9 @@ void mistral_destroy_log_entry(mistral_log *log_entry)
     if (log_entry) {
         free((void *)log_entry->label);
         free((void *)log_entry->path);
+        free((void *)log_entry->fstype);
+        free((void *)log_entry->fsname);
+        free((void *)log_entry->fshost);
         free((void *)log_entry->size_range);
         free((void *)log_entry->threshold_str);
         free((void *)log_entry->measured_str);
