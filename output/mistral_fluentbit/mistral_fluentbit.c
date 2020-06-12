@@ -63,7 +63,7 @@ static void usage(const char *name)
                 "\n"
                 "  --host=hostname\n"
                 "  -h hostname\n"
-                "     The hostname of the Fluet Bit server with which to establish a\n"
+                "     The hostname of the Fluent Bit server with which to establish a\n"
                 "     connection. If not specified the plug-in will default to \"localhost\".\n"
                 "\n"
                 "  --mode=octal-mode\n"
