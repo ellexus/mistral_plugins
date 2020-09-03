@@ -888,6 +888,9 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         case MEASUREMENT_CPU_TIME:
         case MEASUREMENT_SYSTEM_TIME:
         case MEASUREMENT_USER_TIME:
+        case MEASUREMENT_HOST_USER:
+        case MEASUREMENT_HOST_SYSTEM:
+        case MEASUREMENT_HOST_IOWAIT:
             correct_table_stmt = insert_cpu_stmt_name;
             break;
         case MEASUREMENT_MEMORY_VSIZE:

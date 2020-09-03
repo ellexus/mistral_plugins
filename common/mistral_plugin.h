@@ -51,20 +51,23 @@ enum __attribute__((packed)) mistral_scope {
 
 extern const char * const mistral_scope_name[];
 
-#define MEASUREMENT(X)                \
-    X(BANDWIDTH,     "bandwidth")     \
-    X(COUNT,         "count")         \
-    X(SEEK_DISTANCE, "seek-distance") \
-    X(MIN_LATENCY,   "min-latency")   \
-    X(MAX_LATENCY,   "max-latency")   \
-    X(MEAN_LATENCY,  "mean-latency")  \
-    X(TOTAL_LATENCY, "total-latency") \
-    X(MEMORY,        "memory")        \
-    X(MEMORY_RSS,    "memory-rss")    \
-    X(MEMORY_VSIZE,  "memory-vsize")  \
-    X(USER_TIME,     "user-time")     \
-    X(SYSTEM_TIME,   "system-time")   \
-    X(CPU_TIME,      "cpu-time")
+#define MEASUREMENT(X)                       \
+    X(BANDWIDTH,     "bandwidth")            \
+    X(COUNT,         "count")                \
+    X(SEEK_DISTANCE, "seek-distance")        \
+    X(MIN_LATENCY,   "min-latency")          \
+    X(MAX_LATENCY,   "max-latency")          \
+    X(MEAN_LATENCY,  "mean-latency")         \
+    X(TOTAL_LATENCY, "total-latency")        \
+    X(MEMORY,        "memory")               \
+    X(MEMORY_RSS,    "memory-rss")           \
+    X(MEMORY_VSIZE,  "memory-vsize")         \
+    X(USER_TIME,     "user-time")            \
+    X(SYSTEM_TIME,   "system-time")          \
+    X(CPU_TIME,      "cpu-time")             \
+    X(HOST_USER,     "host-cpu-user-time")   \
+    X(HOST_SYSTEM,   "host-cpu-system-time") \
+    X(HOST_IOWAIT,   "host-cpu-iowait-time")
 
 enum __attribute__((packed)) mistral_measurement {
     #define X(name, str) MEASUREMENT_ ## name,
