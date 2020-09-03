@@ -13,6 +13,7 @@ set -e
 
 REMOTE_BUILD_MACHINE_32=ellexus@10.33.0.103
 REMOTE_BUILD_MACHINE_64=ellexus@10.33.0.104
+REMOTE_BUILD_MACHINE_DOCS=ellexus@build-doc
 
 
 # Cleanup all temporary files on the local machine, and arrange for this to
@@ -44,13 +45,14 @@ remote_build() {
     local machine=$1
     local source=$2
     local result=$3
-    shift 3
+    local make_command=$4
+    shift 4
 
     echo "Remote build on ${machine}"
 
     local remote=$(ssh "${machine}" mktemp -d)
 
-    ( tar -cz --directory=${source} ./ | ssh "${machine}" "cd ${remote} && tar -xz && make package" )
+    ( tar -cz --directory=${source} ./ | ssh "${machine}" "cd ${remote} && tar -xz && ${make_command}" )
 
     local compiled
     for compiled in "${@}"; do
@@ -100,8 +102,12 @@ BUILD_DIR=$(mktemp -d)
 # Build both the 32-bit and 64-bit versions of the plugins on the appropriate
 # build machines.
 
-remote_build ${REMOTE_BUILD_MACHINE_32} ${SOURCE_DIR} ${BUILD_DIR} ${BUILD32}
-remote_build ${REMOTE_BUILD_MACHINE_64} ${SOURCE_DIR} ${BUILD_DIR} ${BUILD64}
+remote_build ${REMOTE_BUILD_MACHINE_32} ${SOURCE_DIR} ${BUILD_DIR} "make package" ${BUILD32}
+remote_build ${REMOTE_BUILD_MACHINE_64} ${SOURCE_DIR} ${BUILD_DIR} "make package" ${BUILD64}
+
+DOC_DIR="${SOURCE_DIR}/docs"
+ALL_DOCS=$(make -s -C "${SOURCE_DIR}/docs" echo-all 2>/dev/null)
+remote_build ${REMOTE_BUILD_MACHINE_DOCS} ${DOC_DIR} ${BUILD_DIR} "make pdf" ${ALL_DOCS}
 
 # Iterate over all plugins, collecting up the files and creating tar files which
 # can be distributed.
@@ -121,6 +127,15 @@ for PACKAGE in ${PACKAGES}; do
         mkdir -p ${PLUGIN_DST}/${arch}
         cp $binary ${PLUGIN_DST}/${arch}/${PLUGIN_NAME}
     done
+
     tar -c --directory=${PLUGIN_SRC} --files-from=${PACKAGE} | tar -x --directory=${PLUGIN_DST}
+
+    # Add documentation
+    cp "${BUILD_DIR}/mistral_plugin_api.pdf" "${PLUGIN_DST}/mistral_plugin_api.pdf"
+    if [ -f "${BUILD_DIR}/${PLUGIN_NAME}_plugin_manual.pdf" ]; then
+        cp "${BUILD_DIR}/${PLUGIN_NAME}_plugin_manual.pdf" "${PLUGIN_DST}/${PLUGIN_NAME}_plugin_manual.pdf"
+    fi
+
     tar -czf ./releases/${PLUGIN_NAME}_${VERSION}.tar.gz --directory=${BUILD_DIR} $(basename ${PLUGIN_DST})
+
 done
