@@ -243,7 +243,7 @@ The Mistral Elasticsearch Plug-in will create indexes with a trailing
 index number `mistral-00000N`. This allows for easy managing of the
 indexes in Kibana using lifecycle policies and rollover. Previously
 the default was to  create indexes with a date appended, by default
-these would be named `mistral-yyyy-MM-dd`. This allows for easy manual
+these would be named `mistral-YYYY-MM-DD`. This allows for easy manual
 management of historic data. The old behaviour can be restored with
 the `-d` option if preferred.
 

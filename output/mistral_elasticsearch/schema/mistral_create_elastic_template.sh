@@ -132,10 +132,6 @@ function main() {
             -d | --date)
                 format="date"
                 ;;
-            --date=*)
-                format="date"
-                shift
-                ;;
             *)
                 usage "Invalid option ${1}"
                 ;;

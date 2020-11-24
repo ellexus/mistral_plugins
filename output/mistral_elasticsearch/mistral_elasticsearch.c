@@ -302,7 +302,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     bool passwordAllocated = false;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:d", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -697,26 +697,19 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         if (index_use_date_format) {
             /* Date based index naming */
             strftime(strdate, date_len, "%F", &utc_time);
-            if (asprintf(&index_definition, "{\"index\":{\"_index\":\"%s-%s\"%s}}\n", es_index, strdate, doc_type) < 0) {
-                mistral_err("Could not allocate memory for log index\n");
-                free(data);
-                free(path);
-                free(file);
-                free(command);
-                mistral_shutdown();
-                return;
-            };
+            (void) asprintf(&index_definition, "{\"index\":{\"_index\":\"%s-%s\"%s}}\n", es_index, strdate, doc_type);
         } else {
             /* Write to index alias, allow rollover to sort this out */
-            if (asprintf(&index_definition, "{\"index\":{\"_index\":\"%s\"%s}}\n", es_index, doc_type) < 0) {
-                mistral_err("Could not allocate memory for log index\n");
-                free(data);
-                free(path);
-                free(file);
-                free(command);
-                mistral_shutdown();
-                return;
-            };
+            (void) asprintf(&index_definition, "{\"index\":{\"_index\":\"%s\"%s}}\n", es_index, doc_type);
+        }
+        if (index_definition == NULL) {
+            mistral_err("Could not allocate memory for log index\n");
+            free(data);
+            free(path);
+            free(file);
+            free(command);
+            mistral_shutdown();
+            return;
         }
 
         if (asprintf(&new_data,
