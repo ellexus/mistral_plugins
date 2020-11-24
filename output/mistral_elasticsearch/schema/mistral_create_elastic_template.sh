@@ -31,6 +31,10 @@ OPTIONS:
   -s, --ssl         Connect via https.
   -u, --user        Username to use for connection. If -p is not specified the
                     user will be prompted for the password.
+  -d, --date        Use date based index naming
+                    e.g. mistral-YYYY-MM-DD
+                    rather than numerical
+                    e.g. mistral-0000N
 EOF
     exit 1
 }
@@ -56,6 +60,7 @@ function main() {
     local port=9200
     local protocol=http
     local username=
+    local format="numeric"
 
     curl_cmd=$(which curl 2>/dev/null)
     if [ -z "$curl_cmd" ]; then
@@ -124,6 +129,13 @@ function main() {
             --user=*)
                 username="${1#--user=}"
                 ;;
+            -d | --date)
+                format="date"
+                ;;
+            --date=*)
+                format="date"
+                shift
+                ;;
             *)
                 usage "Invalid option ${1}"
                 ;;
@@ -140,7 +152,7 @@ function main() {
     fi
 
     if [[ "$auth" != "" ]]; then
-        auth="-u $auth"
+        auth="-k -u $auth"
     fi
 
     outval=$($curl_cmd -s $auth -XGET $protocol://$host:$port)
@@ -157,10 +169,17 @@ function main() {
         ver=$(echo "$outval" | grep number | sed -e 's/.*number" : "\([0-9]\+\).*/\1/g')
     fi
 
-    outval=$($curl_cmd -s $auth -XPUT -H "Content-Type: application/json" \
-        $protocol://$host:$port/_template/$database -d \
-        "$(sed -e "s/mistral/$database/" $scriptdir/mappings_$ver.x.json)" \
-        )
+    if [[ "$format" == "date" ]]; then
+        outval=$($curl_cmd -s $auth -XPUT -H "Content-Type: application/json" \
+            $protocol://$host:$port/_template/$database -d \
+            "$(sed -e "s/mistral/$database/" $scriptdir/mappings_$ver.x.json)" \
+            )
+    else
+        outval=$($curl_cmd -s $auth -XPUT -H "Content-Type: application/json" \
+            $protocol://$host:$port/_template/$database -d \
+            "$(sed -e "s/mistral/$database/" $scriptdir/mappings_rollover_$ver.x.json)" \
+            )
+    fi
     retval=$?
 
     if [[ "$retval" -ne 0 ]]; then
@@ -173,6 +192,54 @@ function main() {
     fi
 
     echo Index mappings for \"$database\" created successfully
+
+    if [[ "$format" == "numeric" ]]; then
+        outval=$($curl_cmd -s $auth -XPUT -H "Content-Type: application/json" \
+            "$protocol://$host:$port/$database-000001")
+        retval=$?
+
+        if [[ "$retval" -ne 0 ]]; then
+            >&2 echo Error, curl exited with error code $retval
+            exit $retval
+        elif [[ "${outval:0:9}" = '{"error":' ]]; then
+            >&2 echo Error, ElasticSearch query failed:
+            echo "$outval" | >&2 sed -e 's/.*reason":\([^}]*\)}.*/  \1/;s/,/\n  /g'
+            exit 2
+        fi
+        echo "First index $database-000001 created successfully"
+
+        outval=$($curl_cmd -s $auth -XPUT -H "Content-Type: application/json" \
+            "$protocol://$host:$port/$database-000001/_alias/$database")
+        retval=$?
+
+        if [[ "$retval" -ne 0 ]]; then
+            >&2 echo Error, curl exited with error code $retval
+            exit $retval
+        elif [[ "${outval:0:9}" = '{"error":' ]]; then
+            >&2 echo Error, ElasticSearch query failed:
+            echo "$outval" | >&2 sed -e 's/.*reason":\([^}]*\)}.*/  \1/;s/,/\n  /g'
+            exit 2
+        fi
+
+        echo "Alias $database created successfully"
+
+        outval=$($curl_cmd -s $auth -XPOST -H "Content-Type: application/json" \
+            $protocol://$host:$port/$database/_rollover -d  \
+            '{"conditions": {"max_age": "1d"}}')
+        retval=$?
+
+        if [[ "$retval" -ne 0 ]]; then
+            >&2 echo Error, curl exited with error code $retval
+            exit $retval
+        elif [[ "${outval:0:9}" = '{"error":' ]]; then
+            >&2 echo Error, ElasticSearch query failed:
+            echo "$outval" | >&2 sed -e 's/.*reason":\([^}]*\)}.*/  \1/;s/,/\n  /g'
+            exit 2
+        fi
+
+        echo "Rollover condition created successfully"
+    fi
+
     exit 0
 }
 
