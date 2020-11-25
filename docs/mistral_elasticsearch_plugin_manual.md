@@ -82,6 +82,13 @@ Use HTTPS protocol instead of HTTP to connect to Elasticsearch.
 
 The username to be used when connecting to Elasticsearch if needed.
 
+    -d, --date
+
+Use date based index naming. By default the indexes are named 
+idx_name-00000N, if you would prefer to use idx_name-YYYY-MM-DD then
+specify this option.
+
+
 # Configuring Mistral to use the Elasticsearch Plug-in
 
 Please see the Plug-in Configuration section of the main Mistral User
@@ -221,14 +228,24 @@ by the plug-in. This option can be specified multiple times.
 The major version of the Elasticsearch server to connect to. If not
 specified the plug-in will default to "`5`".
 
+    -d, --date
+
+Use date based index naming. By default the indexes are named 
+idx_name-00000N, if you would prefer to use idx_name-YYYY-MM-DD then
+specify this option.
+
 # Mistral’s Elasticsearch Document Model
 
 This section describes how the Mistral Elasticsearch Plug-in stores data
 within Elasticsearch.
 
-The Mistral Elasticsearch Plug-in will create indexes with a date
-appended, by default these will be named `mistral-yyyy-MM-dd`. This
-allows for better management of historic data.
+The Mistral Elasticsearch Plug-in will create indexes with a trailing
+index number `mistral-00000N`. This allows for easy managing of the
+indexes in Kibana using lifecycle policies and rollover. Previously
+the default was to  create indexes with a date appended, by default
+these would be named `mistral-YYYY-MM-DD`. This allows for easy manual
+management of historic data. The old behaviour can be restored with
+the `-d` option if preferred.
 
 Documents are inserted into these indexes with the following labels and
 structure:
@@ -243,6 +260,9 @@ structure:
         "measurement",
         "calltype",
         "path",
+        "fstype",
+        "fsname",
+        "fshost",
         "threshold",
         "timeframe",
         "size-min",
@@ -283,6 +303,9 @@ the following table.
 | `rule.measurement`       | Inserted as a text string, copied from the log message `MEASUREMENT` field unchanged. |
 | `rule.calltype`          | Inserted as a text string, the list of call types specified in the log message `CALL-TYPE` field. The Mistral Elasticsearch plug-in will always log compound types in alphabetical order. E.g. if the log message listed call types as `read+write+seek` the plug-in will normalise this to `read+seek+write`. |
 | `rule.path`              | Inserted as a text string, copied from the log message `PATH` field unchanged. |
+| `rule.fstype`            | Inserted as a text string, copied from the log message `FSTYPE` field unchanged. |
+| `rule.fsname`            | Inserted as a text string, copied from the log message `FSNAME` field unchanged. |
+| `rule.fshost`            | Inserted as a text string, copied from the log message `FSHOST` field unchanged. |
 | `rule.threshold`         | Inserted as a number, the rule limit as reported in the log message `THRESHOLD` field converted into the smallest unit for the measurement type. For bandwidth rules this field will be bytes, for latency rules it is microseconds and for count rules the simple raw count. |
 | `rule.timeframe`         | Inserted as a number, the timeframe the measurement was taken over as reported in the log message `THRESHOLD` field, converted into microseconds. |
 | `rule.size-min`          | Inserted as a number, the lower bound of the operation size range as reported in the log message `SIZE-RANGE` field, converted into bytes. If this field was set to `all` in the log message this value will be set to 0. |

@@ -3,4 +3,5 @@ schema/mappings_2.x.json
 schema/mappings_5.x.json
 schema/mappings_6.x.json
 schema/mappings_7.x.json
+schema/mappings_rollover_7.x.json
 schema/mistral_create_elastic_template.sh

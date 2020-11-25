@@ -26,6 +26,7 @@ static mistral_log *log_list_tail = NULL;
 static const char *es_index = "mistral";
 static char *custom_variables = NULL;
 static unsigned long es_version = 7;
+static bool index_use_date_format = false;
 
 struct saved_resp {
     size_t size;
@@ -286,6 +287,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"username", required_argument, NULL, 'u'},
         {"var", required_argument, NULL, 'v'},
         {"es-version", required_argument, NULL, 'V'},
+        {"date", no_argument, NULL, 'd'},
         {0, 0, 0, 0},
     };
 
@@ -300,7 +302,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     bool passwordAllocated = false;
     mode_t new_mode = 0;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:d", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -393,6 +395,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
                 mistral_err("Unsupported Elasticsearch version \"%s\" specified\n", optarg);
                 return;
             }
+            break;
+        }
+        case 'd': {
+            index_use_date_format = true;
             break;
         }
         default:
@@ -669,7 +675,6 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             return;
         }
 
-        strftime(strdate, date_len, "%F", &utc_time);
         strftime(strts, ts_len, "%FT%T", &utc_time);
 
         /* Several fields  must be JSON escaped */
@@ -688,9 +693,28 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                     mistral_contract_name[log_entry->contract_type]);
         }
 
+        char *index_definition = NULL;
+        if (index_use_date_format) {
+            /* Date based index naming */
+            strftime(strdate, date_len, "%F", &utc_time);
+            (void) asprintf(&index_definition, "{\"index\":{\"_index\":\"%s-%s\"%s}}\n", es_index, strdate, doc_type);
+        } else {
+            /* Write to index alias, allow rollover to sort this out */
+            (void) asprintf(&index_definition, "{\"index\":{\"_index\":\"%s\"%s}}\n", es_index, doc_type);
+        }
+        if (index_definition == NULL) {
+            mistral_err("Could not allocate memory for log index\n");
+            free(data);
+            free(path);
+            free(file);
+            free(command);
+            mistral_shutdown();
+            return;
+        }
+
         if (asprintf(&new_data,
                      "%s"
-                     "{\"index\":{\"_index\":\"%s-%s\"%s}}\n"
+                     "%s"
                      "{\"@timestamp\": \"%s.%03" PRIu32 "Z\","
                      "\"rule\":{"
                      "\"scope\":\"%s\","
@@ -725,7 +749,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                      "\"value\":%" PRIu64
                      "}\n",
                      (data) ? data : "",
-                     es_index, strdate, doc_type,
+                     index_definition,
                      strts,
                      (uint32_t)((log_entry->microseconds / 1000.0f) + 0.5f),
                      mistral_scope_name[log_entry->scope],
