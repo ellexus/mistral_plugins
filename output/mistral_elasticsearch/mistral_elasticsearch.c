@@ -693,7 +693,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
                     mistral_contract_name[log_entry->contract_type]);
         }
 
-        char *index_definition;
+        char *index_definition = NULL;
         if (index_use_date_format) {
             /* Date based index naming */
             strftime(strdate, date_len, "%F", &utc_time);
