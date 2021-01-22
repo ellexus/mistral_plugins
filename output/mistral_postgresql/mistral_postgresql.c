@@ -872,9 +872,11 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         if (asprintf(&pid, "%" PRIu64, log_entry->pid)) {
             values[12] = pid;
         }
+
         if (asprintf(&cpu, "%d", log_entry->cpu)) {
             values[13] = cpu;
         }
+
         values[14] = log_entry->command;
         values[15] = log_entry->file;
         values[16] = log_entry->job_group_id;
@@ -919,7 +921,7 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
             break;
         }
 
-        PGresult *res = PQexecPrepared(con, correct_table_stmt, 16, values, NULL, NULL, 0);
+        PGresult *res = PQexecPrepared(con, correct_table_stmt, 19, values, NULL, NULL, 0);
         /* Has the prepared statement inserted correctly? */
         if (PQresultStatus(res) != PGRES_COMMAND_OK) {
             mistral_err("Unable to save log record (%s) %s\n", correct_table_stmt,
