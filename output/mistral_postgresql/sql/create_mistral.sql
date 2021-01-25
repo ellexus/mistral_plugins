@@ -25,7 +25,7 @@ SET row_security = off;
 
 CREATE SEQUENCE public.bandwidth_log_id_seq
     START WITH 1
-    INCREMENT BY 297642
+    INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
@@ -121,7 +121,7 @@ ALTER TABLE public.counts OWNER TO mistral;
 
 CREATE SEQUENCE public.cpu_log_id_seq
     START WITH 1
-    INCREMENT BY 297642
+    INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
@@ -207,7 +207,7 @@ ALTER SEQUENCE public.env_env_id_seq OWNED BY public.env.env_id;
 
 CREATE SEQUENCE public.latency_log_id_seq
     START WITH 1
-    INCREMENT BY 297642
+    INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
@@ -253,7 +253,7 @@ ALTER TABLE public.latency OWNER TO mistral;
 
 CREATE SEQUENCE public.memory_log_id_seq
     START WITH 1
-    INCREMENT BY 297642
+    INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
@@ -342,7 +342,7 @@ ALTER SEQUENCE public.rule_details_rule_id_seq OWNED BY public.rule_details.rule
 
 CREATE SEQUENCE public.seek_distance_log_id_seq
     START WITH 1
-    INCREMENT BY 297642
+    INCREMENT BY 1
     NO MINVALUE
     NO MAXVALUE
     CACHE 1;
