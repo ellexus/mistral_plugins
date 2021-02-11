@@ -301,7 +301,7 @@ CREATE TABLE public.rule_details (
     rule_id integer NOT NULL,
     rule_label character varying(256) NOT NULL,
     violation_path character varying(256) NOT NULL,
-    call_type character varying(55) NOT NULL,
+    call_type character varying(256) NOT NULL,
     measurement character varying(20) NOT NULL,
     size_range character varying(64) NOT NULL,
     threshold character varying(64) NOT NULL
