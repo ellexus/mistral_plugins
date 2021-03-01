@@ -136,7 +136,8 @@ extern const uint32_t mistral_unit_type[];
     X(OPEN,         "open")         \
     X(READ,         "read")         \
     X(SEEK,         "seek")         \
-    X(WRITE,        "write")
+    X(WRITE,        "write")        \
+    X(MMAP,         "mmap")
 
 #define BITMASK(type) (1u << type)
 

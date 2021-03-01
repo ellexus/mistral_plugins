@@ -694,15 +694,16 @@ void mistral_received_data_end(uint64_t block_num, bool block_error)
         }
 
         char *index_definition = NULL;
+        int res = 0;
         if (index_use_date_format) {
             /* Date based index naming */
             strftime(strdate, date_len, "%F", &utc_time);
-            (void) asprintf(&index_definition, "{\"index\":{\"_index\":\"%s-%s\"%s}}\n", es_index, strdate, doc_type);
+            res = asprintf(&index_definition, "{\"index\":{\"_index\":\"%s-%s\"%s}}\n", es_index, strdate, doc_type);
         } else {
             /* Write to index alias, allow rollover to sort this out */
-            (void) asprintf(&index_definition, "{\"index\":{\"_index\":\"%s\"%s}}\n", es_index, doc_type);
+            res = asprintf(&index_definition, "{\"index\":{\"_index\":\"%s\"%s}}\n", es_index, doc_type);
         }
-        if (index_definition == NULL) {
+        if (index_definition == NULL || res == -1) {
             mistral_err("Could not allocate memory for log index\n");
             free(data);
             free(path);
