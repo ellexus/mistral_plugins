@@ -39,6 +39,11 @@ build-mistral_splunk:
 build-mistral_fluentbit:
 	$(MAKE) -C output/mistral_fluentbit
 
+.PHONY: package-mistral_elasticsearch
+package-mistral_elasticsearch:
+	$(MAKE) -C common
+	$(MAKE) -C output/mistral_elasticsearch package
+
 .PHONY: package
 package:
 	$(MAKE) -C common

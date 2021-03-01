@@ -79,7 +79,11 @@ git checkout-index -a --prefix=${SOURCE_DIR}/
 # just use these files to identify directories to be packaged, but later on we
 # expect the PACKAGE file to list the files that should be distributed.
 
-PACKAGES=$(find . -name PACKAGE -print)
+# If packages is set to a list of packages, then use that - otherwise package them
+# all.
+if [ -z "$PACKAGES" ]; then
+    PACKAGES=$(find . -name PACKAGE -print)
+fi
 
 # Construct lists of the plugins to be built. The plugin takes its name from the
 # directory with ".i386" appended for 32-bit builds and ".x86_64" for 64-bit
@@ -99,11 +103,16 @@ done
 
 BUILD_DIR=$(mktemp -d)
 
+
+if [ -z "$MAKE_PACKAGE" ]; then
+    MAKE_PACKAGE="package"
+fi
+
 # Build both the 32-bit and 64-bit versions of the plugins on the appropriate
 # build machines.
 
-remote_build ${REMOTE_BUILD_MACHINE_32} ${SOURCE_DIR} ${BUILD_DIR} "make package" ${BUILD32}
-remote_build ${REMOTE_BUILD_MACHINE_64} ${SOURCE_DIR} ${BUILD_DIR} "make package" ${BUILD64}
+remote_build ${REMOTE_BUILD_MACHINE_32} ${SOURCE_DIR} ${BUILD_DIR} "make ${MAKE_PACKAGE}" ${BUILD32}
+remote_build ${REMOTE_BUILD_MACHINE_64} ${SOURCE_DIR} ${BUILD_DIR} "make ${MAKE_PACKAGE}" ${BUILD64}
 
 DOC_DIR="${SOURCE_DIR}/docs"
 ALL_DOCS=$(make -s -C "${SOURCE_DIR}/docs" echo-all 2>/dev/null)
