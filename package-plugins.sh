@@ -81,7 +81,7 @@ git checkout-index -a --prefix=${SOURCE_DIR}/
 
 # If packages is set to a list of packages, then use that - otherwise package them
 # all.
-if [ -z $PACKAGES+x ]; then
+if [ -z "$PACKAGES" ]; then
     PACKAGES=$(find . -name PACKAGE -print)
 fi
 
@@ -104,7 +104,7 @@ done
 BUILD_DIR=$(mktemp -d)
 
 
-if [ -z $MAKE_PACKAGE+x ]; then
+if [ -z "$MAKE_PACKAGE" ]; then
     MAKE_PACKAGE="package"
 fi
 
