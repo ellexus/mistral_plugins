@@ -119,7 +119,7 @@ static void usage(const char *name)
      */
     mistral_err("Usage:\n"
                 "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n"
-                     "[-c certificate_path] [-d certificate_directory]\n", name);
+                     "[-c certificate_path] [--cert-dir=certificate_directory]\n", name);
     mistral_err("\n"
                 "  --cert-path=certificate_path\n"
                 "  -c certificate_path\n"
@@ -127,9 +127,13 @@ static void usage(const char *name)
                 "     of the ElasticSearch server.\n"
                 "\n"
                 "  --cert-dir=certificate_directory \n"
-                "  -f certificate_directory\n"
                 "     The directory that contains the CA certificate(s) used to sign the\n"
                 "     certificate of the ElasticSearch server\n"
+                 "\n"
+                "  --date \n"
+                "  -d\n"
+                "     Use date based index names e.g. ``<idx_name>-yyyy-MM-dd`` rather than the default\n"
+                "     of numeric indexes ``<idx_name>-0000N``.\n"
                 "\n"
                 "  --error=file\n"
                 "  -e file\n"
@@ -283,7 +287,9 @@ static char *elasticsearch_escape(const char *string)
  */
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 {
-    /* Returning without setting plug-in type will cause a clean exit */
+     /* Returning without setting plug-in type will cause a clean exit */
+
+   #define CERT_DIR_OPTION_CODE 1001
 
     static const struct option options[] = {
         {"index", required_argument, NULL, 'i'},
@@ -298,7 +304,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"var", required_argument, NULL, 'v'},
         {"es-version", required_argument, NULL, 'V'},
         {"date", no_argument, NULL, 'd'},
-        {"cert-dir", required_argument, NULL, 'f'},
+        {"cert-dir", required_argument, NULL, CERT_DIR_OPTION_CODE},
         {"cert-path", required_argument, NULL, 'c'},
         {0, 0, 0, 0},
     };
@@ -316,7 +322,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *cert_path = NULL;
     const char *cert_dir = NULL;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:dc:f:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:dc:", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -418,7 +424,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'c':
             cert_path = optarg;
             break;
-        case 'f':
+        case CERT_DIR_OPTION_CODE:
             cert_dir = optarg;
             break;
         default:

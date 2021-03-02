@@ -17,6 +17,13 @@ Plug-in Configuration
 
 The plug-in accepts the following command line options:
 
+--cert-path=certificate_path | -c certificate_path
+  The full path to a CA certificate used to sign the certificate of the Splunk server.
+
+--cert-dir=certificate_directory
+  The directory that contains the CA certificate(s) used to sign the certificate of the
+  Splunk server
+
 --error=filename | -e filename
   The name of the file to which any error messages will be written.
 
@@ -34,6 +41,9 @@ The plug-in accepts the following command line options:
 --port=number | -p number
   Specifies the port to connect to on the Splunk server host. If not specified
   the plug-in will default to using port 8088.
+
+--skip-ssl-validation | -k
+  Disbale SSL certificate validation when connecting to Splunk.
 
 --ssl | -s
   Use HTTPS protocol instead of HTTP to connect to Splunk.

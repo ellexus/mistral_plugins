@@ -94,7 +94,7 @@ static void usage(const char *name)
     mistral_err("Usage:\n");
     mistral_err(
         "  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n"
-             "[-c certificate_path] [-d certificate_directory]\n", name);
+             "[-c certificate_path] [--cert-dir=certificate_directory]\n", name);
     mistral_err("\n"
                 "  --cert-path=certificate_path\n"
                 "  -c certificate_path\n"
@@ -102,7 +102,6 @@ static void usage(const char *name)
                 "     of the InfluxDB server.\n"
                 "\n"
                 "  --cert-dir=certificate_directory \n"
-                "  -f certificate_directory\n"
                 "     The directory that contains the CA certificate(s) used to sign the\n"
                 "     certificate of the InfluxDB server\n"
                 "\n"
@@ -278,6 +277,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function %d, %p, %p\n", argc, argv, plugin);
     /* Returning without setting plug-in type will cause a clean exit */
 
+    #define CERT_DIR_OPTION_CODE 1001
+
     static const struct option options[] = {
         {"database", required_argument, NULL, 'd'},
         {"debug", required_argument, NULL, 'D'},
@@ -290,7 +291,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"skip-ssl-validation", no_argument, NULL, 'k'},
         {"username", required_argument, NULL, 'u'},
         {"var", required_argument, NULL, 'v'},
-        {"cert-dir", required_argument, NULL, 'f'},
+        {"cert-dir", required_argument, NULL, CERT_DIR_OPTION_CODE},
         {"cert-path", required_argument, NULL, 'c'},        
         {0, 0, 0, 0},
     };
@@ -308,7 +309,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *cert_path = NULL;
     const char *cert_dir = NULL;
 
-    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:sku:v:c:f:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:sku:v:c:", options, NULL)) != -1) {
         switch (opt) {
         case 'd':
             database = optarg;
@@ -411,7 +412,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'c':
             cert_path = optarg;
             break;
-        case 'f':
+        case CERT_DIR_OPTION_CODE:
             cert_dir = optarg;
             break;
         default:

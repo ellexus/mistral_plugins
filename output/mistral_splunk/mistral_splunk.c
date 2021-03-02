@@ -117,7 +117,7 @@ static void usage(const char *name)
      */
     mistral_err("Usage:\n"
                 "  %s [-i index] [-h host] [-p port] [-e file] [-m octal-mode] [-s] [-t hash] [-v var-name ...]\n"
-                     "[-c certificate_path] [-d certificate_directory]\n", name);
+                     "[-c certificate_path] [--cert-dir=certificate_directory]\n", name);
     mistral_err("\n"
                 "  --cert-path=certificate_path\n"
                 "  -c certificate_path\n"
@@ -125,7 +125,6 @@ static void usage(const char *name)
                 "     of the Splunk server.\n"
                 "\n"
                 "  --cert-dir=certificate_directory \n"
-                "  -d certificate_directory\n"
                 "     The directory that contains the CA certificate(s) used to sign the\n"
                 "     certificate of the Splunk server\n"
                 "\n"
@@ -274,6 +273,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 {
     /* Returning without setting plug-in type will cause a clean exit */
 
+    #define CERT_DIR_OPTION_CODE 1001
+
     static const struct option options[] = {
         {"index", required_argument, NULL, 'i'},
         {"error", required_argument, NULL, 'e'},
@@ -284,7 +285,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"skip-ssl-validation", no_argument, NULL, 'k'},
         {"token", required_argument, NULL, 't'},
         {"var", required_argument, NULL, 'v'},
-        {"cert-dir", required_argument, NULL, 'd'},
+        {"cert-dir", required_argument, NULL, CERT_DIR_OPTION_CODE},
         {"cert-path", required_argument, NULL, 'c'},
         {0, 0, 0, 0},
     };
@@ -300,7 +301,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     const char *cert_path = NULL;
     const char *cert_dir = NULL;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:skt:v:c:d:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:skt:v:c:", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -391,7 +392,7 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         case 'c':
             cert_path = optarg;
             break;
-        case 'd':
+        case CERT_DIR_OPTION_CODE:
             cert_dir = optarg;
             break;
         default:

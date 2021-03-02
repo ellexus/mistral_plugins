@@ -21,6 +21,17 @@ The script takes the following command line options:
 --help | -?
   Display usage instructions
 
+--cert-path=certificate_path | -c certificate_path
+  The full path to a CA certificate used to sign the certificate of the Elasticsearch server.
+
+--cert-dir=certificate_directory
+  The directory that contains the CA certificate(s) used to sign the certificate of the
+  Elasticsearch server
+
+--date | -d
+  Use date based index names e.g. ``<idx_name>-yyyy-MM-dd`` rather than the default
+  of numeric indexes ``<idx_name>-0000N``.
+
 --index=idx_name | -i idx_name
   The basename of the index. If not specified the template will be created for
   indexes called "mistral". As long as a matching option is provided to the
@@ -37,6 +48,9 @@ The script takes the following command line options:
 --port=n | -P n
   The port to be used when connecting to Elasticsearch. If not specified the
   script will use port 9200.
+
+--skip-ssl-validation | -k
+  Disbale SSL certificate validation when connecting to Elasticsearch.
 
 --ssl | -s
   Use HTTPS protocol instead of HTTP to connect to Elasticsearch.
