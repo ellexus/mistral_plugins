@@ -116,9 +116,19 @@ static void usage(const char *name)
      * line.
      */
     mistral_err("Usage:\n"
-                "  %s [-i index] [-h host] [-p port] [-e file] [-m octal-mode] [-s] [-t hash] [-v var-name ...]\n",
-                name);
+                "  %s [-i index] [-h host] [-p port] [-e file] [-m octal-mode] [-s] [-t hash] [-v var-name ...]\n"
+                     "[-c certificate_path] [-d certificate_directory]\n", name);
     mistral_err("\n"
+                "  --cert-path=certificate_path\n"
+                "  -c certificate_path\n"
+                "     The full path to a CA certificate used to sign the certificate\n"
+                "     of the Splunk server.\n"
+                "\n"
+                "  --cert-dir=certificate_directory \n"
+                "  -d certificate_directory\n"
+                "     The directory that contains the CA certificate(s) used to sign the\n"
+                "     certificate of the Splunk server\n"
+                "\n"
                 "  --error=file\n"
                 "  -e file\n"
                 "     Specify location for error log. If not specified all errors will\n"
@@ -145,7 +155,7 @@ static void usage(const char *name)
                 "\n"
                 "  --ssl\n"
                 "  -s\n"
-                "     Connect to the Splunk server via secure HTTP.\n"
+                "     Connect to the Splunk server via secure HTTPS.\n"
                 "\n"
                 "  --skip-ssl-validation\n"
                 "  -k\n"
@@ -274,6 +284,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"skip-ssl-validation", no_argument, NULL, 'k'},
         {"token", required_argument, NULL, 't'},
         {"var", required_argument, NULL, 'v'},
+        {"cert-dir", required_argument, NULL, 'd'},
+        {"cert-path", required_argument, NULL, 'c'},
         {0, 0, 0, 0},
     };
 
@@ -285,8 +297,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     int opt;
     bool skip_validation = false;
     mode_t new_mode = 0;
+    const char *cert_path = NULL;
+    const char *cert_dir = NULL;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:skt:v:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:skt:v:c:d:", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -374,6 +388,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             custom_variables = new_var;
             break;
         }
+        case 'c':
+            cert_path = optarg;
+            break;
+        case 'd':
+            cert_dir = optarg;
+            break;
         default:
             usage(argv[0]);
             return;
@@ -425,6 +445,20 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         mistral_err("Could not set curl to fail on HTTP error\n");
         return;
     }
+
+    if (cert_path) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_CAINFO, cert_path) != CURLE_OK) {
+            mistral_err("Could not set curl certificate path (CAINFO) '%s'\n", cert_path);
+            return;
+        }
+    }
+
+    if (cert_dir) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_CAPATH, cert_dir) != CURLE_OK) {
+            mistral_err("Could not set curl certificate directory (CAPATH) '%s'\n", cert_dir);
+            return;
+        }
+    }    
 
     /* If using a self-signed certificate (for example) disable SSL validation */
     if (skip_validation) {
