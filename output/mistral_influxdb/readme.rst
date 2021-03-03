@@ -6,6 +6,15 @@ database.
 
 The plug-in accepts the following command line options:
 
+--cert-path=certificate_path | -c certificate_path
+  The full path to a CA certificate used to sign the certificate of the InfluxDB server.
+  See ``man openssl verify`` for details of the ``CAfile`` option.
+
+--cert-dir=certificate_directory
+  The directory that contains the CA certificate(s) used to sign the certificate of the
+  InfluxDB server. Certificates in this directory should be named after the hashed
+  certificate subject name, see ``man openssl verify`` for details of the ``CApath`` option.
+
 --database=db-name | -d db-name
    Set the InfluxDB database to be used for storing data.
    Defaults to "mistral".
@@ -27,6 +36,9 @@ The plug-in accepts the following command line options:
 --port=number | -P number
    Specifies the port to connect to on the InfluxDB server host.
    If not specified the plug-in will default to "8086".
+
+--skip-ssl-validation | -k
+  Disable SSL certificate validation when connecting to InfluxDB.
 
 --ssl | -s
    Connect to the InfluxDB server via secure HTTP.

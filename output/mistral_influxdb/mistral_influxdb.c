@@ -93,9 +93,21 @@ static void usage(const char *name)
      */
     mistral_err("Usage:\n");
     mistral_err(
-        "  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n",
-        name);
+        "  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n"
+             "[-k] [-c certificate_path] [--cert-dir=certificate_directory]\n", name);
     mistral_err("\n"
+                "  --cert-path=certificate_path\n"
+                "  -c certificate_path\n"
+                "     The full path to a CA certificate used to sign the certificate\n"
+                "     of the InfluxDB server. See ``man openssl verify`` for details\n"
+                "     of the ``CAfile`` option.\n"
+                "\n"
+                "  --cert-dir=certificate_directory \n"
+                "     The directory that contains the CA certificate(s) used to sign the\n"
+                "     certificate of the InfluxDB server. Certificates in this directory\n"
+                "     should be named after the hashed certificate subject name, see\n"
+                "     ``man openssl verify`` for details of the ``CApath`` option.\n"
+                "\n"
                 "  --database=db-name\n"
                 "  -d db-name\n"
                 "     Set the InfluxDB database to be used for storing data.\n"
@@ -131,7 +143,7 @@ static void usage(const char *name)
                 "\n"
                 "  --skip-ssl-validation\n"
                 "  -k\n"
-                "     Disbale SSL certificate validation when connecting to InfluxDB.\n"
+                "     Disable SSL certificate validation when connecting to InfluxDB.\n"
                 "\n"
                 "  --username=user\n"
                 "  -u user\n"
@@ -268,6 +280,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     DEBUG_OUTPUT(DBG_ENTRY, "Entering function %d, %p, %p\n", argc, argv, plugin);
     /* Returning without setting plug-in type will cause a clean exit */
 
+    #define CERT_DIR_OPTION_CODE 1001
+
     static const struct option options[] = {
         {"database", required_argument, NULL, 'd'},
         {"debug", required_argument, NULL, 'D'},
@@ -280,6 +294,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"skip-ssl-validation", no_argument, NULL, 'k'},
         {"username", required_argument, NULL, 'u'},
         {"var", required_argument, NULL, 'v'},
+        {"cert-dir", required_argument, NULL, CERT_DIR_OPTION_CODE},
+        {"cert-path", required_argument, NULL, 'c'},        
         {0, 0, 0, 0},
     };
 
@@ -293,8 +309,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     int opt;
     bool skip_validation = false;
     mode_t new_mode = 0;
+    const char *cert_path = NULL;
+    const char *cert_dir = NULL;
 
-    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:sku:v:", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "d:D:e:h:m:p:P:sku:v:c:", options, NULL)) != -1) {
         switch (opt) {
         case 'd':
             database = optarg;
@@ -394,6 +412,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             custom_variables = new_var;
             break;
         }
+        case 'c':
+            cert_path = optarg;
+            break;
+        case CERT_DIR_OPTION_CODE:
+            cert_dir = optarg;
+            break;
         default:
             usage(argv[0]);
             DEBUG_OUTPUT(DBG_HIGH, "Leaving function, failed\n");
@@ -458,6 +482,20 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             return;
         }
     }
+
+    if (cert_path) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_CAINFO, cert_path) != CURLE_OK) {
+            mistral_err("Could not set curl certificate path (CAINFO) '%s'\n", cert_path);
+            return;
+        }
+    }
+
+    if (cert_dir) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_CAPATH, cert_dir) != CURLE_OK) {
+            mistral_err("Could not set curl certificate directory (CAPATH) '%s'\n", cert_dir);
+            return;
+        }
+    }    
 
     /* Set InfluxDB connection options and set precision to microseconds as this
      * is what we see in logs

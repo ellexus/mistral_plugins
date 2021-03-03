@@ -118,9 +118,26 @@ static void usage(const char *name)
      * line.
      */
     mistral_err("Usage:\n"
-                "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n",
-                name);
+                "  %s [-i index] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n"
+                     "[-k] [-c certificate_path] [--cert-dir=certificate_directory]\n", name);
     mistral_err("\n"
+                "  --cert-path=certificate_path\n"
+                "  -c certificate_path\n"
+                "     The full path to a CA certificate used to sign the certificate\n"
+                "     of the ElasticSearch server. See ``man openssl verify`` for\n"
+                "     details of the ``CAfile`` option.\n"
+                "\n"
+                "  --cert-dir=certificate_directory \n"
+                "     The directory that contains the CA certificate(s) used to sign the\n"
+                "     certificate of the ElasticSearch server.  Certificates in this\n"
+                "     directory should be named after the hashed certificate subject\n"
+                "     name, see ``man openssl verify`` for details of the ``CApath`` option.\n"
+                 "\n"
+                "  --date \n"
+                "  -d\n"
+                "     Use date based index names e.g. ``<idx_name>-yyyy-MM-dd`` rather than the default\n"
+                "     of numeric indexes ``<idx_name>-0000N``.\n"
+                "\n"
                 "  --error=file\n"
                 "  -e file\n"
                 "     Specify location for error log. If not specified all errors will\n"
@@ -157,7 +174,7 @@ static void usage(const char *name)
                 "\n"
                 "  --skip-ssl-validation\n"
                 "  -k\n"
-                "     Disbale SSL certificate validation when connecting to Elasticsearch.\n"
+                "     Disable SSL certificate validation when connecting to Elasticsearch.\n"
                 "\n"
                 "  --username=user\n"
                 "  -u user\n"
@@ -273,7 +290,9 @@ static char *elasticsearch_escape(const char *string)
  */
 void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 {
-    /* Returning without setting plug-in type will cause a clean exit */
+     /* Returning without setting plug-in type will cause a clean exit */
+
+   #define CERT_DIR_OPTION_CODE 1001
 
     static const struct option options[] = {
         {"index", required_argument, NULL, 'i'},
@@ -288,6 +307,8 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
         {"var", required_argument, NULL, 'v'},
         {"es-version", required_argument, NULL, 'V'},
         {"date", no_argument, NULL, 'd'},
+        {"cert-dir", required_argument, NULL, CERT_DIR_OPTION_CODE},
+        {"cert-path", required_argument, NULL, 'c'},
         {0, 0, 0, 0},
     };
 
@@ -301,8 +322,10 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
     bool skip_validation = false;
     bool passwordAllocated = false;
     mode_t new_mode = 0;
+    const char *cert_path = NULL;
+    const char *cert_dir = NULL;
 
-    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:d", options, NULL)) != -1) {
+    while ((opt = getopt_long(argc, argv, "e:h:i:m:p:P:sku:v:V:dc:", options, NULL)) != -1) {
         switch (opt) {
         case 'e':
             error_file = optarg;
@@ -401,6 +424,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             index_use_date_format = true;
             break;
         }
+        case 'c':
+            cert_path = optarg;
+            break;
+        case CERT_DIR_OPTION_CODE:
+            cert_dir = optarg;
+            break;
         default:
             usage(argv[0]);
             return;
@@ -491,6 +520,20 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
             return;
         }
     }
+
+    if (cert_path) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_CAINFO, cert_path) != CURLE_OK) {
+            mistral_err("Could not set curl certificate path (CAINFO) '%s'\n", cert_path);
+            return;
+        }
+    }
+
+    if (cert_dir) {
+        if (curl_easy_setopt(easyhandle, CURLOPT_CAPATH, cert_dir) != CURLE_OK) {
+            mistral_err("Could not set curl certificate directory (CAPATH) '%s'\n", cert_dir);
+            return;
+        }
+    }    
 
     /* Use a custom write function to save any response from Elasticsearch */
     if (!set_curl_option(CURLOPT_WRITEFUNCTION, write_callback)) {
