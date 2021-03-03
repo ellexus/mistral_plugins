@@ -94,16 +94,19 @@ static void usage(const char *name)
     mistral_err("Usage:\n");
     mistral_err(
         "  %s [-d database] [-h host] [-P port] [-e file] [-m octal-mode] [-u user] [-p password] [-s] [-v var-name ...]\n"
-             "[-c certificate_path] [--cert-dir=certificate_directory]\n", name);
+             "[-k] [-c certificate_path] [--cert-dir=certificate_directory]\n", name);
     mistral_err("\n"
                 "  --cert-path=certificate_path\n"
                 "  -c certificate_path\n"
                 "     The full path to a CA certificate used to sign the certificate\n"
-                "     of the InfluxDB server.\n"
+                "     of the InfluxDB server. See ``man openssl verify`` for details\n"
+                "     of the ``CAfile`` option.\n"
                 "\n"
                 "  --cert-dir=certificate_directory \n"
                 "     The directory that contains the CA certificate(s) used to sign the\n"
-                "     certificate of the InfluxDB server\n"
+                "     certificate of the InfluxDB server. Certificates in this directory\n"
+                "     should be named after the hashed certificate subject name, see\n"
+                "     ``man openssl verify`` for details of the ``CApath`` option.\n"
                 "\n"
                 "  --database=db-name\n"
                 "  -d db-name\n"
@@ -140,7 +143,7 @@ static void usage(const char *name)
                 "\n"
                 "  --skip-ssl-validation\n"
                 "  -k\n"
-                "     Disbale SSL certificate validation when connecting to InfluxDB.\n"
+                "     Disable SSL certificate validation when connecting to InfluxDB.\n"
                 "\n"
                 "  --username=user\n"
                 "  -u user\n"

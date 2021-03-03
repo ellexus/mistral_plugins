@@ -23,10 +23,12 @@ The script takes the following command line options:
 
 --cert-path=certificate_path | -c certificate_path
   The full path to a CA certificate used to sign the certificate of the Elasticsearch server.
+  See ``man openssl verify`` for details of the ``CAfile`` option.
 
 --cert-dir=certificate_directory
   The directory that contains the CA certificate(s) used to sign the certificate of the
-  Elasticsearch server
+  Elasticsearch server. Certificates in this directory should be named after the hashed
+  certificate subject name, see ``man openssl verify`` for details of the ``CApath`` option.
 
 --date | -d
   Use date based index names e.g. ``<idx_name>-yyyy-MM-dd`` rather than the default
@@ -50,7 +52,7 @@ The script takes the following command line options:
   script will use port 9200.
 
 --skip-ssl-validation | -k
-  Disbale SSL certificate validation when connecting to Elasticsearch.
+  Disable SSL certificate validation when connecting to Elasticsearch.
 
 --ssl | -s
   Use HTTPS protocol instead of HTTP to connect to Elasticsearch.
