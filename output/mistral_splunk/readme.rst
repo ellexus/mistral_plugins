@@ -65,7 +65,7 @@ The options would normally be included in a plug-in configuration file, such as
 
    PLUGIN,OUTPUT
 
-   PLUGIN_PATH,/path/to/mistral_elasticsearch
+   PLUGIN_PATH,/path/to/mistral_splunk
 
    INTERVAL,5
 
@@ -75,7 +75,7 @@ The options would normally be included in a plug-in configuration file, such as
    PLUGIN_OPTION,--token=file:/home/user/secret/HEC.token
    PLUGIN_OPTION,--var=USER
    PLUGIN_OPTION,--var=SHELL
-   PLUGIN_OPTION,--error=/path/to/mistral_elasticsearch.log
+   PLUGIN_OPTION,--error=/path/to/mistral_splunk.log
 
    END
 
