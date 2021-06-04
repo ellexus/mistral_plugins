@@ -168,7 +168,12 @@ typedef struct mistral_plugin {
     uint64_t interval;
     enum mistral_plugin_type type;
     FILE *error_log;
+    char *error_log_name;
+    mode_t error_log_mode;
+    uint32_t flags;
 } mistral_plugin;
+
+#define PLUGIN_ERRLOG_INIT    1
 
 typedef struct mistral_log {
     struct mistral_log *forward;
