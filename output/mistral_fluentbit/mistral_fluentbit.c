@@ -284,25 +284,12 @@ void mistral_startup(mistral_plugin *plugin, int argc, char *argv[])
 
     log_file_ptr = &(plugin->error_log);
 
-    if (error_file != NULL) {
-        if (new_mode > 0) {
-            mode_t old_mask = umask(00);
-            int fd = open(error_file, O_CREAT | O_WRONLY | O_APPEND, new_mode);
-            if (fd >= 0) {
-                plugin->error_log = fdopen(fd, "a");
-            }
-            umask(old_mask);
-        } else {
-            plugin->error_log = fopen(error_file, "a");
-        }
-
-        if (!plugin->error_log) {
-            plugin->error_log = stderr;
-            char buf[256];
-            mistral_err("Could not open error file %s: %s\n", error_file,
-                        strerror_r(errno, buf, sizeof buf));
-        }
-    }
+    /* Error file is opened/created by the first error_msg
+     */
+    plugin->error_log = stderr;
+    plugin->error_log_name = (char *)error_file;
+    plugin->error_log_mode = new_mode;
+    plugin->flags = 0;
 
     /* We connect to the Fluent Bit TCP plug-in in a detached thread */
     if (mistral_fluentbit_connect(&fluentbit_tcp_ctx, host, port, NULL, NULL) < 0) {

@@ -8,7 +8,11 @@
 #include <stddef.h>             /* size_t */
 #include <stdint.h>             /* uint32_t */
 #include <stdio.h>              /* FILE */
+#include <fcntl.h>              /* open */
 #include <sys/time.h>           /* struct timeval */
+#include <sys/stat.h>           /* open, umask */
+#include <sys/types.h>          /* open, umask */
+
 #include "mistral_plugin.h"     /* Definitions that need to be available to plug-in developers */
 
 /* Store the lengths of the scopes to avoid using strlen */

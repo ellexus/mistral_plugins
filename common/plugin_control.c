@@ -92,8 +92,33 @@ int mistral_err(const char *format, ...)
     bool sem_claimed = false;
 
     if (sem_wait(&mistral_plugin_info.lock) == 0) {
-        log_stream = mistral_plugin_info.error_log;
         sem_claimed = true;
+
+        if (!(mistral_plugin_info.flags & PLUGIN_ERRLOG_INIT) &&
+            mistral_plugin_info.error_log_name) {
+            if (mistral_plugin_info.error_log_mode > 0) {
+                mode_t old_mask = umask(00);
+                int fd = open(mistral_plugin_info.error_log_name,
+                              O_CREAT | O_WRONLY | O_APPEND,
+                              mistral_plugin_info.error_log_mode);
+                if (fd >= 0) {
+                    FILE *fdp = fdopen(fd, "a");
+                    if (fdp) {
+                        mistral_plugin_info.error_log = fdp;
+                    }
+                }
+                umask(old_mask);
+            } else {
+                FILE *fdp = fopen(mistral_plugin_info.error_log_name, "a");
+                if (fdp) {
+                    mistral_plugin_info.error_log = fdp;
+                }
+            }
+            /* Even if we failed to init above will not try again
+             */
+            mistral_plugin_info.flags |= PLUGIN_ERRLOG_INIT;
+        }
+        log_stream = mistral_plugin_info.error_log;
     } else {
         /* We didn't manage to claim the semaphore - proceed using stderr but log another error */
         char buf[256];
