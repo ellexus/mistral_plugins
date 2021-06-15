@@ -92,17 +92,19 @@ enum __attribute__((packed)) mistral_unit_class {
 
 extern const char * const mistral_unit_class_name[];
 
-#define UNIT(X)                               \
-    X(MICROSECS, "us", 1,   UNIT_CLASS_TIME)  \
-    X(MILLISECS, "ms", 1e3, UNIT_CLASS_TIME)  \
-    X(KILOBYTES, "kB", 1e3, UNIT_CLASS_SIZE)  \
-    X(MEGABYTES, "MB", 1e6, UNIT_CLASS_SIZE)  \
-    X(GIGABYTES, "GB", 1e9, UNIT_CLASS_SIZE)  \
-    X(BYTES,     "B",  1,   UNIT_CLASS_SIZE)  \
-    X(SECONDS,   "s",  1e6, UNIT_CLASS_TIME)  \
-    X(THOUSAND,  "k",  1e3, UNIT_CLASS_COUNT) \
-    X(MILLION,   "M",  1e6, UNIT_CLASS_COUNT) \
-    X(COUNT,     "",   1,   UNIT_CLASS_COUNT)
+#define UNIT(X)                                        \
+    X(MICROSECS,         "us", 1,    UNIT_CLASS_TIME)  \
+    X(MILLISECS,         "ms", 1e3,  UNIT_CLASS_TIME)  \
+    X(KILOBYTES,         "kB", 1e3,  UNIT_CLASS_SIZE)  \
+    X(CAPITAL_KILOBYTES, "KB", 1e3,  UNIT_CLASS_SIZE)  \
+    X(MEGABYTES,         "MB", 1e6,  UNIT_CLASS_SIZE)  \
+    X(GIGABYTES,         "GB", 1e9,  UNIT_CLASS_SIZE)  \
+    X(BYTES,              "B",  1,   UNIT_CLASS_SIZE)  \
+    X(SECONDS,            "s",  1e6, UNIT_CLASS_TIME)  \
+    X(THOUSAND,           "k",  1e3, UNIT_CLASS_COUNT) \
+    X(CAPITAL_THOUSAND,   "K",  1e3, UNIT_CLASS_COUNT) \
+    X(MILLION,            "M",  1e6, UNIT_CLASS_COUNT) \
+    X(COUNT,               "",   1,  UNIT_CLASS_COUNT)
 
 enum __attribute__((packed)) mistral_unit {
     #define X(name, suffix, scale, type) UNIT_ ## name,
